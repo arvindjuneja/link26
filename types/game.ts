@@ -143,9 +143,10 @@ export interface TerminalLine {
   type: "info" | "command" | "error" | "success" | "warning";
 }
 
-export type VfxEventType = "scan" | "alert" | "success" | "idle";
+export type VfxEventType = "scan" | "alert" | "success" | "idle" | "connect";
 
 export interface VfxEvent {
   type: VfxEventType;
   value?: string;
+  target?: string;  // Target host ID for visual effects
 }

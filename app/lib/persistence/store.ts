@@ -42,6 +42,19 @@ const multiWordCommands = [
 
 type SoundCue = "click" | "beep" | "alert" | "scan" | "connect" | "success" | "routeAdd" | "fileOp" | null;
 
+// Scan animation state for visual feedback on map
+export interface ScanAnimation {
+  fromNode: string | null;  // Starting node (last proxy or "player")
+  toNode: string;           // Target host
+  throughProxies: string[]; // Route hops
+  phase: "routing" | "scanning" | "complete";
+  progress: number;         // 0-1
+  startTime: number;
+}
+
+// Execution phases for visual command feedback
+type ExecutionPhase = "idle" | "initiating" | "routing" | "executing" | "complete";
+
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
 const buildRouteState = (hops: string[], proxies: Record<string, ProxyNode>): RouteState => {
@@ -191,6 +204,9 @@ interface GameStoreState {
   commandHistory: string[];
   lastVfxEvent: VfxEvent | null;
   soundCue: SoundCue;
+  isExecuting: boolean;
+  executionPhase: ExecutionPhase;
+  scanAnimation: ScanAnimation | null;
   runCommand: (input: string) => Promise<void>;
   clearTerminal: () => void;
   loadSavedState: () => Promise<void>;
@@ -198,16 +214,20 @@ interface GameStoreState {
   acknowledgeSoundCue: () => void;
   addTerminalLine: (line: TerminalLine) => void;
   resetWorld: () => Promise<void>;
+  setScanAnimation: (animation: ScanAnimation | null) => void;
+  setExecutionPhase: (phase: ExecutionPhase) => void;
 }
 
 const welcomeMessage = (): TerminalLine[] => [
   createLine("╔═══════════════════════════════════════════════════════╗", "info"),
-  createLine("║           ProxyTrace v0.1 - Terminal Interface         ║", "info"),
+  createLine("║               Link26 :: Terminal v2026.1               ║", "info"),
+  createLine("║         A sentimental road back to Uplink times        ║", "info"),
   createLine("╚═══════════════════════════════════════════════════════╝", "info"),
   createLine("", "info"),
-  createLine("Welcome, operator. Your mission inbox contains 3 contracts.", "info"),
-  createLine("Type 'inbox' to view available missions.", "info"),
-  createLine("Type 'help' for command reference.", "info"),
+  createLine("Welcome back, operator. The network awaits.", "info"),
+  createLine("Your mission inbox contains 3 contracts.", "info"),
+  createLine("", "info"),
+  createLine("Type 'inbox' to view missions. Type 'help' for commands.", "info"),
   createLine("", "info"),
 ];
 
@@ -217,10 +237,15 @@ export const useGameStore = create<GameStoreState>()((set, get) => ({
   commandHistory: [],
   lastVfxEvent: null,
   soundCue: null,
+  isExecuting: false,
+  executionPhase: "idle" as ExecutionPhase,
+  scanAnimation: null,
   addTerminalLine: (line) =>
     set((state) => ({ terminalLines: [...state.terminalLines, line] })),
   clearTerminal: () => set({ terminalLines: [] }),
   acknowledgeSoundCue: () => set({ soundCue: null }),
+  setScanAnimation: (animation) => set({ scanAnimation: animation }),
+  setExecutionPhase: (phase) => set({ executionPhase: phase, isExecuting: phase !== "idle" && phase !== "complete" }),
   resetWorld: async () => {
     // Clear saved state from IndexedDB
     await localSaveProvider.clear();
@@ -232,6 +257,9 @@ export const useGameStore = create<GameStoreState>()((set, get) => ({
       commandHistory: [],
       lastVfxEvent: null,
       soundCue: null,
+      isExecuting: false,
+      executionPhase: "idle",
+      scanAnimation: null,
     });
   },
   loadSavedState: async () => {
@@ -471,15 +499,63 @@ export const useGameStore = create<GameStoreState>()((set, get) => ({
           emit([createLine(`Host ${args[0]} not found.`, "error")]);
           break;
         }
-        // Simulate scanning delay with progressive output
-        emit([createLine(`Scanning ${host.label}...`, "info")]);
+        
+        // Start scan animation sequence
+        const hasRoute = route.hops.length > 0;
+        const scanMode = flags.includes("stealth") ? "STEALTH" : flags.includes("aggr") ? "AGGRESSIVE" : "STANDARD";
+        
+        // Initial output - routing phase
+        emit([
+          createLine(`[SCAN] Initiating ${scanMode} scan on ${host.label}`, "info"),
+          createLine(`[ROUTE] ${hasRoute ? `Routing through ${route.hops.length} proxy hop${route.hops.length > 1 ? "s" : ""}...` : "DIRECT CONNECTION - No proxy route!"}`, hasRoute ? "info" : "warning"),
+        ]);
+        
+        // Set up scan animation for the map
+        const scanAnim: ScanAnimation = {
+          fromNode: route.hops.length > 0 ? route.hops[route.hops.length - 1] : "player",
+          toNode: host.id,
+          throughProxies: [...route.hops],
+          phase: "routing",
+          progress: 0,
+          startTime: Date.now(),
+        };
+        set({ scanAnimation: scanAnim, isExecuting: true, executionPhase: "routing" });
+        
+        // Delayed output for drama
         setTimeout(() => {
-          // This won't work in current structure, but we'll add visual feedback
-        }, 100);
-        const lines = formatScanOutput(host).map((line) => createLine(line));
-        emit(lines);
+          set((state) => ({
+            terminalLines: [...state.terminalLines, createLine(`[PROBE] Enumerating ports on ${host.label}...`, "info")],
+            scanAnimation: state.scanAnimation ? { ...state.scanAnimation, phase: "scanning", progress: 0.5 } : null,
+            executionPhase: "executing",
+          }));
+        }, 400);
+        
+        setTimeout(() => {
+          set((state) => ({
+            terminalLines: [...state.terminalLines, createLine(`[PROBE] Fingerprinting services...`, "info")],
+            scanAnimation: state.scanAnimation ? { ...state.scanAnimation, progress: 0.75 } : null,
+          }));
+        }, 800);
+        
+        // Final results after animation
+        setTimeout(() => {
+          const lines = formatScanOutput(host).map((line) => createLine(line, "success"));
+          set((state) => ({
+            terminalLines: [...state.terminalLines, createLine(`[COMPLETE] Scan finished.`, "success"), ...lines],
+            scanAnimation: { ...state.scanAnimation!, phase: "complete", progress: 1 },
+            executionPhase: "complete",
+            isExecuting: false,
+          }));
+          
+          // Clear animation after a moment
+          setTimeout(() => {
+            set({ scanAnimation: null, executionPhase: "idle" });
+          }, 1500);
+        }, 1200);
+        
         const baseNoise = flags.includes("stealth") ? 6 : flags.includes("aggr") ? 18 : 12;
         appendTrace(baseNoise, host);
+        
         // Ensure scannedHosts is a Set
         let scannedHostsSet = session.scannedHosts;
         if (!scannedHostsSet) {
@@ -492,7 +568,7 @@ export const useGameStore = create<GameStoreState>()((set, get) => ({
         scannedHostsSet.add(host.id);
         nextState = { ...nextState, session: { ...session, currentTarget: host.id, scannedHosts: scannedHostsSet } };
         soundCue = "scan";
-        vfxEvent = { type: "scan" };
+        vfxEvent = { type: "scan", target: host.id };
         break;
       }
       case "probe": {
@@ -546,28 +622,78 @@ export const useGameStore = create<GameStoreState>()((set, get) => ({
         const wasScanned = scannedHosts.has(host.id);
 
         // Check if route exists
-        const hasRoute = route.hops.length > 0;
+        const hasRouteForConnect = route.hops.length > 0;
+
+        // Staged connection output
+        emit([
+          createLine(`[CONNECT] Initiating session to ${host.label}...`, "info"),
+          createLine(`[ROUTE] ${hasRouteForConnect ? `Establishing tunnel through ${route.hops.length} hop${route.hops.length > 1 ? "s" : ""}` : "WARNING: Direct connection - no proxy!"}`, hasRouteForConnect ? "info" : "warning"),
+        ]);
+        
+        // Set connection animation
+        const connectAnim: ScanAnimation = {
+          fromNode: route.hops.length > 0 ? route.hops[route.hops.length - 1] : "player",
+          toNode: host.id,
+          throughProxies: [...route.hops],
+          phase: "routing",
+          progress: 0,
+          startTime: Date.now(),
+        };
+        set({ scanAnimation: connectAnim, isExecuting: true, executionPhase: "routing" });
 
         // Warn and apply penalties if requirements not met
         if (!wasScanned) {
-          emit([
-            createLine(`WARNING: Host ${host.label} not scanned. Direct connection detected immediately.`, "warning"),
-            createLine("Trace noise will be extremely high. Use 'scan' first.", "warning"),
-          ]);
+          setTimeout(() => {
+            set((state) => ({
+              terminalLines: [...state.terminalLines, 
+                createLine(`[!] WARNING: Host not scanned. IDS triggered.`, "warning"),
+              ],
+            }));
+          }, 300);
         }
 
-        if (!hasRoute) {
-          emit([
-            createLine(`WARNING: No proxy route configured. Direct connection exposes your IP.`, "warning"),
-            createLine("Trace noise will be extremely high. Build route with 'route add <proxy>'.", "warning"),
-          ]);
+        if (!hasRouteForConnect) {
+          setTimeout(() => {
+            set((state) => ({
+              terminalLines: [...state.terminalLines,
+                createLine(`[!] WARNING: No proxy route. IP exposed.`, "warning"),
+              ],
+            }));
+          }, 500);
         }
 
         // Calculate trace penalty - make it VERY visible
         let connectionNoise = 15; // Base connection noise (higher)
         if (!wasScanned) connectionNoise += 35; // Massive penalty for no scan
-        if (!hasRoute) connectionNoise += 40; // Massive penalty for no route
-        if (!wasScanned && !hasRoute) connectionNoise += 20; // Extra penalty for both
+        if (!hasRouteForConnect) connectionNoise += 40; // Massive penalty for no route
+        if (!wasScanned && !hasRouteForConnect) connectionNoise += 20; // Extra penalty for both
+
+        // Delayed connection complete
+        setTimeout(() => {
+          set((state) => ({
+            terminalLines: [...state.terminalLines,
+              createLine(`[HANDSHAKE] Negotiating encryption...`, "info"),
+            ],
+            scanAnimation: state.scanAnimation ? { ...state.scanAnimation, phase: "scanning", progress: 0.6 } : null,
+            executionPhase: "executing",
+          }));
+        }, 700);
+
+        setTimeout(() => {
+          set((state) => ({
+            terminalLines: [...state.terminalLines,
+              createLine(`[SESSION] Connection established to ${host.label}`, hasRouteForConnect && wasScanned ? "success" : "warning"),
+              createLine(`[TRACE] Noise spike: +${connectionNoise} | Current: ${(state.gameState.trace.level).toFixed(1)}%`, connectionNoise > 30 ? "error" : "warning"),
+            ],
+            scanAnimation: { ...state.scanAnimation!, phase: "complete", progress: 1 },
+            executionPhase: "complete",
+            isExecuting: false,
+          }));
+          
+          setTimeout(() => {
+            set({ scanAnimation: null, executionPhase: "idle" });
+          }, 1000);
+        }, 1100);
 
         nextState = {
           ...nextState,
@@ -580,17 +706,13 @@ export const useGameStore = create<GameStoreState>()((set, get) => ({
           },
         };
         appendTrace(connectionNoise, host);
-        emit([
-          createLine(`Connected to ${host.label}.`, hasRoute && wasScanned ? "success" : "warning"),
-          createLine(`Trace increased by ${connectionNoise} points. Current: ${nextState.trace.level.toFixed(1)}%`, "warning"),
-        ]);
         
         if (connectionNoise > 20 || nextState.trace.level > 25) {
-          vfxEvent = { type: "alert" };
+          vfxEvent = { type: "alert", target: host.id };
           soundCue = "alert";
         } else {
           soundCue = "connect";
-          vfxEvent = { type: "scan" };
+          vfxEvent = { type: "connect", target: host.id };
         }
         break;
       }
@@ -760,7 +882,7 @@ export const useGameStore = create<GameStoreState>()((set, get) => ({
         soundCue = "alert";
     }
 
-    const commandLine = createLine(`ptx> ${trimmed}`, "command");
+    const commandLine = createLine(`lnk> ${trimmed}`, "command");
 
     set((state) => {
       const baseBuffer = clearScreen ? [] : state.terminalLines;

@@ -3,6 +3,7 @@
 import { MouseEvent, PointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { RouteState, World, TraceInfo } from "@/types/game";
 import { continents, drawContinent } from "@/app/lib/map/continents";
+import { useGameStore, ScanAnimation } from "@/app/lib/persistence/store";
 
 type MapCanvasProps = {
   world: World;
@@ -25,6 +26,10 @@ export default function MapCanvas({ world, route, trace, focusHost, session, onP
   const [routeAnimationPhase, setRouteAnimationPhase] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const routeLengthRef = useRef(route.hops.length);
+  
+  // Scan animation state from store
+  const scanAnimation = useGameStore((state) => state.scanAnimation);
+  const [scanWaveProgress, setScanWaveProgress] = useState(0);
 
   const nodes = useMemo(() => ({
     proxies: Object.values(world.proxies),
@@ -56,6 +61,31 @@ export default function MapCanvas({ world, route, trace, focusHost, session, onP
     animate();
     return () => cancelAnimationFrame(frame);
   }, [route.hops.length]);
+
+  // Scan wave animation
+  useEffect(() => {
+    if (!scanAnimation) {
+      setScanWaveProgress(0);
+      return;
+    }
+    
+    const startTime = scanAnimation.startTime;
+    const duration = scanAnimation.phase === "routing" ? 600 : scanAnimation.phase === "scanning" ? 800 : 400;
+    
+    let frame: number;
+    const animateWave = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      setScanWaveProgress(progress);
+      
+      if (progress < 1) {
+        frame = requestAnimationFrame(animateWave);
+      }
+    };
+    
+    frame = requestAnimationFrame(animateWave);
+    return () => cancelAnimationFrame(frame);
+  }, [scanAnimation]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -276,6 +306,153 @@ export default function MapCanvas({ world, route, trace, focusHost, session, onP
       }
     }
 
+    // -------- SCAN WAVE ANIMATION --------
+    if (scanAnimation && scanAnimation.toNode) {
+      const targetHost = world.hosts[scanAnimation.toNode];
+      if (targetHost) {
+        const targetPoint = toCanvasPoint(targetHost.geo.lat, targetHost.geo.lon, width, height);
+        
+        // Build the path: player/center -> proxies -> target
+        const pathPoints: { x: number; y: number }[] = [];
+        
+        // Start point (center of canvas for "player")
+        pathPoints.push({ x: width / 2, y: height / 2 });
+        
+        // Add proxy hops
+        scanAnimation.throughProxies.forEach((proxyId) => {
+          const proxy = world.proxies[proxyId];
+          if (proxy) {
+            const point = toCanvasPoint(proxy.geo.lat, proxy.geo.lon, width, height);
+            pathPoints.push(point);
+          }
+        });
+        
+        // End point is the target
+        pathPoints.push(targetPoint);
+        
+        // Calculate total path length
+        let totalLength = 0;
+        const segmentLengths: number[] = [];
+        for (let i = 0; i < pathPoints.length - 1; i++) {
+          const dx = pathPoints[i + 1].x - pathPoints[i].x;
+          const dy = pathPoints[i + 1].y - pathPoints[i].y;
+          const len = Math.sqrt(dx * dx + dy * dy);
+          segmentLengths.push(len);
+          totalLength += len;
+        }
+        
+        // Draw the scan wave traveling along the path
+        const waveProgress = scanWaveProgress;
+        const waveDistance = waveProgress * totalLength;
+        
+        // Find where the wave is
+        let accumulatedLength = 0;
+        let waveX = pathPoints[0].x;
+        let waveY = pathPoints[0].y;
+        
+        for (let i = 0; i < segmentLengths.length; i++) {
+          if (accumulatedLength + segmentLengths[i] >= waveDistance) {
+            const localProgress = (waveDistance - accumulatedLength) / segmentLengths[i];
+            waveX = pathPoints[i].x + (pathPoints[i + 1].x - pathPoints[i].x) * localProgress;
+            waveY = pathPoints[i].y + (pathPoints[i + 1].y - pathPoints[i].y) * localProgress;
+            break;
+          }
+          accumulatedLength += segmentLengths[i];
+        }
+        
+        // Draw the wave trail (glowing line from start to current position)
+        const gradient = ctx.createLinearGradient(pathPoints[0].x, pathPoints[0].y, waveX, waveY);
+        gradient.addColorStop(0, "rgba(56, 189, 248, 0.1)");
+        gradient.addColorStop(0.7, "rgba(56, 189, 248, 0.6)");
+        gradient.addColorStop(1, "rgba(56, 189, 248, 1)");
+        
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 3;
+        ctx.shadowColor = "rgba(56, 189, 248, 1)";
+        ctx.shadowBlur = 15;
+        ctx.setLineDash([8, 4]);
+        ctx.beginPath();
+        
+        // Draw path up to wave position
+        let drawnLength = 0;
+        ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
+        for (let i = 0; i < segmentLengths.length && drawnLength < waveDistance; i++) {
+          const remainingDistance = waveDistance - drawnLength;
+          if (segmentLengths[i] <= remainingDistance) {
+            ctx.lineTo(pathPoints[i + 1].x, pathPoints[i + 1].y);
+            drawnLength += segmentLengths[i];
+          } else {
+            ctx.lineTo(waveX, waveY);
+            break;
+          }
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        // Draw the wave pulse
+        const pulseSize = 8 + Math.sin(phase * 4) * 3;
+        const pulseOpacity = 0.8 + Math.sin(phase * 4) * 0.2;
+        
+        // Outer glow ring
+        ctx.beginPath();
+        ctx.strokeStyle = `rgba(56, 189, 248, ${pulseOpacity * 0.4})`;
+        ctx.lineWidth = 2;
+        ctx.arc(waveX, waveY, pulseSize + 8, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Middle ring
+        ctx.beginPath();
+        ctx.strokeStyle = `rgba(56, 189, 248, ${pulseOpacity * 0.7})`;
+        ctx.lineWidth = 2;
+        ctx.arc(waveX, waveY, pulseSize + 4, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Core pulse
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(56, 189, 248, ${pulseOpacity})`;
+        ctx.shadowColor = "rgba(56, 189, 248, 1)";
+        ctx.shadowBlur = 20;
+        ctx.arc(waveX, waveY, pulseSize, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        
+        // Light up proxies that the wave has passed
+        pathPoints.slice(1, -1).forEach((point, index) => {
+          const proxyDistance = segmentLengths.slice(0, index + 1).reduce((a, b) => a + b, 0);
+          if (waveDistance >= proxyDistance) {
+            // Proxy has been passed - light it up
+            ctx.beginPath();
+            ctx.fillStyle = "rgba(56, 189, 248, 0.8)";
+            ctx.shadowColor = "rgba(56, 189, 248, 1)";
+            ctx.shadowBlur = 12;
+            ctx.arc(point.x, point.y, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+          }
+        });
+        
+        // Light up target when wave reaches it
+        if (waveProgress >= 0.95) {
+          const rippleSize = 15 + (waveProgress - 0.95) * 200;
+          const rippleOpacity = Math.max(0, 1 - (waveProgress - 0.95) * 10);
+          
+          ctx.beginPath();
+          ctx.strokeStyle = `rgba(56, 189, 248, ${rippleOpacity * 0.6})`;
+          ctx.lineWidth = 3;
+          ctx.shadowColor = "rgba(56, 189, 248, 1)";
+          ctx.shadowBlur = 15;
+          ctx.arc(targetPoint.x, targetPoint.y, rippleSize, 0, Math.PI * 2);
+          ctx.stroke();
+          
+          ctx.beginPath();
+          ctx.strokeStyle = `rgba(56, 189, 248, ${rippleOpacity * 0.3})`;
+          ctx.arc(targetPoint.x, targetPoint.y, rippleSize + 10, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+        }
+      }
+    }
+
     // Draw ALL hosts as simple squares like Uplink
     Object.values(world.hosts).forEach((host) => {
       const { x, y } = toCanvasPoint(host.geo.lat, host.geo.lon, width, height);
@@ -373,7 +550,7 @@ export default function MapCanvas({ world, route, trace, focusHost, session, onP
       }
       ctx.shadowBlur = 0;
     }
-  }, [nodes.proxies, nodes.hosts, route.hops, focusHost, phase, routeAnimationPhase, hoveredProxyId, world, toCanvasPoint, session, isFullscreen]);
+  }, [nodes.proxies, nodes.hosts, route.hops, focusHost, phase, routeAnimationPhase, hoveredProxyId, world, toCanvasPoint, session, isFullscreen, scanAnimation, scanWaveProgress]);
 
   const handlePointer = (event: PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;

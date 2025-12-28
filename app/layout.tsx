@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ProxyTrace",
-  description: "Offline-first proxy trace terminal inspired by classic hacker sims.",
+  title: "Link26",
+  description: "A sentimental road back to Uplink times, but in 2026.",
 };
 
 export default function RootLayout({

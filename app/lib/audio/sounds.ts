@@ -80,3 +80,36 @@ export function playFileOp() {
   // Subtle file operation sound
   playTone(600, 0.1, "sine", 0.5);
 }
+
+export function playTraceRise() {
+  // Warning tone for trace increase
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "sawtooth";
+  osc.frequency.setValueAtTime(200, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.15);
+  gain.gain.value = volume * 0.5;
+  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.2);
+}
+
+export function playTraceWarning() {
+  // Urgent warning for high trace
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  for (let i = 0; i < 2; i++) {
+    setTimeout(() => {
+      playChord([300, 200], 0.12, "sawtooth");
+    }, i * 150);
+  }
+}
+
+export function playTyping() {
+  // Subtle typing click
+  playTone(1800, 0.02, "square", 0.3);
+}

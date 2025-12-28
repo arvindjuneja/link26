@@ -5,6 +5,10 @@
   --background: #010409;
   --foreground: #eef2ff;
   --accent: #14b8a6;
+  --trace-calm: #10b981;
+  --trace-alert: #f59e0b;
+  --trace-hunt: #f97316;
+  --trace-lockdown: #ef4444;
 }
 
 * {
@@ -20,4 +24,263 @@ body {
 
 a, button {
   font-family: inherit;
+}
+
+/* Terminal cursor blink */
+@keyframes cursor-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.cursor-blink {
+  animation: cursor-blink 1s step-end infinite;
+}
+
+/* Typewriter effect */
+@keyframes typewriter {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+/* Scan wave pulse */
+@keyframes scan-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.scan-pulse {
+  animation: scan-pulse 0.8s ease-out forwards;
+}
+
+/* Glitch effect for status changes */
+@keyframes glitch {
+  0% {
+    transform: translate(0);
+    opacity: 1;
+  }
+  20% {
+    transform: translate(-2px, 2px);
+    opacity: 0.8;
+  }
+  40% {
+    transform: translate(2px, -2px);
+    opacity: 0.9;
+  }
+  60% {
+    transform: translate(-1px, 1px);
+    opacity: 0.7;
+  }
+  80% {
+    transform: translate(1px, -1px);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(0);
+    opacity: 1;
+  }
+}
+
+.glitch {
+  animation: glitch 0.3s ease-in-out;
+}
+
+/* Trace status border glow effects */
+@keyframes border-glow-calm {
+  0%, 100% { box-shadow: 0 0 5px var(--trace-calm), inset 0 0 3px var(--trace-calm); }
+  50% { box-shadow: 0 0 10px var(--trace-calm), inset 0 0 5px var(--trace-calm); }
+}
+
+@keyframes border-glow-alert {
+  0%, 100% { box-shadow: 0 0 8px var(--trace-alert), inset 0 0 4px var(--trace-alert); }
+  50% { box-shadow: 0 0 15px var(--trace-alert), inset 0 0 8px var(--trace-alert); }
+}
+
+@keyframes border-glow-hunt {
+  0%, 100% { box-shadow: 0 0 10px var(--trace-hunt), inset 0 0 5px var(--trace-hunt); }
+  50% { box-shadow: 0 0 20px var(--trace-hunt), inset 0 0 10px var(--trace-hunt); }
+}
+
+@keyframes border-glow-lockdown {
+  0%, 100% { 
+    box-shadow: 0 0 15px var(--trace-lockdown), inset 0 0 8px var(--trace-lockdown);
+    border-color: var(--trace-lockdown);
+  }
+  50% { 
+    box-shadow: 0 0 30px var(--trace-lockdown), inset 0 0 15px var(--trace-lockdown);
+    border-color: #fca5a5;
+  }
+}
+
+.border-glow-calm { animation: border-glow-calm 3s ease-in-out infinite; }
+.border-glow-alert { animation: border-glow-alert 2s ease-in-out infinite; }
+.border-glow-hunt { animation: border-glow-hunt 1.5s ease-in-out infinite; }
+.border-glow-lockdown { animation: border-glow-lockdown 0.8s ease-in-out infinite; }
+
+/* Text flicker for high trace */
+@keyframes text-flicker {
+  0%, 100% { opacity: 1; }
+  10% { opacity: 0.8; }
+  20% { opacity: 1; }
+  30% { opacity: 0.9; }
+  40% { opacity: 1; }
+  50% { opacity: 0.85; }
+  60% { opacity: 1; }
+  70% { opacity: 0.95; }
+}
+
+.text-flicker {
+  animation: text-flicker 2s ease-in-out infinite;
+}
+
+/* Scanline effect */
+@keyframes scanline-move {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+.scanline {
+  position: relative;
+  overflow: hidden;
+}
+
+.scanline::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(255, 255, 255, 0.03) 50%,
+    transparent 100%
+  );
+  animation: scanline-move 4s linear infinite;
+  pointer-events: none;
+}
+
+/* Terminal line entry animation */
+@keyframes line-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.line-enter {
+  animation: line-enter 0.15s ease-out;
+}
+
+/* Smooth fade in for terminal lines */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.25s ease-out;
+}
+
+/* Pulse ring for targets */
+@keyframes target-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.target-pulse {
+  animation: target-pulse 1.5s ease-out infinite;
+}
+
+/* Data stream effect for routes */
+@keyframes data-stream {
+  0% { transform: translateX(-100%); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateX(100%); opacity: 0; }
+}
+
+/* CRT screen effect (subtle) */
+.crt-effect {
+  position: relative;
+}
+
+.crt-effect::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: 
+    linear-gradient(
+      to bottom,
+      transparent 50%,
+      rgba(0, 0, 0, 0.02) 50%
+    );
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* Scrollbar styling */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
+
+/* Selection colors */
+::selection {
+  background: var(--accent);
+  color: var(--background);
+}
+
+/* Focus styles for accessibility - but not on terminal input */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Remove all focus styling from terminal input */
+input[type="text"]:focus,
+input:focus {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  ring: none !important;
+}
+
+/* Smooth transitions for UI state changes */
+.transition-trace {
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
