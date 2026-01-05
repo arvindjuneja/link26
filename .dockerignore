@@ -1,0 +1,28 @@
+# Dependencies
+node_modules
+
+# Build output
+.next
+out
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Debug
+npm-debug.log*
+
+# Env files
+.env*
+
+# Misc
+*.md
+.DS_Store
+Dockerfile
+.dockerignore

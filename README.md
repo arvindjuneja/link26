@@ -55,6 +55,8 @@ disconnect              Drop connection (trace decays while idle)
 
 ## Getting Started
 
+#### Local Development
+
 ```bash
 # Install dependencies
 npm install
@@ -64,6 +66,24 @@ npm run dev
 
 # Build for production
 npm run build
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+#### Docker
+
+```bash
+# Build the image
+docker build -t link26 .
+
+# Run the container
+docker run -p 3000:3000 link26
+```
+
+Or use Docker Compose:
+
+```bash
+docker compose up -d
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
