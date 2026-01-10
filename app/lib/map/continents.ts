@@ -139,3 +139,5 @@ export function drawContinent(
   ctx.stroke();
 }
 
+
+

@@ -49,10 +49,11 @@ export default function Terminal() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   
-  // Typewriter state
-  const [displayedLines, setDisplayedLines] = useState<typeof terminalLines>([]);
-  const [isTyping, setIsTyping] = useState(false);
-  const typingRef = useRef<NodeJS.Timeout | null>(null);
+  // Typewriter effect state - track which lines are fully displayed
+  const [displayedLineCount, setDisplayedLineCount] = useState(0);
+  const [currentLineText, setCurrentLineText] = useState("");
+  const [isAnimating, setIsAnimating] = useState(false);
+  const animationRef = useRef<{ cancelled: boolean }>({ cancelled: false });
   
   // Cursor blink
   const [cursorVisible, setCursorVisible] = useState(true);
@@ -69,11 +70,26 @@ export default function Terminal() {
     return () => clearInterval(interval);
   }, []);
 
+  // Focus input on mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Focus when not animating
+  useEffect(() => {
+    if (!isAnimating && !isExecuting) {
+      inputRef.current?.focus();
+    }
+  }, [isAnimating, isExecuting]);
+
   // Random system message injection (atmospheric)
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
-      if (session.connectedHost && !isTyping && now - lastSystemMsgTime.current > 10000) {
+      if (session.connectedHost && !isAnimating && now - lastSystemMsgTime.current > 10000) {
         if (Math.random() > 0.65) {
           const msg = systemMessages[Math.floor(Math.random() * systemMessages.length)];
           addTerminalLine({
@@ -86,77 +102,65 @@ export default function Terminal() {
       }
     }, 6000);
     return () => clearInterval(interval);
-  }, [session.connectedHost, isTyping, addTerminalLine]);
+  }, [session.connectedHost, isAnimating, addTerminalLine]);
 
-  // Typewriter effect - smooth character by character
+  // Typewriter animation effect
   useEffect(() => {
-    // Clear any existing typing timeout
-    if (typingRef.current) {
-      clearTimeout(typingRef.current);
-    }
-
-    if (terminalLines.length <= displayedLines.length) {
-      setDisplayedLines(terminalLines);
+    // If we're caught up, nothing to animate
+    if (displayedLineCount >= terminalLines.length) {
+      setIsAnimating(false);
+      setCurrentLineText("");
       return;
     }
 
-    // New lines to type
-    const newLines = terminalLines.slice(displayedLines.length);
-    if (newLines.length === 0) return;
+    // Cancel any previous animation
+    animationRef.current.cancelled = true;
+    const thisAnimation = { cancelled: false };
+    animationRef.current = thisAnimation;
 
-    setIsTyping(true);
-    let lineIndex = 0;
-    let charIndex = 0;
-    const currentDisplayed = [...displayedLines];
+    setIsAnimating(true);
 
-    const typeNextChar = () => {
-      if (lineIndex >= newLines.length) {
-        setIsTyping(false);
-        setDisplayedLines(terminalLines);
-        return;
-      }
-
-      const currentLine = newLines[lineIndex];
-      const fullText = currentLine.text;
+    const animateLines = async () => {
+      let lineIdx = displayedLineCount;
       
-      // Slower, more consistent timing
-      const isCommand = currentLine.type === "command";
-      const baseDelay = isCommand ? 12 : 18;
+      while (lineIdx < terminalLines.length && !thisAnimation.cancelled) {
+        const line = terminalLines[lineIdx];
+        const fullText = line.text;
+        const isCommand = line.type === "command";
+        const charDelay = isCommand ? 8 : 14;
 
-      if (charIndex === 0) {
-        // Start new line
-        currentDisplayed.push({
-          ...currentLine,
-          text: "",
-        });
+        // Type out each character
+        for (let i = 0; i <= fullText.length && !thisAnimation.cancelled; i++) {
+          setCurrentLineText(fullText.slice(0, i));
+          if (i < fullText.length) {
+            await new Promise(resolve => setTimeout(resolve, charDelay));
+          }
+        }
+
+        if (thisAnimation.cancelled) break;
+
+        // Line complete - move to next
+        lineIdx++;
+        setDisplayedLineCount(lineIdx);
+        setCurrentLineText("");
+        
+        // Small pause between lines
+        if (lineIdx < terminalLines.length) {
+          await new Promise(resolve => setTimeout(resolve, 40));
+        }
       }
 
-      if (charIndex < fullText.length) {
-        // Type next character
-        currentDisplayed[currentDisplayed.length - 1] = {
-          ...currentLine,
-          text: fullText.slice(0, charIndex + 1),
-        };
-        setDisplayedLines([...currentDisplayed]);
-        charIndex++;
-        typingRef.current = setTimeout(typeNextChar, baseDelay);
-      } else {
-        // Move to next line
-        lineIndex++;
-        charIndex = 0;
-        typingRef.current = setTimeout(typeNextChar, 80);
+      if (!thisAnimation.cancelled) {
+        setIsAnimating(false);
       }
     };
 
-    // Start typing
-    typingRef.current = setTimeout(typeNextChar, 50);
-    
+    animateLines();
+
     return () => {
-      if (typingRef.current) {
-        clearTimeout(typingRef.current);
-      }
+      thisAnimation.cancelled = true;
     };
-  }, [terminalLines, displayedLines.length]);
+  }, [terminalLines, displayedLineCount]);
 
   const statusInfo = statusLabel[traceStatus] ?? statusLabel.CALM;
   
@@ -182,11 +186,17 @@ export default function Terminal() {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [displayedLines.length]);
+  }, [displayedLineCount, currentLineText]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!inputValue.trim() || isTyping || isExecuting) return;
+    if (!inputValue.trim() || isExecuting) return;
+    // Skip animation for pending lines when user submits new command
+    if (isAnimating) {
+      setDisplayedLineCount(terminalLines.length);
+      setCurrentLineText("");
+      setIsAnimating(false);
+    }
     await runCommand(inputValue);
     setInputValue("");
     setHistoryIndex(-1);
@@ -216,23 +226,44 @@ export default function Terminal() {
     }
   };
 
-  const renderedLines = useMemo(
-    () =>
-      displayedLines.map((line) => {
-        const isSystemLine = line.text.startsWith("//");
-        return (
-          <pre
-            key={line.id}
-            className={`m-0 text-xs leading-5 ${
-              isSystemLine ? "text-cyan-500/40 italic" : (typeClass[line.type as keyof typeof typeClass] ?? typeClass.info)
-            }`}
-          >
-            {line.text}
-          </pre>
-        );
-      }),
-    [displayedLines]
-  );
+  const renderedLines = useMemo(() => {
+    const lines: React.ReactNode[] = [];
+    
+    // Render fully displayed lines
+    for (let i = 0; i < displayedLineCount && i < terminalLines.length; i++) {
+      const line = terminalLines[i];
+      const isSystemLine = line.text.startsWith("//");
+      lines.push(
+        <pre
+          key={line.id}
+          className={`m-0 text-xs leading-5 ${
+            isSystemLine ? "text-cyan-500/40 italic" : (typeClass[line.type as keyof typeof typeClass] ?? typeClass.info)
+          }`}
+        >
+          {line.text}
+        </pre>
+      );
+    }
+    
+    // Render currently typing line
+    if (displayedLineCount < terminalLines.length && currentLineText !== undefined) {
+      const currentLine = terminalLines[displayedLineCount];
+      const isSystemLine = currentLineText.startsWith("//");
+      lines.push(
+        <pre
+          key={currentLine.id + "-typing"}
+          className={`m-0 text-xs leading-5 ${
+            isSystemLine ? "text-cyan-500/40 italic" : (typeClass[currentLine.type as keyof typeof typeClass] ?? typeClass.info)
+          }`}
+        >
+          {currentLineText}
+          <span className="animate-pulse">▌</span>
+        </pre>
+      );
+    }
+    
+    return lines;
+  }, [terminalLines, displayedLineCount, currentLineText]);
 
   // Determine border color based on trace status
   const borderColor = traceStatus === "LOCKDOWN" 
@@ -243,8 +274,16 @@ export default function Terminal() {
     ? "border-amber-500/40" 
     : "border-zinc-800";
 
+  // Handle click on terminal to focus input (always focus, input is never disabled)
+  const handleTerminalClick = useCallback(() => {
+    inputRef.current?.focus();
+  }, []);
+
   return (
-    <div className={`flex h-full flex-col rounded border ${borderColor} bg-black/70 p-4 text-xs text-zinc-200 transition-colors duration-500`}>
+    <div 
+      className={`flex h-full flex-col rounded border ${borderColor} bg-black/70 p-4 text-xs text-zinc-200 transition-colors duration-500`}
+      onClick={handleTerminalClick}
+    >
       <div ref={scrollRef} className="flex-1 space-y-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
         {renderedLines.length === 0 && (
           <div className="flex h-full items-center justify-center text-zinc-500">
@@ -284,13 +323,12 @@ export default function Terminal() {
             onChange={(event) => setInputValue(event.target.value)}
             onKeyDown={handleKeyDown}
             autoComplete="off"
-            disabled={isTyping || isExecuting}
             className="w-full border-none bg-transparent font-mono text-sm text-zinc-100 outline-none ring-0 focus:border-none focus:outline-none focus:ring-0 placeholder:text-zinc-600"
-            placeholder={isTyping || isExecuting ? "" : "Type command..."}
+            placeholder={isExecuting ? "processing..." : isAnimating ? "" : "Type command..."}
             autoFocus
           />
           {/* Blinking cursor */}
-          {!isTyping && !isExecuting && (
+          {!isExecuting && !isAnimating && (
             <span 
               className={`pointer-events-none absolute font-mono text-sm text-lime-400 transition-opacity duration-100 ${cursorVisible ? "opacity-100" : "opacity-0"}`}
               style={{ left: `${inputValue.length * 0.6}em`, top: 0 }}
