@@ -96,8 +96,16 @@ const welcomeMessage = (): TerminalLine[] => [
   createLine("", "info"),
 ];
 
+// The store module is evaluated on BOTH server (SSR) and client, so the initial
+// state must be deterministic — a Date.now() seed here renders a different world
+// on each side and triggers a hydration mismatch. Use a fixed seed/time for the
+// pre-load state; a real saved game (or a reset) replaces it client-side after
+// mount. resetWorld() below still uses Date.now() for per-reset variety.
+const INITIAL_SEED = 26;
+const INITIAL_TIME = 1767225600000; // 2026-01-01 UTC
+
 export const useGameStore = create<GameStoreState>()((set, get) => ({
-  gameState: createInitialState(),
+  gameState: createInitialState({ seed: INITIAL_SEED, now: INITIAL_TIME }),
   terminalLines: welcomeMessage(),
   commandHistory: [],
   lastVfxEvent: null,
