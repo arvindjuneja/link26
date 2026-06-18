@@ -22,6 +22,8 @@ const multiWordCommands = [
   "route show",
   "route clear",
   "wipe logs",
+  "collect rf",
+  "deploy sensor",
 ];
 
 // ScanAnimation / ExecutionPhase now live in app/lib/game/effects.ts (shared

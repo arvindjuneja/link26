@@ -14,6 +14,7 @@
 // switch — the strangler-fig pattern.
 
 import type {
+  EvidenceCard,
   ExposureChannel,
   GameState,
   Host,
@@ -32,7 +33,14 @@ import {
 } from "@/app/lib/game/formatting";
 import { evaluateMission, setMissionStatus, syncInbox } from "@/app/lib/game/missionLogic";
 import { applyChannelNoise, EXPOSURE_CHANNELS } from "@/app/lib/game/exposure";
-import { buildRouteState, clamp, findHost, listFiles } from "@/app/lib/game/worldQueries";
+import {
+  buildRouteState,
+  clamp,
+  findEmitter,
+  findHost,
+  findPerson,
+  listFiles,
+} from "@/app/lib/game/worldQueries";
 
 export type SoundCue =
   | "click"
@@ -94,6 +102,11 @@ const HANDLED = new Set([
   "scan",
   "probe",
   "fingerprint",
+  "osint",
+  "collect rf",
+  "deploy sensor",
+  "acquire",
+  "evidence",
   // session / filesystem
   "connect",
   "pwd",
@@ -128,6 +141,14 @@ function applyExposure(
     exposure: applyChannelNoise(state.exposure, ch, noise, state.route, host),
     time: ctx.now,
   };
+}
+
+/** Append evidence cards, de-duped by (sourceId, factKind). Pure. */
+function addEvidence(state: GameState, cards: EvidenceCard[]): GameState {
+  const seen = new Set(state.evidence.map((e) => `${e.sourceId}:${e.factKind}`));
+  const fresh = cards.filter((c) => !seen.has(`${c.sourceId}:${c.factKind}`));
+  if (!fresh.length) return state;
+  return { ...state, evidence: [...state.evidence, ...fresh] };
 }
 
 /** Replace a single host in the world. Pure. */
@@ -677,6 +698,10 @@ export function reduceCommand(
       if (!wasScanned) connectionNoise += 35;
       if (!hasRoute) connectionNoise += 40;
       if (!wasScanned && !hasRoute) connectionNoise += 20;
+      // Acquired credentials authenticate the session — far less noise than a cold pop.
+      if ((state.session.acquired ?? []).includes(host.id)) {
+        connectionNoise = Math.max(5, connectionNoise - 25);
+      }
       result.state = applyExposure(
         {
           ...state,
@@ -740,6 +765,138 @@ export function reduceCommand(
       });
       effects.push({ atMs: 2100, anim: { type: "clear" }, executionPhase: "idle" });
       result.effects = effects;
+      break;
+    }
+
+    case "osint": {
+      const person = findPerson(state.world, cmd.args[0]);
+      if (!person) {
+        result.lines = [line(`No subject matches "${cmd.args[0] ?? ""}".`, "error")];
+        break;
+      }
+      const active = cmd.flags.includes("active");
+      const facts = person.facts.filter((f) => (active ? true : f.passive));
+      const cards: EvidenceCard[] = facts.map((f) => ({
+        id: ctx.nextId(),
+        sourceKind: "person",
+        sourceId: person.id,
+        factKind: f.kind,
+        label: f.label,
+        value: f.value,
+      }));
+      // Passive collection is near-zero footprint; active probing of a watched
+      // entity is the expensive, recognizable OSINT tradeoff.
+      const footprint = active ? 8 + (person.watched ? 6 : 0) : 2;
+      result.state = applyExposure(addEvidence(state, cards), "FOOTPRINT", footprint, ctx);
+      result.lines = [
+        line(
+          `[OSINT] ${active ? "ACTIVE" : "PASSIVE"} sweep on ${person.label}${
+            active && person.watched ? "  (watched entity — high footprint)" : ""
+          }`,
+          active ? "warning" : "info"
+        ),
+        ...facts.map((f) => line(`  + ${f.label}: ${f.value}`, "success")),
+        line(
+          active
+            ? "  active probing wrote to FOOTPRINT."
+            : "  passive only — run with --active to surface breach/device leads.",
+          "info"
+        ),
+      ];
+      result.soundCue = "scan";
+      result.vfx = { type: "scan" };
+      break;
+    }
+
+    case "collect rf":
+    case "deploy sensor": {
+      const emitter = findEmitter(state.world, cmd.args[0]);
+      if (!emitter) {
+        result.lines = [
+          line(`No emitter at "${cmd.args[0] ?? ""}". Pass a host id or emitter id.`, "error"),
+        ];
+        break;
+      }
+      const card: EvidenceCard = {
+        id: ctx.nextId(),
+        sourceKind: "emitter",
+        sourceId: emitter.id,
+        factKind: "signature",
+        label: `${emitter.band} emitter`,
+        value: emitter.signature,
+      };
+      result.state = applyExposure(addEvidence(state, [card]), "RF", 10, ctx);
+      result.lines = [
+        line(`[RF] Tasking remote sensor at ${emitter.label}...`, "info"),
+        line(`  band ${emitter.band} | signature ${emitter.signature}`, "success"),
+        line("  emitter characterized. RF exposure rising (DF risk).", "warning"),
+      ];
+      result.soundCue = "scan";
+      result.vfx = { type: "scan" };
+      break;
+    }
+
+    case "acquire": {
+      const host = findHost(state.world, cmd.args[0]);
+      if (!host) {
+        result.lines = [line(`Host ${cmd.args[0] ?? ""} not found.`, "error")];
+        break;
+      }
+      const spray = cmd.flags.includes("spray");
+      const orgPerson = state.world.people[`person-${host.id}`];
+      const hasCreds =
+        !!orgPerson &&
+        state.evidence.some((e) => e.sourceId === orgPerson.id && e.factKind === "breach");
+      if (!hasCreds && !spray) {
+        result.lines = [
+          line(`No harvested credentials for ${host.label}.`, "error"),
+          line(
+            `Run 'osint ${orgPerson?.label ?? "<subject>"} --active' to surface a breach record, or 'acquire ${
+              cmd.args[0]
+            } --spray' (loud).`,
+            "info"
+          ),
+        ];
+        break;
+      }
+      // Probabilistic gate — never a working technique, a roll against posture.
+      const base = hasCreds ? 0.75 : 0.35;
+      const chance = clamp(base - host.monitoring * 0.4, 0.05, 0.95);
+      const success = ctx.random() < chance;
+      const noise = (spray ? 22 : 8) + (success ? 0 : 6);
+      let next = applyExposure(state, "NETWORK", noise, ctx, host);
+      if (success) {
+        const acquired = Array.from(new Set([...(state.session.acquired ?? []), host.id]));
+        next = { ...next, session: { ...next.session, acquired } };
+        result.lines = [
+          line(`[ACCESS] ${spray ? "Spray" : "Credential"} attempt on ${host.label}...`, "info"),
+          line(`  access acquired. 'connect ${host.id}' will authenticate (lower noise).`, "success"),
+        ];
+        result.soundCue = "success";
+        result.vfx = { type: "success" };
+      } else {
+        result.lines = [
+          line(`[ACCESS] ${spray ? "Spray" : "Credential"} attempt on ${host.label}...`, "info"),
+          line("  rejected. NETWORK exposure spiked.", "warning"),
+        ];
+        result.soundCue = "alert";
+        result.vfx = { type: "alert" };
+      }
+      result.state = next;
+      break;
+    }
+
+    case "evidence": {
+      if (!state.evidence.length) {
+        result.lines = [line("No evidence collected. Try 'osint <subject>' or 'collect rf <host>'.", "info")];
+        break;
+      }
+      result.lines = [
+        line(`Evidence board (${state.evidence.length} cards):`),
+        ...state.evidence.map((e) =>
+          line(`  [${e.sourceId}] ${e.label}: ${e.value}`, "info")
+        ),
+      ];
       break;
     }
 

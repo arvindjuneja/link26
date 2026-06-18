@@ -62,7 +62,8 @@ export function createInitialState(options: InitialStateOptions = {}): GameState
     inbox,
     activeMissions: missions,
     world,
-    session: { scannedHosts: new Set() },
+    session: { scannedHosts: new Set(), acquired: [] },
     inventory: [],
+    evidence: [],
   };
 }

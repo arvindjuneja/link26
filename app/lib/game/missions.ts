@@ -1,4 +1,5 @@
 import { Mission, MissionObjective, MissionReward, MissionSummary, World } from "@/types/game";
+import { missionSummaryFromMission } from "@/app/lib/game/missionLogic";
 
 const missionBlueprints: Array<{
   id: string;
@@ -43,6 +44,31 @@ const missionBlueprints: Array<{
     },
     reward: { cash: 1600, reputation: 18 },
   },
+  {
+    id: "mission-faceless",
+    title: "Faceless",
+    description:
+      "Attribute the operator behind the Aurora lab handle. Assemble a handle, a work email and a breach record on them (`osint <handle> --active`).",
+    objective: {
+      type: "identify",
+      hostId: "aurora",
+      targetPersonId: "person-aurora",
+      requiredKinds: ["handle", "email", "breach"],
+    },
+    reward: { cash: 2000, reputation: 22 },
+  },
+  {
+    id: "mission-carrier",
+    title: "Silent Carrier",
+    description:
+      "Characterize the unlabeled emitter at the Solstice substation — band and signature only (`collect rf solstice`).",
+    objective: {
+      type: "characterize",
+      hostId: "solstice",
+      emitterId: "emitter-solstice",
+    },
+    reward: { cash: 1500, reputation: 16 },
+  },
 ];
 
 export function generateMissions(
@@ -50,7 +76,9 @@ export function generateMissions(
   now: number = Date.now()
 ): { inbox: MissionSummary[]; missions: Mission[] } {
   const missions: Mission[] = missionBlueprints.map((blueprint, index) => {
-    const host = world.hosts[blueprint.objective.hostId];
+    const host = blueprint.objective.hostId
+      ? world.hosts[blueprint.objective.hostId]
+      : undefined;
     const desc = host ? `${blueprint.description} Target: ${host.label}` : blueprint.description;
     return {
       ...blueprint,
@@ -62,15 +90,7 @@ export function generateMissions(
     } as Mission;
   });
 
-  const inbox: MissionSummary[] = missions.map((mission) => ({
-    id: mission.id,
-    title: mission.title,
-    description: mission.description,
-    reward: mission.reward,
-    targetHost: mission.objective.hostId,
-    deadline: mission.deadline,
-    status: mission.status,
-  }));
+  const inbox: MissionSummary[] = missions.map(missionSummaryFromMission);
 
   return { inbox, missions };
 }

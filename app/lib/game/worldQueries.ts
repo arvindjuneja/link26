@@ -1,7 +1,7 @@
 // Pure read helpers + small math shared by the reducer and the store.
 // Extracted so the migration to the pure reducer doesn't duplicate logic.
 
-import type { Host, ProxyNode, RouteState, World } from "@/types/game";
+import type { Host, Person, ProxyNode, RfEmitter, RouteState, World } from "@/types/game";
 
 export const clamp = (value: number, min: number, max: number) =>
   Math.max(min, Math.min(max, value));
@@ -35,6 +35,32 @@ export function findHost(world: World, query?: string): Host | undefined {
       host.id === normalized ||
       host.label.toLowerCase().includes(normalized) ||
       host.id === query
+  );
+}
+
+/** Resolve a person by id or fuzzy handle/org match. */
+export function findPerson(world: World, query?: string): Person | undefined {
+  if (!query) return undefined;
+  const q = query.toLowerCase();
+  return Object.values(world.people).find(
+    (p) =>
+      p.id === q ||
+      p.id === query ||
+      p.label.toLowerCase().includes(q) ||
+      (p.org ?? "").toLowerCase().includes(q)
+  );
+}
+
+/** Resolve an RF emitter by id, label, or the host site it sits at. */
+export function findEmitter(world: World, query?: string): RfEmitter | undefined {
+  if (!query) return undefined;
+  const q = query.toLowerCase();
+  return Object.values(world.emitters).find(
+    (e) =>
+      e.id === q ||
+      e.id === query ||
+      e.label.toLowerCase().includes(q) ||
+      (e.siteHostId ?? "").toLowerCase() === q
   );
 }
 

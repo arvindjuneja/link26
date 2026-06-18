@@ -135,11 +135,23 @@ export interface MissionReward {
 
 export type MissionStatus = "available" | "accepted" | "completed" | "failed";
 
+export type MissionObjectiveType =
+  | "exfil"
+  | "modify"
+  | "plant"
+  | "identify" // assemble evidence cards about a person
+  | "characterize"; // collect an RF emitter signature
+
 export interface MissionObjective {
-  type: "exfil" | "modify" | "plant";
-  hostId: string;
-  targetPath: string;
+  type: MissionObjectiveType;
+  hostId?: string;
+  targetPath?: string;
   marker?: string;
+  // identify: assemble cards of these fact kinds about this person
+  targetPersonId?: string;
+  requiredKinds?: string[];
+  // characterize: collect a signature card for this emitter
+  emitterId?: string;
 }
 
 export interface MissionSummary {
@@ -166,11 +178,24 @@ export interface InventoryItem {
   content?: string;
 }
 
+// A piece of intel collected from recon. The OSINT "identify" missions are
+// completed by ASSEMBLING the right set of cards (a deterministic predicate),
+// never by typing free text — that is what keeps grading crisp and fair.
+export interface EvidenceCard {
+  id: string;
+  sourceKind: "person" | "emitter";
+  sourceId: string;
+  factKind: string; // a PersonFact kind, or "signature" for an emitter
+  label: string;
+  value: string;
+}
+
 export interface SessionState {
   currentTarget?: string;
   connectedHost?: string;
   workingDir?: string;
   scannedHosts?: Set<string>;
+  acquired?: string[]; // host ids the player has acquired access credentials for
 }
 
 export interface GameState {
@@ -186,6 +211,7 @@ export interface GameState {
   world: World;
   session: SessionState;
   inventory: InventoryItem[];
+  evidence: EvidenceCard[]; // collected OSINT/RF intel (assembled for identify missions)
 }
 
 export interface TerminalLine {

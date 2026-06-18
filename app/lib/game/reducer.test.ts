@@ -4,11 +4,11 @@ import { createInitialState } from "@/app/lib/game/initialState";
 import { createDeterministicContext } from "@/app/lib/game/context";
 import { isReducerCommand, reduceCommand, type ParsedCommand } from "@/app/lib/game/reducer";
 
-const cmd = (key: string, args: string[] = []): ParsedCommand => ({
+const cmd = (key: string, args: string[] = [], flags: string[] = []): ParsedCommand => ({
   key,
   args,
-  flags: [],
-  raw: [key, ...args].join(" "),
+  flags,
+  raw: [key, ...args, ...flags.map((f) => `--${f}`)].join(" "),
 });
 
 // mission-ghost is an exfil objective on host "hq-node", path "/secrets.txt",
@@ -172,6 +172,73 @@ describe("gameReducer — scan / connect (effects channel)", () => {
     expect(r.lines[0].type).toBe("error");
     expect(r.effects).toBeUndefined();
     expect(r.state).toBe(state);
+  });
+});
+
+describe("gameReducer — recon surfaces (OSINT / RF / access)", () => {
+  const ctx = () => createDeterministicContext("recon", 0);
+
+  it("osint passive collects only passive facts at near-zero footprint", () => {
+    const state = createInitialState({ now: 0 });
+    const r = reduceCommand(state, cmd("osint", ["person-aurora"]), ctx())!;
+    expect(r.state.evidence.length).toBeGreaterThan(0);
+    expect(r.state.evidence.every((e) => e.sourceId === "person-aurora")).toBe(true);
+    // passive sweep surfaces no breach/device cards
+    expect(r.state.evidence.some((e) => e.factKind === "breach")).toBe(false);
+    expect(r.state.exposure.FOOTPRINT.level).toBeGreaterThan(0);
+  });
+
+  it("osint --active surfaces breach/device and costs more footprint", () => {
+    const state = createInitialState({ now: 0 });
+    const passive = reduceCommand(state, cmd("osint", ["person-aurora"]), ctx())!;
+    const active = reduceCommand(state, cmd("osint", ["person-aurora"], ["active"]), ctx())!;
+    expect(active.state.evidence.some((e) => e.factKind === "breach")).toBe(true);
+    expect(active.state.exposure.FOOTPRINT.level).toBeGreaterThan(passive.state.exposure.FOOTPRINT.level);
+  });
+
+  it("collect rf characterizes an emitter and raises RF", () => {
+    const state = createInitialState({ now: 0 });
+    const r = reduceCommand(state, cmd("collect rf", ["solstice"]), ctx())!;
+    expect(r.state.evidence.some((e) => e.sourceId === "emitter-solstice" && e.factKind === "signature")).toBe(true);
+    expect(r.state.exposure.RF.level).toBeGreaterThan(0);
+  });
+
+  it("acquire needs harvested creds first, then is deterministic + raises NETWORK", () => {
+    const state = createInitialState({ now: 0 });
+    const cold = reduceCommand(state, cmd("acquire", ["hq-node"]), ctx())!;
+    expect(cold.lines[0].text).toContain("No harvested credentials");
+
+    const withBreach = reduceCommand(state, cmd("osint", ["person-hq-node"], ["active"]), ctx())!.state;
+    const a = reduceCommand(withBreach, cmd("acquire", ["hq-node"]), ctx())!;
+    const b = reduceCommand(withBreach, cmd("acquire", ["hq-node"]), ctx())!;
+    expect(a.state.exposure.NETWORK.level).toBeGreaterThan(withBreach.exposure.NETWORK.level);
+    expect(a.state.session.acquired).toEqual(b.state.session.acquired); // deterministic
+  });
+});
+
+describe("gameReducer — evidence-assembly missions", () => {
+  const ctx = () => createDeterministicContext("missions", 0);
+
+  it("identify completes by assembling the required cards, not typing", () => {
+    const base = createInitialState({ now: 0 });
+    const accepted = reduceCommand(base, cmd("accept", ["mission-faceless"]), ctx())!.state;
+    // before recon: not satisfiable
+    const early = reduceCommand(accepted, cmd("submit", ["mission-faceless"]), ctx())!;
+    expect(early.lines.some((l) => l.text.includes("additional work"))).toBe(true);
+    // active OSINT surfaces handle+email+breach
+    const recon = reduceCommand(accepted, cmd("osint", ["person-aurora"], ["active"]), ctx())!.state;
+    const done = reduceCommand(recon, cmd("submit", ["mission-faceless"]), ctx())!;
+    expect(done.state.cash).toBe(base.cash + 2000);
+    expect(done.state.activeMissions.find((m) => m.id === "mission-faceless")!.status).toBe("completed");
+  });
+
+  it("characterize completes by collecting the emitter signature", () => {
+    const base = createInitialState({ now: 0 });
+    const accepted = reduceCommand(base, cmd("accept", ["mission-carrier"]), ctx())!.state;
+    const recon = reduceCommand(accepted, cmd("collect rf", ["solstice"]), ctx())!.state;
+    const done = reduceCommand(recon, cmd("submit", ["mission-carrier"]), ctx())!;
+    expect(done.state.cash).toBe(base.cash + 1500);
+    expect(done.state.activeMissions.find((m) => m.id === "mission-carrier")!.status).toBe("completed");
   });
 });
 
