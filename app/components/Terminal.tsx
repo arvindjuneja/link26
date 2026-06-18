@@ -2,6 +2,7 @@
 
 import { FormEvent, KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGameStore } from "@/app/lib/persistence/store";
+import { overallTrace } from "@/app/lib/game/exposure";
 import { playAlert, playBeep, playClick, playScan, playConnect, playSuccess, playRouteAdd, playFileOp } from "@/app/lib/audio/sounds";
 
 const typeClass = {
@@ -41,7 +42,7 @@ export default function Terminal() {
   const soundCue = useGameStore((state) => state.soundCue);
   const acknowledgeSoundCue = useGameStore((state) => state.acknowledgeSoundCue);
   const session = useGameStore((state) => state.gameState.session);
-  const traceStatus = useGameStore((state) => state.gameState.trace.status);
+  const traceStatus = useGameStore((state) => overallTrace(state.gameState.exposure).status);
   const isExecuting = useGameStore((state) => state.isExecuting);
   const [inputValue, setInputValue] = useState("");
   const [, setHistoryIndex] = useState(-1);

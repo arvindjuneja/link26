@@ -13,7 +13,14 @@
 // any command it does not (yet) own, so the store can fall back to its legacy
 // switch — the strangler-fig pattern.
 
-import type { GameState, Host, InventoryItem, TerminalLine, VfxEvent } from "@/types/game";
+import type {
+  ExposureChannel,
+  GameState,
+  Host,
+  InventoryItem,
+  TerminalLine,
+  VfxEvent,
+} from "@/types/game";
 import type { CommandContext } from "@/app/lib/game/context";
 import type { ScanAnimation, TimedEffect } from "@/app/lib/game/effects";
 import { helpOutput } from "@/app/lib/game/commands";
@@ -24,7 +31,7 @@ import {
   missionSummaryLine,
 } from "@/app/lib/game/formatting";
 import { evaluateMission, setMissionStatus, syncInbox } from "@/app/lib/game/missionLogic";
-import { addTraceNoise } from "@/app/lib/game/trace";
+import { applyChannelNoise, EXPOSURE_CHANNELS } from "@/app/lib/game/exposure";
 import { buildRouteState, clamp, findHost, listFiles } from "@/app/lib/game/worldQueries";
 
 export type SoundCue =
@@ -108,11 +115,17 @@ export function isReducerCommand(key: string): boolean {
   return HANDLED.has(key);
 }
 
-/** Apply trace noise from an action, stamping the injected clock. Pure. */
-function applyTrace(state: GameState, noise: number, ctx: CommandContext, host?: Host): GameState {
+/** Add exposure noise to one channel, stamping the injected clock. Pure. */
+function applyExposure(
+  state: GameState,
+  ch: ExposureChannel,
+  noise: number,
+  ctx: CommandContext,
+  host?: Host
+): GameState {
   return {
     ...state,
-    trace: addTraceNoise(state.trace, noise, state.route, host),
+    exposure: applyChannelNoise(state.exposure, ch, noise, state.route, host),
     time: ctx.now,
   };
 }
@@ -176,7 +189,13 @@ export function reduceCommand(
     case "status":
       result.lines = [
         line(`Cash: ${state.cash}c | Reputation: ${state.reputation}`),
-        line(`Trace: ${state.trace.level.toFixed(1)}% (${state.trace.status})`),
+        line("Exposure board:"),
+        ...EXPOSURE_CHANNELS.map((ch) =>
+          line(
+            `  ${ch.padEnd(11)} ${state.exposure[ch].level.toFixed(1).padStart(5)}%  ${state.exposure[ch].status}`,
+            state.exposure[ch].status === "CALM" ? "info" : "warning"
+          )
+        ),
         line(
           `Route anonym.: ${(state.route.anonymity * 100).toFixed(1)}% | Hops: ${state.route.hops.length}`
         ),
@@ -380,7 +399,7 @@ export function reduceCommand(
             ),
           ]
         : [line(`Port ${port} filtered (no service).`, "info")];
-      result.state = applyTrace(state, 5, ctx, host);
+      result.state = applyExposure(state, "NETWORK", 5, ctx, host);
       break;
     }
 
@@ -394,7 +413,7 @@ export function reduceCommand(
         line("OS guess: Linux 68%, FreeBSD 18%, Unknown 14%"),
         line("Latency analysis suggests hardened kernel.", "info"),
       ];
-      result.state = applyTrace(state, 4, ctx, host);
+      result.state = applyExposure(state, "NETWORK", 4, ctx, host);
       break;
     }
 
@@ -464,8 +483,9 @@ export function reduceCommand(
         path: entry.path,
         content: entry.content,
       };
-      result.state = applyTrace(
+      result.state = applyExposure(
         { ...state, inventory: [...state.inventory, newItem] },
+        "NETWORK",
         6,
         ctx,
         host
@@ -491,7 +511,7 @@ export function reduceCommand(
         ...host,
         filesystem: host.filesystem.filter((entry) => entry.path !== target),
       };
-      result.state = applyTrace(withHost(state, updatedHost), 7, ctx, host);
+      result.state = applyExposure(withHost(state, updatedHost), "NETWORK", 7, ctx, host);
       result.lines = [line(`Removed ${target}.`, "success")];
       break;
     }
@@ -518,7 +538,7 @@ export function reduceCommand(
           entry.path === target ? { ...entry, content: `${data} (tampered)` } : entry
         ),
       };
-      result.state = applyTrace(withHost(state, updatedHost), 5, ctx, host);
+      result.state = applyExposure(withHost(state, updatedHost), "NETWORK", 5, ctx, host);
       result.lines = [line(`Patched ${target}.`, "success")];
       break;
     }
@@ -529,8 +549,8 @@ export function reduceCommand(
         break;
       }
       const host = state.world.hosts[state.session.connectedHost];
-      result.state = applyTrace(withHost(state, { ...host, logs: [] }), 10, ctx, host);
-      result.lines = [line("Logs wiped. Trace noise spiked.", "warning")];
+      result.state = applyExposure(withHost(state, { ...host, logs: [] }), "NETWORK", 10, ctx, host);
+      result.lines = [line("Logs wiped. NETWORK noise spiked.", "warning")];
       result.vfx = { type: "alert" };
       result.soundCue = "alert";
       break;
@@ -587,8 +607,9 @@ export function reduceCommand(
       const baseNoise = cmd.flags.includes("stealth") ? 6 : cmd.flags.includes("aggr") ? 18 : 12;
       const scanned = new Set(asSet(state.session.scannedHosts));
       scanned.add(host.id);
-      result.state = applyTrace(
+      result.state = applyExposure(
         { ...state, session: { ...state.session, currentTarget: host.id, scannedHosts: scanned } },
+        "NETWORK",
         baseNoise,
         ctx,
         host
@@ -656,7 +677,7 @@ export function reduceCommand(
       if (!wasScanned) connectionNoise += 35;
       if (!hasRoute) connectionNoise += 40;
       if (!wasScanned && !hasRoute) connectionNoise += 20;
-      result.state = applyTrace(
+      result.state = applyExposure(
         {
           ...state,
           session: {
@@ -667,11 +688,12 @@ export function reduceCommand(
             scannedHosts: scanned,
           },
         },
+        "NETWORK",
         connectionNoise,
         ctx,
         host
       );
-      const finalTrace = result.state.trace.level;
+      const finalTrace = result.state.exposure.NETWORK.level;
       if (connectionNoise > 20 || finalTrace > 25) {
         result.vfx = { type: "alert", target: host.id };
         result.soundCue = "alert";

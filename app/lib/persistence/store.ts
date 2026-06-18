@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { GameState, TerminalLine, VfxEvent } from "@/types/game";
-import { decayTrace } from "@/app/lib/game/trace";
+import { tickExposure } from "@/app/lib/game/exposure";
 import { createInitialState } from "@/app/lib/game/initialState";
 import { reduceCommand, type SoundCue } from "@/app/lib/game/reducer";
 import { createLiveContext } from "@/app/lib/game/context";
@@ -132,6 +132,8 @@ export const useGameStore = create<GameStoreState>()((set, get) => ({
     
     const cloudState = await cloudSaveProvider.load();
     if (cloudState) {
+      // Discard pre-exposure saves rather than crash on the new schema.
+      if (!cloudState.exposure) return false;
       // Convert scannedHosts array back to Set
       if (cloudState.session && Array.isArray(cloudState.session.scannedHosts)) {
         cloudState.session.scannedHosts = new Set(cloudState.session.scannedHosts);
@@ -169,6 +171,8 @@ export const useGameStore = create<GameStoreState>()((set, get) => ({
     // First try local save
     const saved = await localSaveProvider.load();
     if (saved) {
+      // Discard pre-exposure saves rather than crash on the new schema.
+      if (!saved.exposure) return;
       // Convert scannedHosts array back to Set
       if (saved.session && Array.isArray(saved.session.scannedHosts)) {
         saved.session.scannedHosts = new Set(saved.session.scannedHosts);
@@ -178,13 +182,23 @@ export const useGameStore = create<GameStoreState>()((set, get) => ({
       set({ gameState: saved });
     }
   },
+  // The Exposure Board tick: while a session is held, NETWORK climbs (the dwell
+  // clock / closing window); idle, channels cool at their own rates.
   decayTraceTick: () =>
     set((state) => {
-      // Only decay if not connected (idle state)
-      if (!state.gameState.session.connectedHost) {
-        return { gameState: { ...state.gameState, trace: decayTrace(state.gameState.trace) } };
-      }
-      return state; // No decay while connected
+      const gs = state.gameState;
+      const connectedHost = gs.session.connectedHost;
+      const host = connectedHost ? gs.world.hosts[connectedHost] : undefined;
+      return {
+        gameState: {
+          ...gs,
+          exposure: tickExposure(gs.exposure, {
+            connected: !!connectedHost,
+            route: gs.route,
+            host,
+          }),
+        },
+      };
     }),
   runCommand: async (rawInput) => {
     const trimmed = rawInput.trim();

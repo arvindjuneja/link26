@@ -63,6 +63,15 @@ export interface TraceInfo {
   lastEvent?: string;
 }
 
+// The Exposure Board: UPLINK's single trace tracker, instantiated per detection
+// vector. The skill is triaging multiple rising bars, not zeroing one.
+//   NETWORK     — "are they tracing the packet back?"  (scan/connect/log ops)
+//   RF          — "is someone in that building noticing me?" (deployed sensors)
+//   FOOTPRINT   — "did I tip them off just by looking?" (active OSINT)
+//   ATTRIBUTION — the slow one: "they're profiling ME" (kit/TTP reuse; persists)
+export type ExposureChannel = "NETWORK" | "RF" | "FOOTPRINT" | "ATTRIBUTION";
+export type ExposureState = Record<ExposureChannel, TraceInfo>;
+
 export interface RouteState {
   hops: string[];
   latencyMs: number;
@@ -127,7 +136,7 @@ export interface GameState {
   time: number;
   cash: number;
   reputation: number;
-  trace: TraceInfo;
+  exposure: ExposureState;
   route: RouteState;
   playerTools: Record<ToolId, ToolInstance>;
   inbox: MissionSummary[];

@@ -5,7 +5,7 @@
 import type { GameState, ToolId, ToolInstance } from "@/types/game";
 import { generateWorld } from "@/app/lib/game/worldgen";
 import { generateMissions } from "@/app/lib/game/missions";
-import { getTraceStatus } from "@/app/lib/game/trace";
+import { createExposure } from "@/app/lib/game/exposure";
 
 export interface InitialStateOptions {
   /** Timestamp baked into the fresh state. Inject for deterministic builds. */
@@ -16,7 +16,6 @@ export function createInitialState(options: InitialStateOptions = {}): GameState
   const now = options.now ?? Date.now();
   const world = generateWorld(now);
   const { inbox, missions } = generateMissions(world, now);
-  const traceLevel = 8;
 
   const tools: Record<ToolId, ToolInstance> = {
     scanner: {
@@ -49,11 +48,7 @@ export function createInitialState(options: InitialStateOptions = {}): GameState
     time: now,
     cash: 4200,
     reputation: 36,
-    trace: {
-      level: traceLevel,
-      status: getTraceStatus(traceLevel),
-      lastEvent: "Session initialized",
-    },
+    exposure: createExposure(8),
     route: {
       hops: [],
       latencyMs: 0,

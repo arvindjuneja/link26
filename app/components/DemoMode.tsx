@@ -2,10 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useGameStore } from "@/app/lib/persistence/store";
-import { generateWorld } from "@/app/lib/game/worldgen";
-import { generateMissions } from "@/app/lib/game/missions";
-import { getTraceStatus } from "@/app/lib/game/trace";
-import { nowTimestamp } from "@/app/lib/util/time";
+import { createInitialState } from "@/app/lib/game/initialState";
+import { overallTrace } from "@/app/lib/game/exposure";
 
 const DEMO_SEQUENCE = [
   { command: "clear", delay: 300 },
@@ -35,41 +33,8 @@ export default function DemoMode() {
   
   // Reset function to create fresh state
   const resetToInitialState = () => {
-    const world = generateWorld();
-    const { inbox, missions } = generateMissions(world);
-    const traceLevel = 8;
-    const tools = {
-      scanner: { id: "scanner" as const, level: 1, label: "ScanSuite Alpha", description: "Base recon module." },
-      proxyChain: { id: "proxyChain" as const, level: 1, label: "Proxy Chain", description: "Sneaks traffic through proxy hops." },
-      wiper: { id: "wiper" as const, level: 1, label: "Logger Wiper", description: "Clears trace signatures (use sparingly)." },
-      tracker: { id: "tracker" as const, level: 1, label: "Pulse Tracker", description: "Tracks host changes." },
-    };
-
-    const initialState = {
-      time: nowTimestamp(),
-      cash: 4200,
-      reputation: 36,
-      trace: {
-        level: traceLevel,
-        status: getTraceStatus(traceLevel),
-        lastEvent: "Session initialized",
-      },
-      route: {
-        hops: [],
-        latencyMs: 0,
-        anonymity: 0,
-      },
-      playerTools: tools,
-      inbox,
-      activeMissions: missions,
-      world,
-      session: { scannedHosts: new Set<string>() },
-      inventory: [],
-    };
-    
-    // Reset store state
-    useGameStore.setState({ 
-      gameState: initialState, 
+    useGameStore.setState({
+      gameState: createInitialState(),
       terminalLines: [],
       commandHistory: [],
       lastVfxEvent: null,
@@ -176,7 +141,7 @@ export default function DemoMode() {
       </div>
       {isRunning && (
         <div className="mt-2 text-[0.65rem] text-zinc-500">
-          Trace: {gameState.trace.level.toFixed(1)}% ({gameState.trace.status}) | 
+          Trace: {overallTrace(gameState.exposure).level.toFixed(1)}% ({overallTrace(gameState.exposure).status}) |
           Route: {gameState.route.hops.length} hops | 
           Cash: {gameState.cash}c
         </div>

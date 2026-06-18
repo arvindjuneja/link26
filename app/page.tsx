@@ -12,6 +12,7 @@ import DemoMode from "./components/DemoMode";
 import TraceMeter from "./components/TraceMeter";
 import { AuthModal } from "./components/AuthModal";
 import { useGameStore } from "./lib/persistence/store";
+import { overallTrace } from "./lib/game/exposure";
 import { supabase, isSupabaseConfigured } from "./lib/supabase/client";
 
 // Status-based styling
@@ -50,7 +51,8 @@ export default function Home() {
 
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
-  const { world, route, session, trace, cash, reputation } = gameState;
+  const { world, route, session, cash, reputation } = gameState;
+  const trace = overallTrace(gameState.exposure);
   const traceStyle = traceStyles[trace.status as keyof typeof traceStyles] ?? traceStyles.CALM;
 
   const handleAuthChange = useCallback((newUser: typeof user) => {

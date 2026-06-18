@@ -130,7 +130,7 @@ describe("gameReducer — scan / connect (effects channel)", () => {
 
     expect(r.state.session.currentTarget).toBe("hq-node");
     expect(r.state.session.scannedHosts).toEqual(new Set(["hq-node"]));
-    expect(r.state.trace.level).toBeGreaterThan(state.trace.level);
+    expect(r.state.exposure.NETWORK.level).toBeGreaterThan(state.exposure.NETWORK.level);
     expect(r.soundCue).toBe("scan");
     expect(r.vfx).toEqual({ type: "scan", target: "hq-node" });
 
@@ -159,7 +159,7 @@ describe("gameReducer — scan / connect (effects channel)", () => {
     expect(r.state.session.connectedHost).toBe("hq-node");
     expect(r.state.session.workingDir).toBe("/");
     // 15 + 35 (unscanned) + 40 (no route) + 20 (both) => large spike, alert
-    expect(r.state.trace.level).toBeGreaterThan(state.trace.level + 10);
+    expect(r.state.exposure.NETWORK.level).toBeGreaterThan(state.exposure.NETWORK.level + 10);
     expect(r.soundCue).toBe("alert");
     // both the "not scanned" (300ms) and "no route" (500ms) warnings are present
     expect(r.effects!.some((e) => e.atMs === 300)).toBe(true);
@@ -226,7 +226,7 @@ describe("gameReducer — recon", () => {
     const state = createInitialState({ now: 0 });
     const r = reduceCommand(state, cmd("probe", ["hq-node", "22"]), ctx())!;
     expect(r.lines[0].text).toContain("ssh");
-    expect(r.state.trace.level).toBeGreaterThan(state.trace.level);
+    expect(r.state.exposure.NETWORK.level).toBeGreaterThan(state.exposure.NETWORK.level);
   });
 
   it("probe of a closed port is filtered", () => {
@@ -254,7 +254,7 @@ describe("gameReducer — filesystem & the exfil loop", () => {
     expect(copied.state.inventory).toHaveLength(1);
     expect(copied.state.inventory[0]).toMatchObject({ source: "hq-node", path: "/secrets.txt" });
     expect(copied.soundCue).toBe("fileOp");
-    expect(copied.state.trace.level).toBeGreaterThan(session.trace.level);
+    expect(copied.state.exposure.NETWORK.level).toBeGreaterThan(session.exposure.NETWORK.level);
 
     const submitted = reduceCommand(copied.state, cmd("submit", ["mission-ghost"]), ctx())!;
     expect(submitted.state.cash).toBe(base.cash + 2200);
@@ -278,7 +278,7 @@ describe("gameReducer — filesystem & the exfil loop", () => {
     const r = reduceCommand(base, cmd("wipe logs"), ctx())!;
     expect(r.state.world.hosts["hq-node"].logs).toHaveLength(0);
     expect(r.vfx).toEqual({ type: "alert" });
-    expect(r.state.trace.level).toBeGreaterThan(base.trace.level);
+    expect(r.state.exposure.NETWORK.level).toBeGreaterThan(base.exposure.NETWORK.level);
   });
 
   it("disconnect drops the session but preserves scanned hosts", () => {
