@@ -1,18 +1,11 @@
 import { create } from "zustand";
-import type {
-  GameState,
-  ProxyNode,
-  RouteState,
-  TerminalLine,
-  VfxEvent,
-  Host,
-  InventoryItem,
-} from "@/types/game";
-import { formatProxyTable, formatScanOutput } from "@/app/lib/game/formatting";
+import type { GameState, TerminalLine, VfxEvent, Host } from "@/types/game";
+import { formatScanOutput } from "@/app/lib/game/formatting";
 import { addTraceNoise, decayTrace } from "@/app/lib/game/trace";
 import { createInitialState } from "@/app/lib/game/initialState";
 import { reduceCommand, type SoundCue } from "@/app/lib/game/reducer";
 import { createLiveContext } from "@/app/lib/game/context";
+import { findHost } from "@/app/lib/game/worldQueries";
 import { localSaveProvider } from "./saveLocalIndexedDb";
 import { cloudSaveProvider } from "./saveCloudSupabase";
 import { nowTimestamp } from "@/app/lib/util/time";
@@ -46,32 +39,6 @@ export interface ScanAnimation {
 // Execution phases for visual command feedback
 type ExecutionPhase = "idle" | "initiating" | "routing" | "executing" | "complete";
 
-const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
-
-const buildRouteState = (hops: string[], proxies: Record<string, ProxyNode>): RouteState => {
-  let latency = 0;
-  let anonymity = 0;
-  hops.forEach((proxyId) => {
-    const node = proxies[proxyId];
-    if (!node) return;
-    latency += 30 + node.costPerUse;
-    anonymity = 1 - (1 - anonymity) * (1 - clamp(node.anonymity, 0, 1));
-  });
-  return {
-    hops: [...hops],
-    latencyMs: latency,
-    anonymity: clamp(anonymity, 0, 0.99),
-  };
-};
-
-const findHost = (world: GameState["world"], query?: string): Host | undefined => {
-  if (!query) return undefined;
-  const normalized = query.toLowerCase();
-  return Object.values(world.hosts).find(
-    (host) => host.id === normalized || host.label.toLowerCase().includes(normalized) || host.id === query
-  );
-};
-
 const parseCommand = (input: string) => {
   const tokens = input.split(/\s+/).filter(Boolean);
   if (!tokens.length) return { key: "", args: [], flags: [] };
@@ -85,17 +52,6 @@ const parseCommand = (input: string) => {
   const flags = args.filter((token) => token.startsWith("--")).map((token) => token.replace(/^--/, ""));
   const filtered = args.filter((token) => !token.startsWith("--"));
   return { key, args: filtered, flags };
-};
-
-const listFiles = (host: Host, path: string): string[] => {
-  const normalized = path === "/" ? "/" : path.replace(/\/+$/, "");
-  const entries = host.filesystem
-    .filter((entry) => {
-      if (normalized === "/") return entry.path.split("/").filter(Boolean).length <= 2;
-      return entry.path.startsWith(`${normalized}/`);
-    })
-    .map((entry) => `${entry.type.padEnd(4)} ${entry.name}`);
-  return entries.length ? entries : ["<empty directory>"];
 };
 
 const createLine = (text: string, type: TerminalLine["type"] = "info"): TerminalLine => ({
@@ -282,84 +238,6 @@ export const useGameStore = create<GameStoreState>()((set, get) => ({
       case "settings":
         emit([createLine("Settings are currently handled by the terminal. Coming soon.", "info")]);
         break;
-      case "proxy list":
-        emit(formatProxyTable(Object.values(nextState.world.proxies)).map((line) => createLine(line, "info")));
-        break;
-      case "proxy info": {
-        const proxyId = args[0];
-        const proxy = nextState.world.proxies[proxyId];
-        if (!proxy) {
-          emit([createLine(`Proxy ${proxyId} not found.`, "error")]);
-          break;
-        }
-        emit([
-          createLine(`ID: ${proxy.id}`),
-          createLine(`Label: ${proxy.label}`),
-          createLine(`Anonymity: ${(proxy.anonymity * 100).toFixed(1)}%`),
-          createLine(`Heat: ${(proxy.heat * 100).toFixed(1)}%`),
-          createLine(`Cost: ${proxy.costPerUse}c`),
-        ]);
-        break;
-      }
-      case "route show": {
-        emit([
-          createLine(`Hops: ${route.hops.join(" -> ") || "Direct"}`),
-          createLine(`Latency: ${route.latencyMs.toFixed(0)}ms | Anonymity: ${(route.anonymity * 100).toFixed(1)}%`),
-        ]);
-        break;
-      }
-      case "route add": {
-        const proxyId = args[0];
-        const proxy = nextState.world.proxies[proxyId];
-        if (!proxy) {
-          emit([createLine(`Proxy ${proxyId} unavailable.`, "error")]);
-          break;
-        }
-        if (proxy.heat >= 1) {
-          emit([createLine(`Proxy ${proxyId} has burned out.`, "error")]);
-          break;
-        }
-        if (route.hops.includes(proxyId)) {
-          emit([createLine(`Proxy ${proxyId} already in route.`, "info")]);
-          break;
-        }
-        // Increase heat more aggressively
-        const heatIncrease = 0.15 + (proxy.heat * 0.1); // More heat if already hot
-        const nextProxies = {
-          ...nextState.world.proxies,
-          [proxyId]: { ...proxy, heat: clamp(proxy.heat + heatIncrease, 0, 1) },
-        };
-        
-        if (nextProxies[proxyId].heat >= 0.8) {
-          emit([createLine(`WARNING: Proxy ${proxyId} is overheating (${(nextProxies[proxyId].heat * 100).toFixed(0)}%).`, "warning")]);
-        }
-        if (nextProxies[proxyId].heat >= 1) {
-          emit([createLine(`CRITICAL: Proxy ${proxyId} has burned out and is unusable.`, "error")]);
-        }
-        const updatedWorld = { ...nextState.world, proxies: nextProxies };
-        const updatedRoute = buildRouteState([...route.hops, proxyId], nextProxies);
-        nextState = { ...nextState, world: updatedWorld, route: updatedRoute };
-        emit([createLine(`Proxy ${proxyId} appended.`, "success")]);
-        soundCue = "routeAdd";
-        vfxEvent = { type: "scan" }; // Visual pulse on map
-        break;
-      }
-      case "route rm": {
-        const proxyId = args[0];
-        if (!route.hops.includes(proxyId)) {
-          emit([createLine(`${proxyId} is not part of the route.`, "error")]);
-          break;
-        }
-        const updatedHops = route.hops.filter((hop) => hop !== proxyId);
-        const updatedRoute = buildRouteState(updatedHops, nextState.world.proxies);
-        nextState = { ...nextState, route: updatedRoute };
-        emit([createLine(`Proxy ${proxyId} removed.`, "info")]);
-        break;
-      }
-      case "route clear":
-        nextState = { ...nextState, route: buildRouteState([], nextState.world.proxies) };
-        emit([createLine("Route cleared.", "success")]);
-        break;
       case "scan": {
         const host = findHost(nextState.world, args[0]);
         if (!host) {
@@ -436,38 +314,6 @@ export const useGameStore = create<GameStoreState>()((set, get) => ({
         nextState = { ...nextState, session: { ...session, currentTarget: host.id, scannedHosts: scannedHostsSet } };
         soundCue = "scan";
         vfxEvent = { type: "scan", target: host.id };
-        break;
-      }
-      case "probe": {
-        const host = findHost(nextState.world, args[0]);
-        const port = Number(args[1]);
-        if (!host || Number.isNaN(port)) {
-          emit([createLine("Usage: probe <host> <port>", "error")]);
-          break;
-        }
-        const service = host.services.find((entry) => entry.port === port);
-        if (!service) {
-          emit([createLine(`Port ${port} filtered (no service).`, "info")]);
-        } else {
-          emit([
-            createLine(`${service.name} (${service.proto}) | ${service.banner ?? service.versionHint ?? "unknown"}`),
-            createLine(`Exposure: ${(service.exposure * 100).toFixed(1)}% | Vigilance: ${service.accessRules.multiFactor ? "MFA" : "standard"}`),
-          ]);
-        }
-        appendTrace(5, host);
-        break;
-      }
-      case "fingerprint": {
-        const host = findHost(nextState.world, args[0]);
-        if (!host) {
-          emit([createLine("Specify a host to fingerprint.", "error")]);
-          break;
-        }
-        emit([
-          createLine("OS guess: Linux 68%, FreeBSD 18%, Unknown 14%"),
-          createLine("Latency analysis suggests hardened kernel.", "info"),
-        ]);
-        appendTrace(4, host);
         break;
       }
       case "connect": {
@@ -583,167 +429,6 @@ export const useGameStore = create<GameStoreState>()((set, get) => ({
         }
         break;
       }
-      case "disconnect":
-      case "exit":
-        const wasConnected = !!session.connectedHost;
-        // Ensure scannedHosts is a Set
-        let preservedScannedHosts = session.scannedHosts;
-        if (!preservedScannedHosts) {
-          preservedScannedHosts = new Set();
-        } else if (Array.isArray(preservedScannedHosts)) {
-          preservedScannedHosts = new Set(preservedScannedHosts);
-        } else if (!(preservedScannedHosts instanceof Set)) {
-          preservedScannedHosts = new Set();
-        }
-        nextState = { ...nextState, session: { scannedHosts: preservedScannedHosts } };
-        emit([createLine(wasConnected ? "Disconnected. Trace will decay while idle." : "No active connection.", "info")]);
-        break;
-      case "pwd":
-        emit([createLine(`Working directory: ${session.workingDir ?? "/"}`)]);
-        break;
-      case "ls": {
-        if (!session.connectedHost) {
-          emit([createLine("No host connected.", "error")]);
-          break;
-        }
-        const host = nextState.world.hosts[session.connectedHost];
-        const target = args[0] ?? session.workingDir ?? "/";
-        emit(listFiles(host, target).map((line) => createLine(line)));
-        break;
-      }
-      case "cd": {
-        if (!session.connectedHost) {
-          emit([createLine("No host connected.", "error")]);
-          break;
-        }
-        const nextDir = args[0] ?? "/";
-        nextState = { ...nextState, session: { ...session, workingDir: nextDir } };
-        emit([createLine(`Set working dir to ${nextDir}`)]);
-        break;
-      }
-      case "cat": {
-        if (!session.connectedHost) {
-          emit([createLine("No host connected.", "error")]);
-          break;
-        }
-        const host = nextState.world.hosts[session.connectedHost];
-        const target = args[0];
-        const file = host.filesystem.find((entry) => entry.path === target);
-        if (!file) {
-          emit([createLine(`${target} not found.`, "error")]);
-          break;
-        }
-        emit([createLine(file.content ?? "[binary data]", "info")] );
-        break;
-      }
-      case "cp": {
-        if (!session.connectedHost) {
-          emit([createLine("No host connected.", "error")]);
-          break;
-        }
-        const host = nextState.world.hosts[session.connectedHost];
-        const src = args[0];
-        const dst = args[1];
-        if (!src || !dst) {
-          emit([createLine("Usage: cp <src> <dst>", "error")]);
-          break;
-        }
-        const entry = host.filesystem.find((file) => file.path === src);
-        if (!entry) {
-          emit([createLine(`${src} not found.`, "error")]);
-          break;
-        }
-        if (dst !== "@local") {
-          emit([createLine("Only @local destination is supported for now.", "info")]);
-          break;
-        }
-        const newItem: InventoryItem = {
-          id: `inv-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-          label: entry.name,
-          source: host.id,
-          path: entry.path,
-          content: entry.content,
-        };
-        nextState = { ...nextState, inventory: [...nextState.inventory, newItem] };
-        emit([createLine(`Copied ${entry.name} into inventory.`, "success")]);
-        appendTrace(6, host);
-        soundCue = "fileOp";
-        vfxEvent = { type: "success" };
-        break;
-      }
-      case "rm": {
-        if (!session.connectedHost) {
-          emit([createLine("No host connected.", "error")]);
-          break;
-        }
-        const target = args[0];
-        if (!target) {
-          emit([createLine("Usage: rm <file>", "error")]);
-          break;
-        }
-        const host = nextState.world.hosts[session.connectedHost];
-        const filtered = host.filesystem.filter((entry) => entry.path !== target);
-        const updatedHost = { ...host, filesystem: filtered };
-        nextState = {
-          ...nextState,
-          world: { ...nextState.world, hosts: { ...nextState.world.hosts, [host.id]: updatedHost } },
-        };
-        emit([createLine(`Removed ${target}.`, "success")]);
-        appendTrace(7, host);
-        break;
-      }
-      case "edit": {
-        if (!session.connectedHost) {
-          emit([createLine("No host connected.", "error")]);
-          break;
-        }
-        const target = args[0];
-        const data = args[1];
-        if (!target || !data) {
-          emit([createLine("Usage: edit <file> key=value", "error")]);
-          break;
-        }
-        const host = nextState.world.hosts[session.connectedHost];
-        const file = host.filesystem.find((entry) => entry.path === target);
-        if (!file) {
-          emit([createLine(`${target} not found.`, "error")]);
-          break;
-        }
-        const updatedFile = { ...file, content: `${data} (tampered)` };
-        const updatedFs = host.filesystem.map((entry) => (entry.path === target ? updatedFile : entry));
-        const updatedHost = { ...host, filesystem: updatedFs };
-        nextState = {
-          ...nextState,
-          world: { ...nextState.world, hosts: { ...nextState.world.hosts, [host.id]: updatedHost } },
-        };
-        emit([createLine(`Patched ${target}.`, "success")]);
-        appendTrace(5, host);
-        break;
-      }
-      case "wipe logs": {
-        if (!session.connectedHost) {
-          emit([createLine("No host connected.", "error")]);
-          break;
-        }
-        const host = nextState.world.hosts[session.connectedHost];
-        const updatedHost = { ...host, logs: [] };
-        const updatedWorld = {
-          ...nextState.world,
-          hosts: { ...nextState.world.hosts, [host.id]: updatedHost },
-        };
-        nextState = { ...nextState, world: updatedWorld };
-        appendTrace(10, host);
-        emit([createLine("Logs wiped. Trace noise spiked.", "warning")]);
-        vfxEvent = { type: "alert" };
-        soundCue = "alert";
-        break;
-      }
-      case "market":
-        emit([createLine("Market rotation offline. Check back after you rack more reputation.", "info")]);
-        break;
-      case "buy":
-        emit([createLine("Store coming soon.", "info")]);
-        break;
       default:
         emit([createLine(`Unknown command: ${key}`, "error")]);
         soundCue = "alert";

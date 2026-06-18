@@ -38,6 +38,9 @@ describe("gameReducer — determinism", () => {
     const steps = [
       cmd("inbox"),
       cmd("accept", ["mission-ghost"]),
+      cmd("route add", ["proxy-1"]),
+      cmd("route add", ["proxy-3"]),
+      cmd("route show"),
       cmd("status"),
       cmd("read", ["mission-ghost"]),
       cmd("missions"),
@@ -110,7 +113,125 @@ describe("gameReducer — behavior parity", () => {
   it("returns null for commands it does not own", () => {
     const state = createInitialState({ now: 0 });
     expect(reduceCommand(state, cmd("scan", ["hq-node"]), ctx())).toBeNull();
+    expect(reduceCommand(state, cmd("connect", ["hq-node"]), ctx())).toBeNull();
     expect(isReducerCommand("scan")).toBe(false);
+    expect(isReducerCommand("connect")).toBe(false);
     expect(isReducerCommand("submit")).toBe(true);
+    expect(isReducerCommand("route add")).toBe(true);
+  });
+});
+
+// Helper: mark a host connected so filesystem commands work.
+const connectedTo = (state: GameState, hostId: string): GameState => ({
+  ...state,
+  session: { ...state.session, connectedHost: hostId, currentTarget: hostId, workingDir: "/" },
+});
+
+describe("gameReducer — proxy / route", () => {
+  const ctx = () => createDeterministicContext();
+
+  it("route add appends a hop, heats the proxy, raises anonymity", () => {
+    const state = createInitialState({ now: 0 });
+    const r = reduceCommand(state, cmd("route add", ["proxy-1"]), ctx())!;
+    expect(r.state.route.hops).toEqual(["proxy-1"]);
+    expect(r.state.world.proxies["proxy-1"].heat).toBeGreaterThan(0);
+    expect(r.state.route.anonymity).toBeGreaterThan(0);
+    expect(r.soundCue).toBe("routeAdd");
+    // input proxies untouched (purity)
+    expect(state.world.proxies["proxy-1"].heat).toBe(0);
+  });
+
+  it("route add warns when a proxy overheats", () => {
+    const base = createInitialState({ now: 0 });
+    const hot: GameState = {
+      ...base,
+      world: {
+        ...base.world,
+        proxies: { ...base.world.proxies, "proxy-1": { ...base.world.proxies["proxy-1"], heat: 0.7 } },
+      },
+    };
+    const r = reduceCommand(hot, cmd("route add", ["proxy-1"]), ctx())!;
+    expect(r.lines.some((l) => l.type === "warning" && l.text.includes("overheating"))).toBe(true);
+  });
+
+  it("route add rejects unknown and duplicate proxies", () => {
+    const state = createInitialState({ now: 0 });
+    const unknown = reduceCommand(state, cmd("route add", ["nope"]), ctx())!;
+    expect(unknown.lines[0].text).toContain("unavailable");
+
+    const added = reduceCommand(state, cmd("route add", ["proxy-1"]), ctx())!.state;
+    const dup = reduceCommand(added, cmd("route add", ["proxy-1"]), ctx())!;
+    expect(dup.lines[0].text).toContain("already in route");
+  });
+});
+
+describe("gameReducer — recon", () => {
+  const ctx = () => createDeterministicContext();
+
+  it("probe reports a known service and raises trace", () => {
+    const state = createInitialState({ now: 0 });
+    const r = reduceCommand(state, cmd("probe", ["hq-node", "22"]), ctx())!;
+    expect(r.lines[0].text).toContain("ssh");
+    expect(r.state.trace.level).toBeGreaterThan(state.trace.level);
+  });
+
+  it("probe of a closed port is filtered", () => {
+    const state = createInitialState({ now: 0 });
+    const r = reduceCommand(state, cmd("probe", ["hq-node", "9999"]), ctx())!;
+    expect(r.lines[0].text).toContain("filtered");
+  });
+});
+
+describe("gameReducer — filesystem & the exfil loop", () => {
+  const ctx = () => createDeterministicContext();
+
+  it("requires a connection for filesystem commands", () => {
+    const state = createInitialState({ now: 0 });
+    expect(reduceCommand(state, cmd("ls"), ctx())!.lines[0].text).toContain("No host connected");
+    expect(reduceCommand(state, cmd("cat", ["/secrets.txt"]), ctx())!.lines[0].type).toBe("error");
+  });
+
+  it("cp pulls a file into inventory and that satisfies an exfil mission end-to-end", () => {
+    const base = createInitialState({ now: 0 });
+    const accepted = reduceCommand(base, cmd("accept", ["mission-ghost"]), ctx())!.state;
+    const session = connectedTo(accepted, "hq-node");
+
+    const copied = reduceCommand(session, cmd("cp", ["/secrets.txt", "@local"]), ctx())!;
+    expect(copied.state.inventory).toHaveLength(1);
+    expect(copied.state.inventory[0]).toMatchObject({ source: "hq-node", path: "/secrets.txt" });
+    expect(copied.soundCue).toBe("fileOp");
+    expect(copied.state.trace.level).toBeGreaterThan(session.trace.level);
+
+    const submitted = reduceCommand(copied.state, cmd("submit", ["mission-ghost"]), ctx())!;
+    expect(submitted.state.cash).toBe(base.cash + 2200);
+    expect(submitted.state.activeMissions.find((m) => m.id === "mission-ghost")!.status).toBe("completed");
+  });
+
+  it("edit tampers a file and rm removes it", () => {
+    const base = connectedTo(createInitialState({ now: 0 }), "hq-node");
+
+    const edited = reduceCommand(base, cmd("edit", ["/secrets.txt", "spoofed"]), ctx())!;
+    const host = edited.state.world.hosts["hq-node"];
+    expect(host.filesystem.find((f) => f.path === "/secrets.txt")!.content).toContain("tampered");
+
+    const removed = reduceCommand(base, cmd("rm", ["/secrets.txt"]), ctx())!;
+    expect(removed.state.world.hosts["hq-node"].filesystem.some((f) => f.path === "/secrets.txt")).toBe(false);
+  });
+
+  it("wipe logs empties host logs, spikes trace, raises an alert", () => {
+    const base = connectedTo(createInitialState({ now: 0 }), "hq-node");
+    expect(base.world.hosts["hq-node"].logs.length).toBeGreaterThan(0);
+    const r = reduceCommand(base, cmd("wipe logs"), ctx())!;
+    expect(r.state.world.hosts["hq-node"].logs).toHaveLength(0);
+    expect(r.vfx).toEqual({ type: "alert" });
+    expect(r.state.trace.level).toBeGreaterThan(base.trace.level);
+  });
+
+  it("disconnect drops the session but preserves scanned hosts", () => {
+    const base = connectedTo(createInitialState({ now: 0 }), "hq-node");
+    const armed: GameState = { ...base, session: { ...base.session, scannedHosts: new Set(["hq-node"]) } };
+    const r = reduceCommand(armed, cmd("disconnect"), ctx())!;
+    expect(r.state.session.connectedHost).toBeUndefined();
+    expect(r.state.session.scannedHosts).toEqual(new Set(["hq-node"]));
   });
 });

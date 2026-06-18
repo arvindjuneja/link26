@@ -13,11 +13,13 @@
 // any command it does not (yet) own, so the store can fall back to its legacy
 // switch — the strangler-fig pattern.
 
-import type { GameState, TerminalLine, VfxEvent } from "@/types/game";
+import type { GameState, Host, InventoryItem, TerminalLine, VfxEvent } from "@/types/game";
 import type { CommandContext } from "@/app/lib/game/context";
 import { helpOutput } from "@/app/lib/game/commands";
-import { formatMissionDetail, missionSummaryLine } from "@/app/lib/game/formatting";
+import { formatMissionDetail, formatProxyTable, missionSummaryLine } from "@/app/lib/game/formatting";
 import { evaluateMission, setMissionStatus, syncInbox } from "@/app/lib/game/missionLogic";
+import { addTraceNoise } from "@/app/lib/game/trace";
+import { buildRouteState, clamp, findHost, listFiles } from "@/app/lib/game/worldQueries";
 
 export type SoundCue =
   | "click"
@@ -49,8 +51,13 @@ export interface CommandResult {
   clearScreen: boolean;
 }
 
-/** Commands fully owned by the pure reducer. Everything else falls back to the store. */
+/**
+ * Commands fully owned by the pure reducer. Everything else falls back to the
+ * store's legacy switch — currently only `scan` and `connect`, which need an
+ * effects channel for their staged animation before they can migrate.
+ */
 const HANDLED = new Set([
+  // mission + status
   "help",
   "clear",
   "status",
@@ -59,10 +66,58 @@ const HANDLED = new Set([
   "missions",
   "accept",
   "submit",
+  // proxy / route
+  "proxy list",
+  "proxy info",
+  "route show",
+  "route add",
+  "route rm",
+  "route clear",
+  // recon
+  "probe",
+  "fingerprint",
+  // session / filesystem
+  "pwd",
+  "ls",
+  "cd",
+  "cat",
+  "cp",
+  "rm",
+  "edit",
+  "wipe logs",
+  "disconnect",
+  "exit",
+  // misc
+  "market",
+  "buy",
 ]);
 
 export function isReducerCommand(key: string): boolean {
   return HANDLED.has(key);
+}
+
+/** Apply trace noise from an action, stamping the injected clock. Pure. */
+function applyTrace(state: GameState, noise: number, ctx: CommandContext, host?: Host): GameState {
+  return {
+    ...state,
+    trace: addTraceNoise(state.trace, noise, state.route, host),
+    time: ctx.now,
+  };
+}
+
+/** Replace a single host in the world. Pure. */
+function withHost(state: GameState, host: Host): GameState {
+  return {
+    ...state,
+    world: { ...state.world, hosts: { ...state.world.hosts, [host.id]: host } },
+  };
+}
+
+/** Coerce session.scannedHosts to a Set regardless of how it was deserialized. */
+function asSet(value: unknown): Set<string> {
+  if (value instanceof Set) return value;
+  if (Array.isArray(value)) return new Set(value);
+  return new Set();
 }
 
 /**
@@ -193,6 +248,306 @@ export function reduceCommand(
       result.vfx = { type: "success" };
       break;
     }
+
+    case "proxy list":
+      result.lines = formatProxyTable(Object.values(state.world.proxies)).map((l) =>
+        line(l, "info")
+      );
+      break;
+
+    case "proxy info": {
+      const proxy = state.world.proxies[cmd.args[0]];
+      if (!proxy) {
+        result.lines = [line(`Proxy ${cmd.args[0]} not found.`, "error")];
+        break;
+      }
+      result.lines = [
+        line(`ID: ${proxy.id}`),
+        line(`Label: ${proxy.label}`),
+        line(`Anonymity: ${(proxy.anonymity * 100).toFixed(1)}%`),
+        line(`Heat: ${(proxy.heat * 100).toFixed(1)}%`),
+        line(`Cost: ${proxy.costPerUse}c`),
+      ];
+      break;
+    }
+
+    case "route show":
+      result.lines = [
+        line(`Hops: ${state.route.hops.join(" -> ") || "Direct"}`),
+        line(
+          `Latency: ${state.route.latencyMs.toFixed(0)}ms | Anonymity: ${(
+            state.route.anonymity * 100
+          ).toFixed(1)}%`
+        ),
+      ];
+      break;
+
+    case "route add": {
+      const proxyId = cmd.args[0];
+      const proxy = state.world.proxies[proxyId];
+      if (!proxy) {
+        result.lines = [line(`Proxy ${proxyId} unavailable.`, "error")];
+        break;
+      }
+      if (proxy.heat >= 1) {
+        result.lines = [line(`Proxy ${proxyId} has burned out.`, "error")];
+        break;
+      }
+      if (state.route.hops.includes(proxyId)) {
+        result.lines = [line(`Proxy ${proxyId} already in route.`, "info")];
+        break;
+      }
+      const heatIncrease = 0.15 + proxy.heat * 0.1; // more heat if already hot
+      const heated = { ...proxy, heat: clamp(proxy.heat + heatIncrease, 0, 1) };
+      const proxies = { ...state.world.proxies, [proxyId]: heated };
+      const warnings: TerminalLine[] = [];
+      if (heated.heat >= 0.8) {
+        warnings.push(
+          line(
+            `WARNING: Proxy ${proxyId} is overheating (${(heated.heat * 100).toFixed(0)}%).`,
+            "warning"
+          )
+        );
+      }
+      if (heated.heat >= 1) {
+        warnings.push(
+          line(`CRITICAL: Proxy ${proxyId} has burned out and is unusable.`, "error")
+        );
+      }
+      result.state = {
+        ...state,
+        world: { ...state.world, proxies },
+        route: buildRouteState([...state.route.hops, proxyId], proxies),
+      };
+      result.lines = [...warnings, line(`Proxy ${proxyId} appended.`, "success")];
+      result.soundCue = "routeAdd";
+      result.vfx = { type: "scan" };
+      break;
+    }
+
+    case "route rm": {
+      const proxyId = cmd.args[0];
+      if (!state.route.hops.includes(proxyId)) {
+        result.lines = [line(`${proxyId} is not part of the route.`, "error")];
+        break;
+      }
+      const hops = state.route.hops.filter((hop) => hop !== proxyId);
+      result.state = { ...state, route: buildRouteState(hops, state.world.proxies) };
+      result.lines = [line(`Proxy ${proxyId} removed.`, "info")];
+      break;
+    }
+
+    case "route clear":
+      result.state = { ...state, route: buildRouteState([], state.world.proxies) };
+      result.lines = [line("Route cleared.", "success")];
+      break;
+
+    case "probe": {
+      const host = findHost(state.world, cmd.args[0]);
+      const port = Number(cmd.args[1]);
+      if (!host || Number.isNaN(port)) {
+        result.lines = [line("Usage: probe <host> <port>", "error")];
+        break;
+      }
+      const service = host.services.find((entry) => entry.port === port);
+      result.lines = service
+        ? [
+            line(
+              `${service.name} (${service.proto}) | ${
+                service.banner ?? service.versionHint ?? "unknown"
+              }`
+            ),
+            line(
+              `Exposure: ${(service.exposure * 100).toFixed(1)}% | Vigilance: ${
+                service.accessRules.multiFactor ? "MFA" : "standard"
+              }`
+            ),
+          ]
+        : [line(`Port ${port} filtered (no service).`, "info")];
+      result.state = applyTrace(state, 5, ctx, host);
+      break;
+    }
+
+    case "fingerprint": {
+      const host = findHost(state.world, cmd.args[0]);
+      if (!host) {
+        result.lines = [line("Specify a host to fingerprint.", "error")];
+        break;
+      }
+      result.lines = [
+        line("OS guess: Linux 68%, FreeBSD 18%, Unknown 14%"),
+        line("Latency analysis suggests hardened kernel.", "info"),
+      ];
+      result.state = applyTrace(state, 4, ctx, host);
+      break;
+    }
+
+    case "pwd":
+      result.lines = [line(`Working directory: ${state.session.workingDir ?? "/"}`)];
+      break;
+
+    case "ls": {
+      if (!state.session.connectedHost) {
+        result.lines = [line("No host connected.", "error")];
+        break;
+      }
+      const host = state.world.hosts[state.session.connectedHost];
+      const target = cmd.args[0] ?? state.session.workingDir ?? "/";
+      result.lines = listFiles(host, target).map((l) => line(l));
+      break;
+    }
+
+    case "cd": {
+      if (!state.session.connectedHost) {
+        result.lines = [line("No host connected.", "error")];
+        break;
+      }
+      const nextDir = cmd.args[0] ?? "/";
+      result.state = { ...state, session: { ...state.session, workingDir: nextDir } };
+      result.lines = [line(`Set working dir to ${nextDir}`)];
+      break;
+    }
+
+    case "cat": {
+      if (!state.session.connectedHost) {
+        result.lines = [line("No host connected.", "error")];
+        break;
+      }
+      const host = state.world.hosts[state.session.connectedHost];
+      const file = host.filesystem.find((entry) => entry.path === cmd.args[0]);
+      result.lines = file
+        ? [line(file.content ?? "[binary data]", "info")]
+        : [line(`${cmd.args[0]} not found.`, "error")];
+      break;
+    }
+
+    case "cp": {
+      if (!state.session.connectedHost) {
+        result.lines = [line("No host connected.", "error")];
+        break;
+      }
+      const host = state.world.hosts[state.session.connectedHost];
+      const [src, dst] = cmd.args;
+      if (!src || !dst) {
+        result.lines = [line("Usage: cp <src> <dst>", "error")];
+        break;
+      }
+      const entry = host.filesystem.find((file) => file.path === src);
+      if (!entry) {
+        result.lines = [line(`${src} not found.`, "error")];
+        break;
+      }
+      if (dst !== "@local") {
+        result.lines = [line("Only @local destination is supported for now.", "info")];
+        break;
+      }
+      const newItem: InventoryItem = {
+        id: `inv-${ctx.nextId()}`,
+        label: entry.name,
+        source: host.id,
+        path: entry.path,
+        content: entry.content,
+      };
+      result.state = applyTrace(
+        { ...state, inventory: [...state.inventory, newItem] },
+        6,
+        ctx,
+        host
+      );
+      result.lines = [line(`Copied ${entry.name} into inventory.`, "success")];
+      result.soundCue = "fileOp";
+      result.vfx = { type: "success" };
+      break;
+    }
+
+    case "rm": {
+      if (!state.session.connectedHost) {
+        result.lines = [line("No host connected.", "error")];
+        break;
+      }
+      const target = cmd.args[0];
+      if (!target) {
+        result.lines = [line("Usage: rm <file>", "error")];
+        break;
+      }
+      const host = state.world.hosts[state.session.connectedHost];
+      const updatedHost = {
+        ...host,
+        filesystem: host.filesystem.filter((entry) => entry.path !== target),
+      };
+      result.state = applyTrace(withHost(state, updatedHost), 7, ctx, host);
+      result.lines = [line(`Removed ${target}.`, "success")];
+      break;
+    }
+
+    case "edit": {
+      if (!state.session.connectedHost) {
+        result.lines = [line("No host connected.", "error")];
+        break;
+      }
+      const [target, data] = cmd.args;
+      if (!target || !data) {
+        result.lines = [line("Usage: edit <file> key=value", "error")];
+        break;
+      }
+      const host = state.world.hosts[state.session.connectedHost];
+      const file = host.filesystem.find((entry) => entry.path === target);
+      if (!file) {
+        result.lines = [line(`${target} not found.`, "error")];
+        break;
+      }
+      const updatedHost = {
+        ...host,
+        filesystem: host.filesystem.map((entry) =>
+          entry.path === target ? { ...entry, content: `${data} (tampered)` } : entry
+        ),
+      };
+      result.state = applyTrace(withHost(state, updatedHost), 5, ctx, host);
+      result.lines = [line(`Patched ${target}.`, "success")];
+      break;
+    }
+
+    case "wipe logs": {
+      if (!state.session.connectedHost) {
+        result.lines = [line("No host connected.", "error")];
+        break;
+      }
+      const host = state.world.hosts[state.session.connectedHost];
+      result.state = applyTrace(withHost(state, { ...host, logs: [] }), 10, ctx, host);
+      result.lines = [line("Logs wiped. Trace noise spiked.", "warning")];
+      result.vfx = { type: "alert" };
+      result.soundCue = "alert";
+      break;
+    }
+
+    case "disconnect":
+    case "exit": {
+      const wasConnected = !!state.session.connectedHost;
+      result.state = {
+        ...state,
+        session: { scannedHosts: asSet(state.session.scannedHosts) },
+      };
+      result.lines = [
+        line(
+          wasConnected ? "Disconnected. Trace will decay while idle." : "No active connection.",
+          "info"
+        ),
+      ];
+      break;
+    }
+
+    case "market":
+      result.lines = [
+        line(
+          "Market rotation offline. Check back after you rack more reputation.",
+          "info"
+        ),
+      ];
+      break;
+
+    case "buy":
+      result.lines = [line("Store coming soon.", "info")];
+      break;
   }
 
   return result;
