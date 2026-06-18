@@ -15,8 +15,14 @@
 
 import type { GameState, Host, InventoryItem, TerminalLine, VfxEvent } from "@/types/game";
 import type { CommandContext } from "@/app/lib/game/context";
+import type { ScanAnimation, TimedEffect } from "@/app/lib/game/effects";
 import { helpOutput } from "@/app/lib/game/commands";
-import { formatMissionDetail, formatProxyTable, missionSummaryLine } from "@/app/lib/game/formatting";
+import {
+  formatMissionDetail,
+  formatProxyTable,
+  formatScanOutput,
+  missionSummaryLine,
+} from "@/app/lib/game/formatting";
 import { evaluateMission, setMissionStatus, syncInbox } from "@/app/lib/game/missionLogic";
 import { addTraceNoise } from "@/app/lib/game/trace";
 import { buildRouteState, clamp, findHost, listFiles } from "@/app/lib/game/worldQueries";
@@ -49,18 +55,22 @@ export interface CommandResult {
   /** Vfx event WITHOUT `value` — the caller stamps the raw input as value. */
   vfx: VfxEvent | null;
   clearScreen: boolean;
+  /** Declarative timeline of staged presentation for the store to play. */
+  effects?: TimedEffect[];
 }
 
 /**
- * Commands fully owned by the pure reducer. Everything else falls back to the
- * store's legacy switch — currently only `scan` and `connect`, which need an
- * effects channel for their staged animation before they can migrate.
+ * Commands fully owned by the pure reducer — now the entire command set. The
+ * staged-animation commands (scan/connect) express their drama through the
+ * effects channel rather than calling setTimeout directly. Anything not listed
+ * here is an unknown command, handled by the store's fallback.
  */
 const HANDLED = new Set([
   // mission + status
   "help",
   "clear",
   "status",
+  "settings",
   "inbox",
   "read",
   "missions",
@@ -74,9 +84,11 @@ const HANDLED = new Set([
   "route rm",
   "route clear",
   // recon
+  "scan",
   "probe",
   "fingerprint",
   // session / filesystem
+  "connect",
   "pwd",
   "ls",
   "cd",
@@ -155,6 +167,10 @@ export function reduceCommand(
     case "clear":
       result.lines = [line("Terminal cleared.", "success")];
       result.clearScreen = true;
+      break;
+
+    case "settings":
+      result.lines = [line("Settings are currently handled by the terminal. Coming soon.", "info")];
       break;
 
     case "status":
@@ -533,6 +549,175 @@ export function reduceCommand(
           "info"
         ),
       ];
+      break;
+    }
+
+    case "scan": {
+      const host = findHost(state.world, cmd.args[0]);
+      if (!host) {
+        result.lines = [line(`Host ${cmd.args[0]} not found.`, "error")];
+        break;
+      }
+      const hops = state.route.hops;
+      const hasRoute = hops.length > 0;
+      const scanMode = cmd.flags.includes("stealth")
+        ? "STEALTH"
+        : cmd.flags.includes("aggr")
+        ? "AGGRESSIVE"
+        : "STANDARD";
+      result.lines = [
+        line(`[SCAN] Initiating ${scanMode} scan on ${host.label}`, "info"),
+        line(
+          `[ROUTE] ${
+            hasRoute
+              ? `Routing through ${hops.length} proxy hop${hops.length > 1 ? "s" : ""}...`
+              : "DIRECT CONNECTION - No proxy route!"
+          }`,
+          hasRoute ? "info" : "warning"
+        ),
+      ];
+      const anim: ScanAnimation = {
+        fromNode: hasRoute ? hops[hops.length - 1] : "player",
+        toNode: host.id,
+        throughProxies: [...hops],
+        phase: "routing",
+        progress: 0,
+        startTime: ctx.now,
+      };
+      const baseNoise = cmd.flags.includes("stealth") ? 6 : cmd.flags.includes("aggr") ? 18 : 12;
+      const scanned = new Set(asSet(state.session.scannedHosts));
+      scanned.add(host.id);
+      result.state = applyTrace(
+        { ...state, session: { ...state.session, currentTarget: host.id, scannedHosts: scanned } },
+        baseNoise,
+        ctx,
+        host
+      );
+      result.soundCue = "scan";
+      result.vfx = { type: "scan", target: host.id };
+      result.effects = [
+        { atMs: 0, anim: { type: "set", value: anim }, isExecuting: true, executionPhase: "routing" },
+        {
+          atMs: 400,
+          lines: [line(`[PROBE] Enumerating ports on ${host.label}...`, "info")],
+          anim: { type: "patch", value: { phase: "scanning", progress: 0.5 } },
+          executionPhase: "executing",
+        },
+        {
+          atMs: 800,
+          lines: [line(`[PROBE] Fingerprinting services...`, "info")],
+          anim: { type: "patch", value: { progress: 0.75 } },
+        },
+        {
+          atMs: 1200,
+          lines: [
+            line(`[COMPLETE] Scan finished.`, "success"),
+            ...formatScanOutput(host).map((l) => line(l, "success")),
+          ],
+          anim: { type: "patch", value: { phase: "complete", progress: 1 } },
+          executionPhase: "complete",
+          isExecuting: false,
+        },
+        { atMs: 2700, anim: { type: "clear" }, executionPhase: "idle" },
+      ];
+      break;
+    }
+
+    case "connect": {
+      const host = findHost(state.world, cmd.args[0]);
+      if (!host) {
+        result.lines = [line(`Host ${cmd.args[0]} not reachable.`, "error")];
+        break;
+      }
+      const scanned = new Set(asSet(state.session.scannedHosts));
+      const wasScanned = scanned.has(host.id);
+      const hops = state.route.hops;
+      const hasRoute = hops.length > 0;
+      result.lines = [
+        line(`[CONNECT] Initiating session to ${host.label}...`, "info"),
+        line(
+          `[ROUTE] ${
+            hasRoute
+              ? `Establishing tunnel through ${hops.length} hop${hops.length > 1 ? "s" : ""}`
+              : "WARNING: Direct connection - no proxy!"
+          }`,
+          hasRoute ? "info" : "warning"
+        ),
+      ];
+      const anim: ScanAnimation = {
+        fromNode: hasRoute ? hops[hops.length - 1] : "player",
+        toNode: host.id,
+        throughProxies: [...hops],
+        phase: "routing",
+        progress: 0,
+        startTime: ctx.now,
+      };
+      let connectionNoise = 15;
+      if (!wasScanned) connectionNoise += 35;
+      if (!hasRoute) connectionNoise += 40;
+      if (!wasScanned && !hasRoute) connectionNoise += 20;
+      result.state = applyTrace(
+        {
+          ...state,
+          session: {
+            ...state.session,
+            connectedHost: host.id,
+            currentTarget: host.id,
+            workingDir: "/",
+            scannedHosts: scanned,
+          },
+        },
+        connectionNoise,
+        ctx,
+        host
+      );
+      const finalTrace = result.state.trace.level;
+      if (connectionNoise > 20 || finalTrace > 25) {
+        result.vfx = { type: "alert", target: host.id };
+        result.soundCue = "alert";
+      } else {
+        result.soundCue = "connect";
+        result.vfx = { type: "connect", target: host.id };
+      }
+      const effects: TimedEffect[] = [
+        { atMs: 0, anim: { type: "set", value: anim }, isExecuting: true, executionPhase: "routing" },
+      ];
+      if (!wasScanned) {
+        effects.push({
+          atMs: 300,
+          lines: [line(`[!] WARNING: Host not scanned. IDS triggered.`, "warning")],
+        });
+      }
+      if (!hasRoute) {
+        effects.push({
+          atMs: 500,
+          lines: [line(`[!] WARNING: No proxy route. IP exposed.`, "warning")],
+        });
+      }
+      effects.push({
+        atMs: 700,
+        lines: [line(`[HANDSHAKE] Negotiating encryption...`, "info")],
+        anim: { type: "patch", value: { phase: "scanning", progress: 0.6 } },
+        executionPhase: "executing",
+      });
+      effects.push({
+        atMs: 1100,
+        lines: [
+          line(
+            `[SESSION] Connection established to ${host.label}`,
+            hasRoute && wasScanned ? "success" : "warning"
+          ),
+          line(
+            `[TRACE] Noise spike: +${connectionNoise} | Current: ${finalTrace.toFixed(1)}%`,
+            connectionNoise > 30 ? "error" : "warning"
+          ),
+        ],
+        anim: { type: "patch", value: { phase: "complete", progress: 1 } },
+        executionPhase: "complete",
+        isExecuting: false,
+      });
+      effects.push({ atMs: 2100, anim: { type: "clear" }, executionPhase: "idle" });
+      result.effects = effects;
       break;
     }
 

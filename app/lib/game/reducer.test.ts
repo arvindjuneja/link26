@@ -110,14 +110,68 @@ describe("gameReducer — behavior parity", () => {
     expect(r.soundCue).toBe("success");
   });
 
-  it("returns null for commands it does not own", () => {
+  it("returns null only for genuinely unknown commands", () => {
     const state = createInitialState({ now: 0 });
-    expect(reduceCommand(state, cmd("scan", ["hq-node"]), ctx())).toBeNull();
-    expect(reduceCommand(state, cmd("connect", ["hq-node"]), ctx())).toBeNull();
-    expect(isReducerCommand("scan")).toBe(false);
-    expect(isReducerCommand("connect")).toBe(false);
+    expect(reduceCommand(state, cmd("frobnicate"), ctx())).toBeNull();
+    expect(isReducerCommand("frobnicate")).toBe(false);
+    expect(isReducerCommand("scan")).toBe(true);
+    expect(isReducerCommand("connect")).toBe(true);
     expect(isReducerCommand("submit")).toBe(true);
     expect(isReducerCommand("route add")).toBe(true);
+  });
+});
+
+describe("gameReducer — scan / connect (effects channel)", () => {
+  const ctx = () => createDeterministicContext("fx", 0);
+
+  it("scan marks the host scanned, raises trace, and emits a staged timeline", () => {
+    const state = createInitialState({ now: 0 });
+    const r = reduceCommand(state, cmd("scan", ["hq-node"]), ctx())!;
+
+    expect(r.state.session.currentTarget).toBe("hq-node");
+    expect(r.state.session.scannedHosts).toEqual(new Set(["hq-node"]));
+    expect(r.state.trace.level).toBeGreaterThan(state.trace.level);
+    expect(r.soundCue).toBe("scan");
+    expect(r.vfx).toEqual({ type: "scan", target: "hq-node" });
+
+    // timeline: t0 sets animation + busy; final step clears + goes idle
+    expect(r.effects!.map((e) => e.atMs)).toEqual([0, 400, 800, 1200, 2700]);
+    expect(r.effects![0]).toMatchObject({ isExecuting: true, executionPhase: "routing" });
+    expect(r.effects![0].anim).toMatchObject({ type: "set" });
+    const last = r.effects![r.effects!.length - 1];
+    expect(last.anim).toEqual({ type: "clear" });
+    expect(last.executionPhase).toBe("idle");
+
+    // purity: the input's scannedHosts set was not mutated
+    expect(state.session.scannedHosts).toEqual(new Set());
+  });
+
+  it("scan effects are deterministic for a fixed context", () => {
+    const a = reduceCommand(createInitialState({ now: 0 }), cmd("scan", ["hq-node"]), ctx())!;
+    const b = reduceCommand(createInitialState({ now: 0 }), cmd("scan", ["hq-node"]), ctx())!;
+    expect(b.effects).toEqual(a.effects);
+  });
+
+  it("connect with no scan and no route stacks the trace penalties and warns", () => {
+    const state = createInitialState({ now: 0 });
+    const r = reduceCommand(state, cmd("connect", ["hq-node"]), ctx())!;
+
+    expect(r.state.session.connectedHost).toBe("hq-node");
+    expect(r.state.session.workingDir).toBe("/");
+    // 15 + 35 (unscanned) + 40 (no route) + 20 (both) => large spike, alert
+    expect(r.state.trace.level).toBeGreaterThan(state.trace.level + 10);
+    expect(r.soundCue).toBe("alert");
+    // both the "not scanned" (300ms) and "no route" (500ms) warnings are present
+    expect(r.effects!.some((e) => e.atMs === 300)).toBe(true);
+    expect(r.effects!.some((e) => e.atMs === 500)).toBe(true);
+  });
+
+  it("connect to an unreachable host errors with no effects", () => {
+    const state = createInitialState({ now: 0 });
+    const r = reduceCommand(state, cmd("connect", ["ghosthost"]), ctx())!;
+    expect(r.lines[0].type).toBe("error");
+    expect(r.effects).toBeUndefined();
+    expect(r.state).toBe(state);
   });
 });
 
