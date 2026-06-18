@@ -10,7 +10,8 @@ const missionBlueprints: Array<{
   {
     id: "mission-ghost",
     title: "Ghost in the Archive",
-    description: "Exfil the prototype diagnostics without triggering the IDS.",
+    description:
+      "Pull the asset register off the mail relay. Read-only exfil — copy it to @local and leave no write artifacts behind.",
     objective: {
       type: "exfil",
       hostId: "hq-node",
@@ -21,7 +22,8 @@ const missionBlueprints: Array<{
   {
     id: "mission-orbital",
     title: "Orbital Whisper",
-    description: "Modify the telemetry log so the orbital launch appears delayed.",
+    description:
+      "Falsify the freight telemetry manifest so the shipment window reads delayed. Tamper it in place with `edit`.",
     objective: {
       type: "modify",
       hostId: "orbital",
@@ -32,9 +34,10 @@ const missionBlueprints: Array<{
   {
     id: "mission-iris",
     title: "Iris Signal",
-    description: "Plant a tracer file inside Iris' vault to track the next shipment.",
+    description:
+      "Doctor the quarterly ledger snapshot to bury one shipment entry. Modify it in place with `edit`.",
     objective: {
-      type: "plant",
+      type: "modify",
       hostId: "iris",
       targetPath: "/data/vault.txt",
     },

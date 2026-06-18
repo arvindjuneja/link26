@@ -14,55 +14,58 @@ const regionCoords: Record<string, { lat: number; lon: number }> = {
   "Pacific": { lat: 20, lon: -160 },            // Hawaii area
 };
 
+// Targets are named like real engagement scope: an org plus the role the box
+// actually plays on the network. A practitioner should recognize each as a
+// plausible asset (mail relay, jump host, object store, substation gateway...).
 const hostTemplates = [
   {
     id: "hq-node",
-    label: "Nova Satellite HQ",
+    label: "Meridian Logistics — mail relay",
     region: "North America",
   },
   {
     id: "orbital",
-    label: "Orbital Data Exchange",
+    label: "Orbital Freight — telemetry API",
     region: "Europe",
   },
   {
     id: "aurora",
-    label: "Aurora Bioware Labs",
+    label: "Aurora Diagnostics — lab LIMS",
     region: "Asia",
   },
   {
     id: "charon",
-    label: "Charon Defense Grid",
+    label: "Charon Industrial — SCADA historian",
     region: "Africa",
   },
   {
     id: "iris",
-    label: "Iris Cloud Archive",
+    label: "Iris Backups — object store",
     region: "Oceania",
   },
   {
     id: "helix",
-    label: "Helix Genomics",
+    label: "Helix Genomics — sequencing cluster",
     region: "South America",
   },
   {
     id: "polaris",
-    label: "Polaris Financial Mesh",
+    label: "Polaris Capital — settlement mesh",
     region: "Middle East",
   },
   {
     id: "solstice",
-    label: "Solstice Power Grid",
+    label: "Solstice Grid Ops — substation gateway",
     region: "Scandinavia",
   },
   {
     id: "mosaic",
-    label: "Mosaic Media Nest",
+    label: "Mosaic Media — CDN origin",
     region: "Central Europe",
   },
   {
     id: "axion",
-    label: "Axion Research Cluster",
+    label: "Axion Research — HPC login node",
     region: "Pacific",
   },
 ];
@@ -90,11 +93,35 @@ const serviceRoster: Service[][] = [
   ],
 ];
 
+// Credible-but-abstract artifacts — the kind of internal file an operator would
+// actually pull. No real secrets, creds, or anything that transfers to reality.
 const rootFiles: FileSystemEntry[] = [
-  { path: "/secrets.txt", name: "secrets.txt", type: "file" as const, content: "TOP SECRET: Prototype diagnostics" },
-  { path: "/payload.bin", name: "payload.bin", type: "file" as const, content: "[binary blob]" },
+  {
+    path: "/secrets.txt",
+    name: "asset_register.txt",
+    type: "file" as const,
+    content:
+      "INTERNAL // restricted\nendpoints: 412  privileged_accounts: 9\noffsite_backup: iris-objstore\nowner: secops@meridian.example",
+  },
+  {
+    path: "/payload.bin",
+    name: "vault_export.enc",
+    type: "file" as const,
+    content: "[encrypted container — 4.2 MB, AES-256-GCM]",
+  },
   { path: "/logs", name: "logs", type: "dir" as const },
-  { path: "/data/vault.txt", name: "vault.txt", type: "file" as const, content: "Ledger entries: 42" },
+  {
+    path: "/logs/manifest.log",
+    name: "manifest.log",
+    type: "file" as const,
+    content: "window=nominal state=scheduled seq=0x1f checksum=ok",
+  },
+  {
+    path: "/data/vault.txt",
+    name: "ledger_snapshot.txt",
+    type: "file" as const,
+    content: "ledger snapshot 2026-Q1 — 1,284 entries — reconciled",
+  },
 ];
 
 const makeLogs = (label: string, now: number) =>
