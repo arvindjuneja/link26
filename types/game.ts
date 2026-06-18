@@ -52,9 +52,50 @@ export interface ProxyNode {
   costPerUse: number;
 }
 
+// A discoverable fact about a person — the raw material of OSINT evidence cards.
+// `passive` facts come from public/cached sources (near-zero FOOTPRINT); active
+// facts require probing a watched entity and cost FOOTPRINT exposure.
+export interface PersonFact {
+  kind:
+    | "handle"
+    | "email"
+    | "domain"
+    | "breach"
+    | "device"
+    | "timezone"
+    | "employer"
+    | "location";
+  label: string;
+  value: string; // fictional datum
+  passive: boolean;
+}
+
+export interface Person {
+  id: string;
+  label: string; // online handle
+  geo: GeoPoint;
+  org?: string; // employing org / host label
+  timezone: string;
+  watched: boolean; // active recon against a watched entity spikes FOOTPRINT
+  facts: PersonFact[];
+}
+
+// An RF emitter co-located with a target site. ELINT thinking, fully abstract:
+// you characterize a signature, you never decode content.
+export interface RfEmitter {
+  id: string;
+  label: string;
+  geo: GeoPoint;
+  band: string; // e.g. "2.4 GHz"
+  signature: string; // descriptive parameters (PRF/modulation/duty), never a recipe
+  siteHostId?: string;
+}
+
 export interface World {
   hosts: Record<string, Host>;
   proxies: Record<string, ProxyNode>;
+  people: Record<string, Person>;
+  emitters: Record<string, RfEmitter>;
 }
 
 export interface TraceInfo {
@@ -134,6 +175,7 @@ export interface SessionState {
 
 export interface GameState {
   time: number;
+  seed: number; // world seed — same seed reproduces the same skeleton
   cash: number;
   reputation: number;
   exposure: ExposureState;

@@ -10,11 +10,14 @@ import { createExposure } from "@/app/lib/game/exposure";
 export interface InitialStateOptions {
   /** Timestamp baked into the fresh state. Inject for deterministic builds. */
   now?: number;
+  /** World seed. Defaults to `now` so {now:0} builds are fully reproducible. */
+  seed?: number;
 }
 
 export function createInitialState(options: InitialStateOptions = {}): GameState {
   const now = options.now ?? Date.now();
-  const world = generateWorld(now);
+  const seed = options.seed ?? now;
+  const world = generateWorld(now, seed);
   const { inbox, missions } = generateMissions(world, now);
 
   const tools: Record<ToolId, ToolInstance> = {
@@ -46,6 +49,7 @@ export function createInitialState(options: InitialStateOptions = {}): GameState
 
   return {
     time: now,
+    seed,
     cash: 4200,
     reputation: 36,
     exposure: createExposure(8),
