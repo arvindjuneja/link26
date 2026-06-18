@@ -18,7 +18,7 @@ export function createInitialState(options: InitialStateOptions = {}): GameState
   const now = options.now ?? Date.now();
   const seed = options.seed ?? now;
   const world = generateWorld(now, seed);
-  const { inbox, missions } = generateMissions(world, now);
+  const { inbox, missions } = generateMissions(world, now, seed);
 
   const tools: Record<ToolId, ToolInstance> = {
     scanner: {

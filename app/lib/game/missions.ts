@@ -1,5 +1,17 @@
 import { Mission, MissionObjective, MissionReward, MissionSummary, World } from "@/types/game";
 import { missionSummaryFromMission } from "@/app/lib/game/missionLogic";
+import { PACK_MISSIONS, type PackMission } from "@/app/lib/game/contentPack";
+import { mulberry32 } from "@/app/lib/util/rng";
+
+// Deterministically pick N items by seed — the "seeded contracts" rotation.
+function pickN<T>(items: T[], seed: number, n: number): T[] {
+  const rng = mulberry32(seed >>> 0);
+  return items
+    .map((it) => ({ it, k: rng() }))
+    .sort((a, b) => a.k - b.k)
+    .slice(0, n)
+    .map((x) => x.it);
+}
 
 const missionBlueprints: Array<{
   id: string;
@@ -79,9 +91,13 @@ const missionBlueprints: Array<{
 
 export function generateMissions(
   world: World,
-  now: number = Date.now()
+  now: number = Date.now(),
+  seed: number = now
 ): { inbox: MissionSummary[]; missions: Mission[] } {
-  const missions: Mission[] = missionBlueprints.map((blueprint, index) => {
+  // Hand-authored anchors + a seeded rotation drawn from the baked pack.
+  const packPick: PackMission[] = pickN(PACK_MISSIONS, seed ^ 0x9e3779b9, 8);
+  const blueprints = [...missionBlueprints, ...packPick];
+  const missions: Mission[] = blueprints.map((blueprint, index) => {
     const host = blueprint.objective.hostId
       ? world.hosts[blueprint.objective.hostId]
       : undefined;
