@@ -13,7 +13,7 @@ import type {
   TraceInfo,
   TraceStatus,
 } from "@/types/game";
-import { addTraceNoise, decayTrace, getTraceStatus } from "@/app/lib/game/trace";
+import { addTraceNoise, clampLevel, decayTrace, getTraceStatus } from "@/app/lib/game/trace";
 
 export const EXPOSURE_CHANNELS: ExposureChannel[] = [
   "NETWORK",
@@ -70,9 +70,17 @@ export function applyChannelNoise(
   host?: Host,
   mitigation = 0
 ): ExposureState {
+  const noise = baseNoise * (1 - mitigation);
+  // NETWORK is packet-trace: proxy anonymity + host monitoring shape the noise.
+  if (ch === "NETWORK") {
+    return { ...exp, NETWORK: addTraceNoise(exp.NETWORK, noise, route, host) };
+  }
+  // RF / FOOTPRINT / ATTRIBUTION are physical/social/meta — they accumulate
+  // directly (network proxying does not hide that you LOOKED or TRANSMITTED).
+  const level = clampLevel(exp[ch].level + noise);
   return {
     ...exp,
-    [ch]: addTraceNoise(exp[ch], baseNoise * (1 - mitigation), route, host),
+    [ch]: { level, status: getTraceStatus(level), lastEvent: `+${noise.toFixed(1)}` },
   };
 }
 

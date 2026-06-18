@@ -9,7 +9,10 @@ import InventoryPanel from "./components/InventoryPanel";
 import MarketPanel from "./components/MarketPanel";
 import MissionGuidance from "./components/MissionGuidance";
 import DemoMode from "./components/DemoMode";
-import TraceMeter from "./components/TraceMeter";
+import ExposureBoard from "./components/ExposureBoard";
+import EvidencePanel from "./components/EvidencePanel";
+import HandlerPanel from "./components/HandlerPanel";
+import Codex from "./components/Codex";
 import { AuthModal } from "./components/AuthModal";
 import { useGameStore } from "./lib/persistence/store";
 import { overallTrace } from "./lib/game/exposure";
@@ -18,9 +21,9 @@ import { supabase, isSupabaseConfigured } from "./lib/supabase/client";
 // Status-based styling
 const traceStyles = {
   CALM: {
-    border: "border-emerald-500/20",
+    border: "border-cyan-500/20",
     glow: "",
-    bg: "bg-emerald-500/5",
+    bg: "bg-cyan-500/5",
   },
   ALERT: {
     border: "border-amber-500/30",
@@ -51,7 +54,7 @@ export default function Home() {
 
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
-  const { world, route, session, cash, reputation } = gameState;
+  const { world, route, session, cash, reputation, streak } = gameState;
   const trace = overallTrace(gameState.exposure);
   const traceStyle = traceStyles[trace.status as keyof typeof traceStyles] ?? traceStyles.CALM;
 
@@ -93,10 +96,14 @@ export default function Home() {
         <header className={`flex items-center justify-between rounded border ${traceStyle.border} ${traceStyle.glow} bg-black/60 px-4 py-2 text-[0.7rem] transition-all duration-300`}>
           <div className="flex items-center gap-6">
             <div><span className="text-zinc-500">CASH</span> <span className="font-semibold text-amber-400">{cash}c</span></div>
-            <div><span className="text-zinc-500">REP</span> <span className="font-semibold text-emerald-400">{reputation}r</span></div>
+            <div><span className="text-zinc-500">REP</span> <span className="font-semibold text-cyan-300">{reputation}r</span></div>
             <div><span className="text-zinc-500">ROUTE</span> <span className="font-semibold">{route.hops.length} hops</span></div>
+            {streak > 0 && (
+              <div><span className="text-zinc-500">STREAK</span> <span className="font-semibold text-cyan-400">×{streak}</span></div>
+            )}
           </div>
           <div className="flex items-center gap-4">
+            <Codex />
             {/* Execution indicator */}
             {isExecuting && (
               <div className="flex items-center gap-2 text-cyan-400">
@@ -154,16 +161,18 @@ export default function Home() {
             <InboxPanel />
           </div>
 
-          {/* Right: Trace + Panels */}
+          {/* Right: Exposure Board + Panels */}
           <div className="flex flex-col gap-3">
-            {/* Trace meter in a prominent position */}
+            {/* The Exposure Board — the heartbeat, in the prominent position */}
             <div className={`rounded border ${traceStyle.border} ${traceStyle.glow} bg-black/60 p-4 transition-all duration-300`}>
-              <TraceMeter />
+              <ExposureBoard />
             </div>
-            <DemoMode />
+            <HandlerPanel />
             <MissionGuidance />
+            <EvidencePanel />
             <InventoryPanel />
             <MarketPanel />
+            <DemoMode />
           </div>
         </div>
       </div>
