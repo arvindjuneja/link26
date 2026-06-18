@@ -1,189 +1,102 @@
-# Link26
+# Link26 → GHOST26
 
-> *A sentimental road back to Uplink times, but in 2026.*
+> *An arcade simulator of the modern signals operator. Uplink's heart, reborn for 2026.*
 
-Link26 is a browser-based hacking simulation game inspired by the classic [Uplink](https://www.introversion.co.uk/uplink/) from Introversion Software. It recreates the tension and atmosphere of being a freelance hacker navigating through proxy chains, scanning targets, and completing contracts—all from your terminal.
+You never leave the chair, but you reach across the whole physical-digital world —
+footprint a person, task a sensor, crack a network — to answer one human question,
+and get out before anyone realizes you were there.
 
-![Link26 Screenshot](screenshot.png)
+This started as a browser homage to Introversion's **Uplink** and is being
+re-architected into a viable, cybersec-credible game. The full vision, decisions,
+and roadmap live in **[docs/GAME_DESIGN.md](docs/GAME_DESIGN.md)**. (Working title;
+final name — GHOST26 vs NULLROUTE vs Link26 — is undecided.)
 
-## Features
+## It's an arcade simulator — not a how-to
 
-### 🖥️ Terminal Interface
-- Typewriter effect for authentic retro feel
-- Status-aware prompt: `lnk@hostname:/path [ALERT]>`
-- Command history navigation
-- Atmospheric system messages when connected
+| WE DEPICT | WE NEVER DEPICT |
+|---|---|
+| Real workflow shapes & phase names (recon → access → action) | Working commands, exploits, or payloads |
+| What tools/disciplines are *for*, abstractly | Anything that transfers to a real system |
+| Risk/reward tradeoffs as game stats | Real targets, data, or credentials |
+| The ethics & rules of engagement | Person identification, tracking, or surveillance |
 
-### 🗺️ Network Map
-- World map with proxy nodes and target hosts
-- Visual scan wave animation through proxy chains
-- Real-time route visualization with data packets
-- Click-to-add proxy routing
+Credibility comes from authentic vocabulary, accurate mental models, and respect
+for the craft — never from transferable attack instructions.
 
-### 📊 Narrative Trace System
-Instead of raw percentages, trace builds tension through narrative:
-- **CALM** → "SYSTEMS NOMINAL"
-- **ALERT** → "SUSPICIOUS ACTIVITY"  
-- **HUNT** → "TRACE IN PROGRESS"
-- **LOCKDOWN** → "IDENTITY COMPROMISED"
+## The loop
 
-### 🎯 Missions
-- Accept contracts from your inbox
-- Exfiltrate data, modify files, plant evidence
-- Build reputation and earn credits
-- Race against trace detection
+One target — a person, place, or org — cracked through several recon surfaces,
+under a rising **Exposure Board**:
 
-### 🔐 Proxy Routing
-- Build multi-hop routes for anonymity
-- Each proxy has heat, cost, and anonymity stats
-- Proxies burn out with overuse
-- Direct connections massively spike trace
+- **Exposure Board** — Uplink's trace tracker, instantiated per detection vector:
+  **NETWORK** (tracing the packet back), **RF** (someone in the building noticing),
+  **FOOTPRINT** (you tipped them off by looking), **ATTRIBUTION** (they're profiling
+  *you*, across sessions). A heartbeat beats at BPM by the worst channel — silence
+  at CALM is the reward. The skill is triage, not zeroing one bar.
+- **Recon surfaces** — `scan`/`connect` network ops; `osint` (passive vs active,
+  the footprint tradeoff) building an **evidence board**; `collect rf` to
+  characterize emitters; `acquire` (probabilistic access with harvested creds).
+- **Evidence-assembly missions** — `identify`/`characterize` objectives are
+  completed by assembling the right cards (a deterministic predicate), never by
+  typing free text.
+- **Three endings** — **clean** (ghost; streak bonus), **hot** (tripped; full pay,
+  attribution ticks up), **burned** (lockdown; you survive, but it costs you).
+  The risk-dial (`submit --push`) trades exposure for a payout — the greed beat.
+- **Gear** — completing jobs buys gear that flattens an exposure channel: a fear
+  gets quieter.
 
 ## Commands
 
 ```
-help                    Show available commands
-inbox                   List open missions
-accept <id>             Accept a mission
-scan <host>             Scan target (triggers map animation)
-connect <host>          Establish session
-ls / cat / cp / rm      File operations when connected
-route add <proxy>       Add proxy to route
-route show              Display current route
-disconnect              Drop connection (trace decays while idle)
+help · status · inbox · read <id> · accept <id> · missions · submit <id> [--push]
+scan <host> [--stealth|--aggr] · probe <host> <port> · fingerprint <host>
+osint <subject> [--active] · collect rf <host|emitter> · deploy sensor <host>
+acquire <host> [--spray] · evidence
+route add/rm/show/clear <proxy> · proxy list/info · connect/disconnect
+ls · cat · cp <src> @local · rm · edit <file> key=value · wipe logs
+market · buy <id>
 ```
 
-## Getting Started
+## Architecture
 
-### Local Development
+- **Pure, deterministic engine.** All command logic is a pure reducer
+  (`app/lib/game/reducer.ts`); `runCommand` is a thin dispatcher. Non-determinism
+  (time/RNG/ids) is injected via `CommandContext`. This is what makes the game
+  testable and (later) server-authoritative. Run `npm test`.
+- **Seeded world** (`worldgen.ts`) — mulberry32 seed → reproducible hosts, people,
+  and RF emitters; same seed → same inbox ("seeded contracts").
+- **Exposure engine** (`exposure.ts`) — four channels, dwell clock, decay, outcome.
+- **Baked content pack** (`contentPack.ts`) — 30 missions / 30 codex cards / 30
+  handler lines, generated once and served offline at **zero per-play LLM cost**.
+  Live LLM generation is a paid delighter, gated behind a server key (inert until
+  set — see `app/lib/llm/`), so the free tier is genuinely free to run.
+- **Recommended hosting:** Cloudflare Workers via OpenNext + Supabase (auth/DB) +
+  Claude tiers (Haiku/Sonnet 4.6/Opus 4.8) behind a Worker. iOS later via Capacitor.
+
+## Status
+
+- ✅ Phase 0: pure reducer + determinism harness; ✅ Exposure Board; ✅ seeded
+  world + entity graph; ✅ OSINT/RF/access surfaces; ✅ evidence missions; ✅ gear;
+  ✅ three endings/streak/RoE; ✅ Gateway UI (board, heartbeat, Mercer, codex);
+  ✅ baked content pack.
+- ⚠️ **Not yet wired (needs your accounts):** server-authoritative economy (the
+  cheat hole — see **[docs/SECURITY.md](docs/SECURITY.md)** and
+  `supabase-schema-hardened.sql`), live LLM, Cloudflare deploy, iOS/Capacitor.
+  Do not ship a competitive leaderboard until the economy is server-authoritative.
+
+## Develop
 
 ```bash
-# Install dependencies
 npm install
-
-# Run development server
-npm run dev
-
-# Build for production
+npm run dev      # http://localhost:3000
+npm test         # vitest — engine determinism, purity, behavior parity
 npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-### Docker
-
-```bash
-# Build the image
-docker build -t link26 .
-
-# Run the container
-docker run -p 3000:3000 link26
-```
-
-Or use Docker Compose:
-
-```bash
-docker compose up -d
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-## Cloud Setup (Vercel + Supabase)
-
-For cloud saves and user authentication, follow these steps:
-
-### 1. Create a Supabase Project
-
-1. Go to [supabase.com](https://supabase.com) and create a new project
-2. Once created, go to **Settings → API** and copy:
-   - Project URL (`NEXT_PUBLIC_SUPABASE_URL`)
-   - Anon public key (`NEXT_PUBLIC_SUPABASE_ANON_KEY`)
-
-### 2. Set Up Database Schema
-
-In your Supabase dashboard, go to **SQL Editor** and run the contents of `supabase-schema.sql`:
-
-```sql
--- This creates the saves table with Row Level Security
--- See supabase-schema.sql for the full script
-```
-
-### 3. Configure Auth Providers (Optional)
-
-In Supabase dashboard → **Authentication → Providers**:
-- Enable **Google** and/or **GitHub** OAuth
-- Add your OAuth credentials from each provider
-- Set redirect URL to `https://your-domain.vercel.app`
-
-### 4. Deploy to Vercel
-
-```bash
-# Install Vercel CLI
-npm i -g vercel
-
-# Deploy (follow prompts)
-vercel
-```
-
-Or connect your GitHub repo to Vercel for automatic deployments.
-
-### 5. Set Environment Variables
-
-In Vercel dashboard → **Settings → Environment Variables**, add:
-
-```
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-```
-
-For local development, create a `.env.local` file:
-
-```bash
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-```
-
-### 6. Update Supabase Auth Settings
-
-In Supabase → **Authentication → URL Configuration**:
-- Add your Vercel domain to **Site URL**: `https://your-app.vercel.app`
-- Add to **Redirect URLs**: `https://your-app.vercel.app/**`
-
-## Tech Stack
-
-- **Framework:** Next.js 16 with App Router
-- **State:** Zustand with IndexedDB persistence
-- **Backend:** Supabase (Auth + PostgreSQL)
-- **Hosting:** Vercel (recommended)
-- **Styling:** Tailwind CSS
-- **Audio:** Web Audio API synthesized sounds
-- **Graphics:** Canvas 2D for map, CSS for effects
-
-## Gameplay Tips
-
-1. **Always scan before connecting** - Direct connections without reconnaissance spike your trace massively
-2. **Build a proxy route** - Never connect without at least 2-3 proxy hops
-3. **Watch proxy heat** - Overused proxies burn out and become unusable
-4. **Disconnect to decay** - Trace slowly decreases when you're not connected
-5. **Wipe logs sparingly** - It works but creates a trace spike
-
-## Roadmap
-
-- [x] Cloud save sync (Supabase)
-- [x] User authentication
-- [ ] More mission types
-- [ ] Hardware upgrades shop
-- [ ] Multiplayer agent rankings
-- [ ] Mobile responsive layout
-
 ## Credits
 
-Inspired by **Uplink: Hacker Elite** (2001) by Introversion Software—the game that defined the hacking sim genre.
+Inspired by **Uplink: Hacker Elite** (2001) by Introversion Software.
 
 ## License
 
 MIT
-
----
-
-*"Welcome back, operator. The network awaits."*

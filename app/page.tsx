@@ -13,6 +13,7 @@ import ExposureBoard from "./components/ExposureBoard";
 import EvidencePanel from "./components/EvidencePanel";
 import HandlerPanel from "./components/HandlerPanel";
 import Codex from "./components/Codex";
+import Disclaimer from "./components/Disclaimer";
 import { AuthModal } from "./components/AuthModal";
 import { useGameStore } from "./lib/persistence/store";
 import { overallTrace } from "./lib/game/exposure";
@@ -86,7 +87,8 @@ export default function Home() {
   return (
     <div className={`relative min-h-screen bg-[#000102] text-white transition-colors duration-500 ${traceStyle.bg}`}>
       <VfxThreeOverlay />
-      <AuthModal 
+      <Disclaimer />
+      <AuthModal
         isOpen={authModalOpen} 
         onClose={() => setAuthModalOpen(false)}
         onAuthChange={handleAuthChange}
