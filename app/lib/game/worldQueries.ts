@@ -38,6 +38,18 @@ export function findHost(world: World, query?: string): Host | undefined {
   );
 }
 
+/** Cool every proxy's heat slightly (called on the idle tick). Pure. */
+export function coolProxies(
+  proxies: Record<string, ProxyNode>,
+  rate = 0.04
+): Record<string, ProxyNode> {
+  const next: Record<string, ProxyNode> = {};
+  for (const [id, p] of Object.entries(proxies)) {
+    next[id] = p.heat > 0 ? { ...p, heat: clamp(p.heat - rate, 0, 1) } : p;
+  }
+  return next;
+}
+
 /** Resolve a person by id or fuzzy handle/org match. */
 export function findPerson(world: World, query?: string): Person | undefined {
   if (!query) return undefined;

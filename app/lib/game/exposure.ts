@@ -58,15 +58,22 @@ export function createExposure(networkStart = 8): ExposureState {
   };
 }
 
-/** Add noise to a single channel (everything else untouched). Pure. */
+/**
+ * Add noise to a single channel (everything else untouched). `mitigation`
+ * (0..1) is the player's gear flattening this channel. Pure.
+ */
 export function applyChannelNoise(
   exp: ExposureState,
   ch: ExposureChannel,
   baseNoise: number,
   route: RouteState,
-  host?: Host
+  host?: Host,
+  mitigation = 0
 ): ExposureState {
-  return { ...exp, [ch]: addTraceNoise(exp[ch], baseNoise, route, host) };
+  return {
+    ...exp,
+    [ch]: addTraceNoise(exp[ch], baseNoise * (1 - mitigation), route, host),
+  };
 }
 
 /**
@@ -75,11 +82,16 @@ export function applyChannelNoise(
  */
 export function tickExposure(
   exp: ExposureState,
-  opts: { connected: boolean; route: RouteState; host?: Host }
+  opts: {
+    connected: boolean;
+    route: RouteState;
+    host?: Host;
+    networkMitigation?: number;
+  }
 ): ExposureState {
   return {
     NETWORK: opts.connected
-      ? addTraceNoise(exp.NETWORK, DWELL_NOISE, opts.route, opts.host)
+      ? addTraceNoise(exp.NETWORK, DWELL_NOISE * (1 - (opts.networkMitigation ?? 0)), opts.route, opts.host)
       : decayTrace(exp.NETWORK, DECAY_SCALE.NETWORK),
     RF: decayTrace(exp.RF, DECAY_SCALE.RF),
     FOOTPRINT: decayTrace(exp.FOOTPRINT, DECAY_SCALE.FOOTPRINT),

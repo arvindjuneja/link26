@@ -33,6 +33,7 @@ import {
 } from "@/app/lib/game/formatting";
 import { evaluateMission, setMissionStatus, syncInbox } from "@/app/lib/game/missionLogic";
 import { applyChannelNoise, EXPOSURE_CHANNELS } from "@/app/lib/game/exposure";
+import { GEAR, channelMitigation, gearById, nextCost } from "@/app/lib/game/gear";
 import {
   buildRouteState,
   clamp,
@@ -138,7 +139,14 @@ function applyExposure(
 ): GameState {
   return {
     ...state,
-    exposure: applyChannelNoise(state.exposure, ch, noise, state.route, host),
+    exposure: applyChannelNoise(
+      state.exposure,
+      ch,
+      noise,
+      state.route,
+      host,
+      channelMitigation(state.gear, ch)
+    ),
     time: ctx.now,
   };
 }
@@ -900,18 +908,52 @@ export function reduceCommand(
       break;
     }
 
-    case "market":
+    case "market": {
       result.lines = [
-        line(
-          "Market rotation offline. Check back after you rack more reputation.",
-          "info"
-        ),
+        line("Market — gear flattens an exposure channel's noise:"),
+        ...GEAR.map((g) => {
+          const tier = state.gear[g.id] ?? 0;
+          const maxed = tier >= g.maxTier;
+          const price = maxed ? "MAXED" : `${nextCost(g, tier)}c`;
+          return line(
+            `  ${g.id.padEnd(9)} T${tier}/${g.maxTier}  ${price.padEnd(7)} [${g.channel}] ${g.label}`,
+            "info"
+          );
+        }),
+        line(`Cash: ${state.cash}c — buy with 'buy <id>'.`),
       ];
       break;
+    }
 
-    case "buy":
-      result.lines = [line("Store coming soon.", "info")];
+    case "buy": {
+      const item = gearById(cmd.args[0]);
+      if (!item) {
+        result.lines = [line(`Unknown item "${cmd.args[0] ?? ""}". See 'market'.`, "error")];
+        break;
+      }
+      const tier = state.gear[item.id] ?? 0;
+      if (tier >= item.maxTier) {
+        result.lines = [line(`${item.label} is already at max tier.`, "info")];
+        break;
+      }
+      const cost = nextCost(item, tier);
+      if (state.cash < cost) {
+        result.lines = [line(`Insufficient cash (${cost}c needed, have ${state.cash}c).`, "error")];
+        break;
+      }
+      result.state = {
+        ...state,
+        cash: state.cash - cost,
+        gear: { ...state.gear, [item.id]: tier + 1 },
+      };
+      result.lines = [
+        line(`Acquired ${item.label} T${tier + 1}.`, "success"),
+        line(`  ${item.channel} noise now flattened — that fear gets quieter.`, "info"),
+      ];
+      result.soundCue = "success";
+      result.vfx = { type: "success" };
       break;
+    }
   }
 
   return result;

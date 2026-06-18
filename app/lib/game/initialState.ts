@@ -65,5 +65,6 @@ export function createInitialState(options: InitialStateOptions = {}): GameState
     session: { scannedHosts: new Set(), acquired: [] },
     inventory: [],
     evidence: [],
+    gear: {},
   };
 }

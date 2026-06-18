@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import type { GameState, TerminalLine, VfxEvent } from "@/types/game";
 import { tickExposure } from "@/app/lib/game/exposure";
+import { channelMitigation } from "@/app/lib/game/gear";
+import { coolProxies } from "@/app/lib/game/worldQueries";
 import { createInitialState } from "@/app/lib/game/initialState";
 import { reduceCommand, type SoundCue } from "@/app/lib/game/reducer";
 import { createLiveContext } from "@/app/lib/game/context";
@@ -198,7 +200,9 @@ export const useGameStore = create<GameStoreState>()((set, get) => ({
             connected: !!connectedHost,
             route: gs.route,
             host,
+            networkMitigation: channelMitigation(gs.gear, "NETWORK"),
           }),
+          world: { ...gs.world, proxies: coolProxies(gs.world.proxies) },
         },
       };
     }),

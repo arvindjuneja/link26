@@ -216,6 +216,35 @@ describe("gameReducer — recon surfaces (OSINT / RF / access)", () => {
   });
 });
 
+describe("gameReducer — gear track", () => {
+  const ctx = () => createDeterministicContext("gear", 0);
+
+  it("buy deducts cash and raises the gear tier", () => {
+    const state = createInitialState({ now: 0 });
+    const r = reduceCommand(state, cmd("buy", ["rig"]), ctx())!;
+    expect(r.state.gear.rig).toBe(1);
+    expect(r.state.cash).toBe(state.cash - 1500);
+    expect(r.soundCue).toBe("success");
+  });
+
+  it("buy rejects unknown items and unaffordable purchases", () => {
+    const state = createInitialState({ now: 0 });
+    expect(reduceCommand(state, cmd("buy", ["nope"]), ctx())!.lines[0].type).toBe("error");
+    const broke = { ...state, cash: 10 };
+    expect(reduceCommand(broke, cmd("buy", ["rig"]), ctx())!.lines[0].text).toContain("Insufficient");
+  });
+
+  it("gear flattens that channel's noise", () => {
+    const base = createInitialState({ now: 0 });
+    const geared = { ...base, gear: { rig: 4 } }; // max NETWORK mitigation
+    const plainScan = reduceCommand(base, cmd("scan", ["hq-node"]), ctx())!;
+    const gearedScan = reduceCommand(geared, cmd("scan", ["hq-node"]), ctx())!;
+    const plainRise = plainScan.state.exposure.NETWORK.level - base.exposure.NETWORK.level;
+    const gearedRise = gearedScan.state.exposure.NETWORK.level - geared.exposure.NETWORK.level;
+    expect(gearedRise).toBeLessThan(plainRise);
+  });
+});
+
 describe("gameReducer — evidence-assembly missions", () => {
   const ctx = () => createDeterministicContext("missions", 0);
 

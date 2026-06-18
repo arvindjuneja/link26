@@ -212,6 +212,7 @@ export interface GameState {
   session: SessionState;
   inventory: InventoryItem[];
   evidence: EvidenceCard[]; // collected OSINT/RF intel (assembled for identify missions)
+  gear: Record<string, number>; // gearId -> owned tier; each tier flattens a channel's noise
 }
 
 export interface TerminalLine {
