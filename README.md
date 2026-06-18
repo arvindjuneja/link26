@@ -55,7 +55,7 @@ disconnect              Drop connection (trace decays while idle)
 
 ## Getting Started
 
-#### Local Development
+### Local Development
 
 ```bash
 # Install dependencies
@@ -70,7 +70,7 @@ npm run build
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-#### Docker
+### Docker
 
 ```bash
 # Build the image
@@ -88,10 +88,73 @@ docker compose up -d
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
+## Cloud Setup (Vercel + Supabase)
+
+For cloud saves and user authentication, follow these steps:
+
+### 1. Create a Supabase Project
+
+1. Go to [supabase.com](https://supabase.com) and create a new project
+2. Once created, go to **Settings → API** and copy:
+   - Project URL (`NEXT_PUBLIC_SUPABASE_URL`)
+   - Anon public key (`NEXT_PUBLIC_SUPABASE_ANON_KEY`)
+
+### 2. Set Up Database Schema
+
+In your Supabase dashboard, go to **SQL Editor** and run the contents of `supabase-schema.sql`:
+
+```sql
+-- This creates the saves table with Row Level Security
+-- See supabase-schema.sql for the full script
+```
+
+### 3. Configure Auth Providers (Optional)
+
+In Supabase dashboard → **Authentication → Providers**:
+- Enable **Google** and/or **GitHub** OAuth
+- Add your OAuth credentials from each provider
+- Set redirect URL to `https://your-domain.vercel.app`
+
+### 4. Deploy to Vercel
+
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Deploy (follow prompts)
+vercel
+```
+
+Or connect your GitHub repo to Vercel for automatic deployments.
+
+### 5. Set Environment Variables
+
+In Vercel dashboard → **Settings → Environment Variables**, add:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+```
+
+For local development, create a `.env.local` file:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+```
+
+### 6. Update Supabase Auth Settings
+
+In Supabase → **Authentication → URL Configuration**:
+- Add your Vercel domain to **Site URL**: `https://your-app.vercel.app`
+- Add to **Redirect URLs**: `https://your-app.vercel.app/**`
+
 ## Tech Stack
 
 - **Framework:** Next.js 16 with App Router
 - **State:** Zustand with IndexedDB persistence
+- **Backend:** Supabase (Auth + PostgreSQL)
+- **Hosting:** Vercel (recommended)
 - **Styling:** Tailwind CSS
 - **Audio:** Web Audio API synthesized sounds
 - **Graphics:** Canvas 2D for map, CSS for effects
@@ -106,7 +169,8 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Roadmap
 
-- [ ] Cloud save sync
+- [x] Cloud save sync (Supabase)
+- [x] User authentication
 - [ ] More mission types
 - [ ] Hardware upgrades shop
 - [ ] Multiplayer agent rankings

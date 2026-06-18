@@ -97,9 +97,9 @@ const rootFiles: FileSystemEntry[] = [
   { path: "/data/vault.txt", name: "vault.txt", type: "file" as const, content: "Ledger entries: 42" },
 ];
 
-const makeLogs = (label: string) =>
+const makeLogs = (label: string, now: number) =>
   Array.from({ length: 3 }).map((_, index) => ({
-    timestamp: Date.now() - index * 1000 * 60,
+    timestamp: now - index * 1000 * 60,
     level: index === 2 ? "warning" : "info",
     message: `${label} audit record ${index}`,
   }));
@@ -118,7 +118,7 @@ const hostLocations: Record<string, { lat: number; lon: number }> = {
   "axion": { lat: 21.3, lon: -157.8 },            // Honolulu, Hawaii
 };
 
-export function generateWorld(): World {
+export function generateWorld(now: number = Date.now()): World {
   const hosts: Record<string, Host> = {};
   hostTemplates.forEach((template, index) => {
     const services = serviceRoster[index % serviceRoster.length];
@@ -135,7 +135,7 @@ export function generateWorld(): World {
       monitoring: 0.15 + (index % 3) * 0.2,
       services,
       filesystem: rootFiles.map((entry) => ({ ...entry })) as FileSystemEntry[],
-      logs: makeLogs(template.label),
+      logs: makeLogs(template.label, now),
       flags: { honeypot: index === 3, rateLimited: index % 4 === 0 },
     } as Host;
   });

@@ -42,8 +42,10 @@ const missionBlueprints: Array<{
   },
 ];
 
-export function generateMissions(world: World): { inbox: MissionSummary[]; missions: Mission[] } {
-  const now = Date.now();
+export function generateMissions(
+  world: World,
+  now: number = Date.now()
+): { inbox: MissionSummary[]; missions: Mission[] } {
   const missions: Mission[] = missionBlueprints.map((blueprint, index) => {
     const host = world.hosts[blueprint.objective.hostId];
     const desc = host ? `${blueprint.description} Target: ${host.label}` : blueprint.description;

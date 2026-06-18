@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Terminal from "./components/Terminal";
 import MapCanvas from "./components/MapCanvas";
 import VfxThreeOverlay from "./components/VfxThreeOverlay";
@@ -10,7 +10,9 @@ import MarketPanel from "./components/MarketPanel";
 import MissionGuidance from "./components/MissionGuidance";
 import DemoMode from "./components/DemoMode";
 import TraceMeter from "./components/TraceMeter";
+import { AuthModal } from "./components/AuthModal";
 import { useGameStore } from "./lib/persistence/store";
+import { supabase, isSupabaseConfigured } from "./lib/supabase/client";
 
 // Status-based styling
 const traceStyles = {
@@ -42,9 +44,18 @@ export default function Home() {
   const gameState = useGameStore((state) => state.gameState);
   const runCommand = useGameStore((state) => state.runCommand);
   const isExecuting = useGameStore((state) => state.isExecuting);
+  const user = useGameStore((state) => state.user);
+  const setUser = useGameStore((state) => state.setUser);
+  const cloudSyncEnabled = useGameStore((state) => state.cloudSyncEnabled);
+
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   const { world, route, session, trace, cash, reputation } = gameState;
   const traceStyle = traceStyles[trace.status as keyof typeof traceStyles] ?? traceStyles.CALM;
+
+  const handleAuthChange = useCallback((newUser: typeof user) => {
+    setUser(newUser);
+  }, [setUser]);
 
   useEffect(() => {
     loadSavedState();
@@ -52,9 +63,29 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [loadSavedState, decayTraceTick]);
 
+  // Initialize auth state on mount (only if Supabase is configured)
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [setUser]);
+
   return (
     <div className={`relative min-h-screen bg-[#000102] text-white transition-colors duration-500 ${traceStyle.bg}`}>
       <VfxThreeOverlay />
+      <AuthModal 
+        isOpen={authModalOpen} 
+        onClose={() => setAuthModalOpen(false)}
+        onAuthChange={handleAuthChange}
+      />
       <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1600px] flex-col gap-3 px-3 py-4">
         {/* Compact top bar with trace-reactive styling */}
         <header className={`flex items-center justify-between rounded border ${traceStyle.border} ${traceStyle.glow} bg-black/60 px-4 py-2 text-[0.7rem] transition-all duration-300`}>
@@ -78,8 +109,22 @@ export default function Home() {
                 <span>Disconnected</span>
               )}
             </div>
-            <button className="rounded border border-zinc-700 bg-zinc-800/50 px-3 py-1 text-zinc-400 hover:bg-zinc-700/50">
-              LOGIN (SOON)
+            <button 
+              onClick={() => setAuthModalOpen(true)}
+              className={`rounded border px-3 py-1 transition-colors ${
+                user 
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20" 
+                  : "border-zinc-700 bg-zinc-800/50 text-zinc-400 hover:bg-zinc-700/50"
+              }`}
+            >
+              {user ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  SYNCED
+                </span>
+              ) : (
+                "LOGIN"
+              )}
             </button>
           </div>
         </header>

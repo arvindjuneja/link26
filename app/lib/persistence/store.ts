@@ -1,29 +1,22 @@
 import { create } from "zustand";
 import type {
   GameState,
-  Mission,
-  MissionSummary,
   ProxyNode,
   RouteState,
   TerminalLine,
   VfxEvent,
-  ToolId,
-  ToolInstance,
   Host,
   InventoryItem,
 } from "@/types/game";
-import { generateWorld } from "@/app/lib/game/worldgen";
-import { generateMissions } from "@/app/lib/game/missions";
-import { helpOutput } from "@/app/lib/game/commands";
-import {
-  formatMissionDetail,
-  formatProxyTable,
-  formatScanOutput,
-  missionSummaryLine,
-} from "@/app/lib/game/formatting";
-import { addTraceNoise, decayTrace, getTraceStatus } from "@/app/lib/game/trace";
+import { formatProxyTable, formatScanOutput } from "@/app/lib/game/formatting";
+import { addTraceNoise, decayTrace } from "@/app/lib/game/trace";
+import { createInitialState } from "@/app/lib/game/initialState";
+import { reduceCommand, type SoundCue } from "@/app/lib/game/reducer";
+import { createLiveContext } from "@/app/lib/game/context";
 import { localSaveProvider } from "./saveLocalIndexedDb";
+import { cloudSaveProvider } from "./saveCloudSupabase";
 import { nowTimestamp } from "@/app/lib/util/time";
+import type { User } from "@supabase/supabase-js";
 
 const lineId = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -39,8 +32,6 @@ const multiWordCommands = [
   "route clear",
   "wipe logs",
 ];
-
-type SoundCue = "click" | "beep" | "alert" | "scan" | "connect" | "success" | "routeAdd" | "fileOp" | null;
 
 // Scan animation state for visual feedback on map
 export interface ScanAnimation {
@@ -73,78 +64,12 @@ const buildRouteState = (hops: string[], proxies: Record<string, ProxyNode>): Ro
   };
 };
 
-const missionSummaryFromMission = (mission: Mission): MissionSummary => ({
-  id: mission.id,
-  title: mission.title,
-  description: mission.description,
-  reward: mission.reward,
-  targetHost: mission.objective.hostId,
-  deadline: mission.deadline,
-  status: mission.status,
-});
-
-const syncInbox = (missions: Mission[]): MissionSummary[] => missions.map(missionSummaryFromMission);
-
 const findHost = (world: GameState["world"], query?: string): Host | undefined => {
   if (!query) return undefined;
   const normalized = query.toLowerCase();
   return Object.values(world.hosts).find(
     (host) => host.id === normalized || host.label.toLowerCase().includes(normalized) || host.id === query
   );
-};
-
-const createInitialState = (): GameState => {
-  const world = generateWorld();
-  const { inbox, missions } = generateMissions(world);
-  const traceLevel = 8;
-  const tools: Record<ToolId, ToolInstance> = {
-    scanner: {
-      id: "scanner",
-      level: 1,
-      label: "ScanSuite Alpha",
-      description: "Base recon module.",
-    },
-    proxyChain: {
-      id: "proxyChain",
-      level: 1,
-      label: "Proxy Chain",
-      description: "Sneaks traffic through proxy hops.",
-    },
-    wiper: {
-      id: "wiper",
-      level: 1,
-      label: "Logger Wiper",
-      description: "Clears trace signatures (use sparingly).",
-    },
-    tracker: {
-      id: "tracker",
-      level: 1,
-      label: "Pulse Tracker",
-      description: "Tracks host changes.",
-    },
-  };
-
-  return {
-    time: nowTimestamp(),
-    cash: 4200,
-    reputation: 36,
-    trace: {
-      level: traceLevel,
-      status: getTraceStatus(traceLevel),
-      lastEvent: "Session initialized",
-    },
-    route: {
-      hops: [],
-      latencyMs: 0,
-      anonymity: 0,
-    },
-    playerTools: tools,
-    inbox,
-    activeMissions: missions,
-    world,
-    session: { scannedHosts: new Set() },
-    inventory: [],
-  };
 };
 
 const parseCommand = (input: string) => {
@@ -173,25 +98,6 @@ const listFiles = (host: Host, path: string): string[] => {
   return entries.length ? entries : ["<empty directory>"];
 };
 
-const evaluateMission = (state: GameState, mission: Mission): boolean => {
-  const { objective } = mission;
-  const host = state.world.hosts[objective.hostId];
-  if (!host) return false;
-
-  switch (objective.type) {
-    case "exfil":
-      return state.inventory.some((item) => item.source === objective.hostId && item.path === objective.targetPath);
-    case "modify": {
-      const fileEntry = host.filesystem.find((entry) => entry.path === objective.targetPath);
-      return !!fileEntry?.content?.includes("tampered") || !!fileEntry?.content?.includes("state patched");
-    }
-    case "plant":
-      return host.filesystem.some((entry) => entry.path === objective.targetPath && entry.content?.includes("tracer"));
-    default:
-      return false;
-  }
-};
-
 const createLine = (text: string, type: TerminalLine["type"] = "info"): TerminalLine => ({
   id: lineId(),
   text,
@@ -207,6 +113,11 @@ interface GameStoreState {
   isExecuting: boolean;
   executionPhase: ExecutionPhase;
   scanAnimation: ScanAnimation | null;
+  // Auth state
+  user: User | null;
+  cloudSyncEnabled: boolean;
+  lastSyncTime: number | null;
+  // Actions
   runCommand: (input: string) => Promise<void>;
   clearTerminal: () => void;
   loadSavedState: () => Promise<void>;
@@ -216,6 +127,10 @@ interface GameStoreState {
   resetWorld: () => Promise<void>;
   setScanAnimation: (animation: ScanAnimation | null) => void;
   setExecutionPhase: (phase: ExecutionPhase) => void;
+  // Auth actions
+  setUser: (user: User | null) => void;
+  syncToCloud: () => Promise<void>;
+  loadFromCloud: () => Promise<boolean>;
 }
 
 const welcomeMessage = (): TerminalLine[] => [
@@ -240,15 +155,56 @@ export const useGameStore = create<GameStoreState>()((set, get) => ({
   isExecuting: false,
   executionPhase: "idle" as ExecutionPhase,
   scanAnimation: null,
+  // Auth state
+  user: null,
+  cloudSyncEnabled: false,
+  lastSyncTime: null,
+  // Basic actions
   addTerminalLine: (line) =>
     set((state) => ({ terminalLines: [...state.terminalLines, line] })),
   clearTerminal: () => set({ terminalLines: [] }),
   acknowledgeSoundCue: () => set({ soundCue: null }),
   setScanAnimation: (animation) => set({ scanAnimation: animation }),
   setExecutionPhase: (phase) => set({ executionPhase: phase, isExecuting: phase !== "idle" && phase !== "complete" }),
+  // Auth actions
+  setUser: (user) => {
+    set({ user, cloudSyncEnabled: !!user });
+    // If user just logged in, try to load cloud save
+    if (user) {
+      get().loadFromCloud();
+    }
+  },
+  syncToCloud: async () => {
+    const { user, gameState } = get();
+    if (!user) return;
+    await cloudSaveProvider.save(gameState);
+    set({ lastSyncTime: Date.now() });
+  },
+  loadFromCloud: async () => {
+    const { user } = get();
+    if (!user) return false;
+    
+    const cloudState = await cloudSaveProvider.load();
+    if (cloudState) {
+      // Convert scannedHosts array back to Set
+      if (cloudState.session && Array.isArray(cloudState.session.scannedHosts)) {
+        cloudState.session.scannedHosts = new Set(cloudState.session.scannedHosts);
+      } else if (cloudState.session && !cloudState.session.scannedHosts) {
+        cloudState.session.scannedHosts = new Set();
+      }
+      set({ gameState: cloudState, lastSyncTime: Date.now() });
+      return true;
+    }
+    return false;
+  },
   resetWorld: async () => {
+    const { user } = get();
     // Clear saved state from IndexedDB
     await localSaveProvider.clear();
+    // Also clear cloud save if logged in
+    if (user) {
+      await cloudSaveProvider.clear();
+    }
     // Generate fresh world
     const freshState = createInitialState();
     set({
@@ -260,9 +216,11 @@ export const useGameStore = create<GameStoreState>()((set, get) => ({
       isExecuting: false,
       executionPhase: "idle",
       scanAnimation: null,
+      lastSyncTime: null,
     });
   },
   loadSavedState: async () => {
+    // First try local save
     const saved = await localSaveProvider.load();
     if (saved) {
       // Convert scannedHosts array back to Set
@@ -301,120 +259,29 @@ export const useGameStore = create<GameStoreState>()((set, get) => ({
       terminalLines.push(...lines);
     };
 
-    const setMissionStatus = (missionId: string, status: MissionSummary["status"]) => {
-      const updatedMissions = nextState.activeMissions.map((mission) =>
-        mission.id === missionId ? { ...mission, status } : mission
-      );
-      nextState = { ...nextState, activeMissions: updatedMissions, inbox: syncInbox(updatedMissions) };
-    };
-
     const appendTrace = (noise: number, host?: Host) => {
       const trace = addTraceNoise(nextState.trace, noise, route, host);
       nextState = { ...nextState, trace, time: nowTimestamp() };
     };
 
+    // Phase 0 migration: the pure reducer owns an increasing subset of commands.
+    // If it handles this one, apply its result and skip the legacy switch entirely.
+    const ctx = createLiveContext();
+    const reduced = reduceCommand(nextState, { key, args, flags, raw: trimmed }, ctx);
+    if (reduced) {
+      nextState = reduced.state;
+      terminalLines.push(...reduced.lines);
+      soundCue = reduced.soundCue;
+      vfxEvent = reduced.vfx;
+      clearScreen = reduced.clearScreen;
+    } else {
     switch (key) {
       case "":
         emit([createLine("No command entered.", "error")]);
         break;
-      case "help":
-        emit(helpOutput());
-        soundCue = "beep";
-        break;
-      case "clear":
-        emit([createLine("Terminal cleared.", "success")]);
-        clearScreen = true;
-        break;
-      case "status":
-        emit([
-          createLine(`Cash: ${nextState.cash}c | Reputation: ${nextState.reputation}`),
-          createLine(`Trace: ${nextState.trace.level.toFixed(1)}% (${nextState.trace.status})`),
-          createLine(`Route anonym.: ${(route.anonymity * 100).toFixed(1)}% | Hops: ${route.hops.length}`),
-          createLine(
-            `Connected host: ${session.connectedHost ?? "none"} | Working dir: ${session.workingDir ?? "/"}`
-          ),
-        ]);
-        soundCue = "beep";
-        break;
       case "settings":
         emit([createLine("Settings are currently handled by the terminal. Coming soon.", "info")]);
         break;
-      case "inbox":
-        emit(nextState.inbox.map((mission) => createLine(missionSummaryLine(mission), "info")));
-        break;
-      case "read": {
-        const missionId = args[0];
-        const mission = nextState.activeMissions.find((m) => m.id === missionId);
-        if (!mission) {
-          emit([createLine(`Mission ${missionId} not found.`, "error")]);
-        } else {
-          emit(formatMissionDetail(mission).map((line) => createLine(line, "info")));
-        }
-        break;
-      }
-      case "accept": {
-        const missionId = args[0];
-        const mission = nextState.activeMissions.find((m) => m.id === missionId);
-        if (!mission) {
-          emit([createLine(`Mission ${missionId} not found.`, "error")]);
-          break;
-        }
-        if (mission.status !== "available") {
-          emit([createLine(`${mission.title} is already ${mission.status}.`, "info")]);
-          break;
-        }
-        setMissionStatus(missionId, "accepted");
-        emit([createLine(`Mission ${mission.title} accepted.`, "success")]);
-        soundCue = "beep";
-        vfxEvent = { type: "success" };
-        break;
-      }
-      case "missions": {
-        const active = nextState.activeMissions.filter((mission) => mission.status === "accepted");
-        if (!active.length) {
-          emit([createLine("No active missions.", "info")]);
-        } else {
-          emit(active.map((mission) => createLine(missionSummaryLine(mission), "info")));
-        }
-        break;
-      }
-      case "submit": {
-        const missionId = args[0];
-        const mission = nextState.activeMissions.find((m) => m.id === missionId);
-        if (!mission) {
-          emit([createLine(`Mission ${missionId} not found.`, "error")]);
-          break;
-        }
-        if (mission.status !== "accepted") {
-          emit([createLine(`Mission ${mission.title} is not active.`, "error")]);
-          break;
-        }
-        const success = evaluateMission(nextState, mission);
-        if (!success) {
-          emit([
-            createLine(`Mission ${mission.title} requires additional work.`, "error"),
-            createLine("Check your inventory or edit the target file.", "info"),
-          ]);
-          break;
-        }
-        const updatedMissions = nextState.activeMissions.map((m) =>
-          m.id === missionId ? { ...m, status: "completed" as const, completed: true } : m
-        );
-        nextState = {
-          ...nextState,
-          cash: nextState.cash + mission.reward.cash,
-          reputation: nextState.reputation + mission.reward.reputation,
-          activeMissions: updatedMissions,
-          inbox: syncInbox(updatedMissions),
-        };
-        emit([
-          createLine(`Mission ${mission.title} completed!`, "success"),
-          createLine(`+${mission.reward.cash}c  +${mission.reward.reputation} reputation`, "success"),
-        ]);
-        soundCue = "success";
-        vfxEvent = { type: "success" };
-        break;
-      }
       case "proxy list":
         emit(formatProxyTable(Object.values(nextState.world.proxies)).map((line) => createLine(line, "info")));
         break;
@@ -881,6 +748,7 @@ export const useGameStore = create<GameStoreState>()((set, get) => ({
         emit([createLine(`Unknown command: ${key}`, "error")]);
         soundCue = "alert";
     }
+    }
 
     const commandLine = createLine(`lnk> ${trimmed}`, "command");
 
@@ -898,6 +766,16 @@ export const useGameStore = create<GameStoreState>()((set, get) => ({
       };
     });
 
+    // Save to local storage
     await localSaveProvider.save(nextState);
+    
+    // Also sync to cloud if user is logged in
+    const { user } = get();
+    if (user) {
+      // Fire and forget - don't block on cloud save
+      cloudSaveProvider.save(nextState).then(() => {
+        set({ lastSyncTime: Date.now() });
+      });
+    }
   },
 }));
