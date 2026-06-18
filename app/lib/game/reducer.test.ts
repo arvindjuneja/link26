@@ -245,6 +245,54 @@ describe("gameReducer — gear track", () => {
   });
 });
 
+describe("gameReducer — exits & scoring (clean / hot / burned + risk-dial)", () => {
+  const ctx = () => createDeterministicContext("exit", 0);
+  const armedGhost = () => {
+    const base = createInitialState({ now: 0 });
+    const accepted = reduceCommand(base, cmd("accept", ["mission-ghost"]), ctx())!.state;
+    return lootForGhost(accepted);
+  };
+
+  it("clean exit increments the streak and pays a streak bonus", () => {
+    const armed = { ...armedGhost(), streak: 3 };
+    const r = reduceCommand(armed, cmd("submit", ["mission-ghost"]), ctx())!;
+    expect(r.state.streak).toBe(4);
+    expect(r.state.cash).toBe(armed.cash + Math.round(2200 * 1.3));
+    expect(r.lines.some((l) => l.text.includes("GHOST"))).toBe(true);
+  });
+
+  it("hot exit pays full, resets the streak, and ticks ATTRIBUTION", () => {
+    const armed = {
+      ...armedGhost(),
+      streak: 2,
+      exposure: { ...armedGhost().exposure, NETWORK: { level: 60, status: "HUNT" as const } },
+    };
+    const r = reduceCommand(armed, cmd("submit", ["mission-ghost"]), ctx())!;
+    expect(r.state.streak).toBe(0);
+    expect(r.state.cash).toBe(armed.cash + 2200);
+    expect(r.state.exposure.ATTRIBUTION.level).toBeGreaterThan(0);
+    expect(r.lines.some((l) => l.text.includes("HOT"))).toBe(true);
+  });
+
+  it("burned exit halves pay and dents reputation", () => {
+    const armed = {
+      ...armedGhost(),
+      exposure: { ...armedGhost().exposure, RF: { level: 90, status: "LOCKDOWN" as const } },
+    };
+    const r = reduceCommand(armed, cmd("submit", ["mission-ghost"]), ctx())!;
+    expect(r.state.cash).toBe(armed.cash + 1100); // half of 2200
+    expect(r.state.reputation).toBe(armed.reputation + 10); // 20 reward - 10 penalty
+    expect(r.lines.some((l) => l.text.includes("BURNED"))).toBe(true);
+  });
+
+  it("the risk-dial (--push) boosts pay but spikes exposure", () => {
+    const armed = armedGhost();
+    const r = reduceCommand(armed, cmd("submit", ["mission-ghost"], ["push"]), ctx())!;
+    expect(r.state.cash).toBe(armed.cash + Math.round(2200 * 1.6));
+    expect(r.state.exposure.NETWORK.level).toBeGreaterThan(armed.exposure.NETWORK.level);
+  });
+});
+
 describe("gameReducer — evidence-assembly missions", () => {
   const ctx = () => createDeterministicContext("missions", 0);
 

@@ -112,6 +112,19 @@ export function overallTrace(exp: ExposureState): TraceInfo {
   return top;
 }
 
+export type ExitOutcome = "clean" | "hot" | "burned";
+
+/** Classify an exit by the worst channel: ghost / tripped / burned. */
+export function missionOutcome(exp: ExposureState): ExitOutcome {
+  let worst = 0;
+  for (const ch of EXPOSURE_CHANNELS) {
+    worst = Math.max(worst, STATUS_RANK[exp[ch].status]);
+  }
+  if (worst >= STATUS_RANK.LOCKDOWN) return "burned";
+  if (worst >= STATUS_RANK.HUNT) return "hot";
+  return "clean";
+}
+
 /** The channel currently carrying the most heat (for UI emphasis). */
 export function topChannel(exp: ExposureState): ExposureChannel {
   let best: ExposureChannel = "NETWORK";

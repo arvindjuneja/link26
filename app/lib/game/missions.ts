@@ -7,6 +7,7 @@ const missionBlueprints: Array<{
   description: string;
   objective: MissionObjective;
   reward: MissionReward;
+  scopeNote?: string;
 }> = [
   {
     id: "mission-ghost",
@@ -19,6 +20,7 @@ const missionBlueprints: Array<{
       targetPath: "/secrets.txt",
     },
     reward: { cash: 2200, reputation: 20 },
+    scopeNote: "In scope: hq-node read paths only, this window. Read-only — any write trips the deal.",
   },
   {
     id: "mission-orbital",
@@ -31,6 +33,7 @@ const missionBlueprints: Array<{
       targetPath: "/logs/manifest.log",
     },
     reward: { cash: 1800, reputation: 15 },
+    scopeNote: "In scope: orbital /logs only. One entry — no broad rewrites, no second pass.",
   },
   {
     id: "mission-iris",
@@ -43,6 +46,7 @@ const missionBlueprints: Array<{
       targetPath: "/data/vault.txt",
     },
     reward: { cash: 1600, reputation: 18 },
+    scopeNote: "In scope: iris /data only, single in-place edit. Leave other checksums untouched.",
   },
   {
     id: "mission-faceless",
@@ -56,6 +60,7 @@ const missionBlueprints: Array<{
       requiredKinds: ["handle", "email", "breach"],
     },
     reward: { cash: 2000, reputation: 22 },
+    scopeNote: "In scope: person-aurora OSINT only (passive + active). No touching live lab assets.",
   },
   {
     id: "mission-carrier",
@@ -68,6 +73,7 @@ const missionBlueprints: Array<{
       emitterId: "emitter-solstice",
     },
     reward: { cash: 1500, reputation: 16 },
+    scopeNote: "In scope: emitter-solstice RF characterization only. No host contact.",
   },
 ];
 

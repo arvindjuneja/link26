@@ -168,6 +168,7 @@ export interface Mission extends MissionSummary {
   objective: MissionObjective;
   completed: boolean;
   evidenceTag?: string;
+  scopeNote?: string; // Rules of Engagement: what is in-scope (display + discipline)
 }
 
 export interface InventoryItem {
@@ -213,6 +214,7 @@ export interface GameState {
   inventory: InventoryItem[];
   evidence: EvidenceCard[]; // collected OSINT/RF intel (assembled for identify missions)
   gear: Record<string, number>; // gearId -> owned tier; each tier flattens a channel's noise
+  streak: number; // consecutive clean (ghost) exits — a cash multiplier
 }
 
 export interface TerminalLine {

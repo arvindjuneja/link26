@@ -66,5 +66,6 @@ export function createInitialState(options: InitialStateOptions = {}): GameState
     inventory: [],
     evidence: [],
     gear: {},
+    streak: 0,
   };
 }

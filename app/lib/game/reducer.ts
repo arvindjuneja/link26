@@ -32,7 +32,7 @@ import {
   missionSummaryLine,
 } from "@/app/lib/game/formatting";
 import { evaluateMission, setMissionStatus, syncInbox } from "@/app/lib/game/missionLogic";
-import { applyChannelNoise, EXPOSURE_CHANNELS } from "@/app/lib/game/exposure";
+import { applyChannelNoise, EXPOSURE_CHANNELS, missionOutcome } from "@/app/lib/game/exposure";
 import { GEAR, channelMitigation, gearById, nextCost } from "@/app/lib/game/gear";
 import {
   buildRouteState,
@@ -244,9 +244,13 @@ export function reduceCommand(
     case "read": {
       const missionId = cmd.args[0];
       const mission = state.activeMissions.find((m) => m.id === missionId);
-      result.lines = mission
-        ? formatMissionDetail(mission).map((text) => line(text, "info"))
-        : [line(`Mission ${missionId} not found.`, "error")];
+      if (!mission) {
+        result.lines = [line(`Mission ${missionId} not found.`, "error")];
+        break;
+      }
+      const detail = formatMissionDetail(mission).map((text) => line(text, "info"));
+      if (mission.scopeNote) detail.push(line(`RoE: ${mission.scopeNote}`, "warning"));
+      result.lines = detail;
       break;
     }
 
@@ -290,26 +294,70 @@ export function reduceCommand(
       if (!evaluateMission(state, mission)) {
         result.lines = [
           line(`Mission ${mission.title} requires additional work.`, "error"),
-          line("Check your inventory or edit the target file.", "info"),
+          line("Check your inventory, evidence board, or edit the target file.", "info"),
         ];
         break;
       }
-      const activeMissions = state.activeMissions.map((m) =>
+
+      // Risk-dial: pushing for bonus intel holds the line longer -> NETWORK spike,
+      // which can flip the exit from clean to hot/burned. The greed decision.
+      const push = cmd.flags.includes("push") || cmd.flags.includes("greedy");
+      const afterPush = push ? applyExposure(state, "NETWORK", 25, ctx) : state;
+      const outcome = missionOutcome(afterPush.exposure);
+
+      let cash = mission.reward.cash;
+      let reputation = mission.reward.reputation;
+      let streak = afterPush.streak;
+      const outcomeLines: TerminalLine[] = [];
+
+      if (outcome === "clean") {
+        const mult = 1 + Math.min(0.5, 0.1 * afterPush.streak); // bonus from prior streak
+        cash = Math.round(cash * mult);
+        streak = afterPush.streak + 1;
+        outcomeLines.push(line("GHOST — clean exit. No one knows you were here.", "success"));
+        if (streak > 1) {
+          outcomeLines.push(line(`  clean streak x${streak} (+${Math.round((mult - 1) * 100)}% bonus)`, "success"));
+        }
+      } else if (outcome === "hot") {
+        streak = 0;
+        outcomeLines.push(line("HOT — objective met, but you tripped a tracer. Full pay; watch your back.", "warning"));
+      } else {
+        streak = 0;
+        cash = Math.round(cash * 0.5);
+        reputation = Math.max(0, reputation - 10);
+        outcomeLines.push(line("BURNED — LOCKDOWN closed the window. You got out, but it cost you.", "error"));
+      }
+
+      if (push) {
+        cash = Math.round(cash * 1.6);
+        outcomeLines.unshift(line("[RISK] Pushed for bonus intel — exposure spiked.", "warning"));
+      }
+
+      // Non-clean exits feed ATTRIBUTION (your profile builds when you get noticed).
+      let exposure = afterPush.exposure;
+      if (outcome !== "clean") {
+        exposure = applyChannelNoise(exposure, "ATTRIBUTION", outcome === "burned" ? 18 : 8, afterPush.route);
+      }
+
+      const activeMissions = afterPush.activeMissions.map((m) =>
         m.id === missionId ? { ...m, status: "completed" as const, completed: true } : m
       );
       result.state = {
-        ...state,
-        cash: state.cash + mission.reward.cash,
-        reputation: state.reputation + mission.reward.reputation,
+        ...afterPush,
+        exposure,
+        cash: afterPush.cash + cash,
+        reputation: afterPush.reputation + reputation,
+        streak,
         activeMissions,
         inbox: syncInbox(activeMissions),
       };
       result.lines = [
         line(`Mission ${mission.title} completed!`, "success"),
-        line(`+${mission.reward.cash}c  +${mission.reward.reputation} reputation`, "success"),
+        ...outcomeLines,
+        line(`+${cash}c  +${reputation} reputation`, outcome === "burned" ? "warning" : "success"),
       ];
-      result.soundCue = "success";
-      result.vfx = { type: "success" };
+      result.soundCue = outcome === "clean" ? "success" : "alert";
+      result.vfx = outcome === "burned" ? { type: "alert" } : { type: "success" };
       break;
     }
 
