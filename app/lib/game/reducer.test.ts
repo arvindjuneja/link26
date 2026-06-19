@@ -313,6 +313,42 @@ describe("gameReducer — exits & scoring (clean / hot / burned + risk-dial)", (
   });
 });
 
+describe("gameReducer — campaign spine", () => {
+  const ctx = () => createDeterministicContext("camp", 0);
+
+  it("chapter 0 is available, later chapters locked, and locked chapters can't be accepted", () => {
+    const s = createInitialState({ now: 0 });
+    const ch0 = s.activeMissions.find((m) => m.chapterIndex === 0)!;
+    const ch1 = s.activeMissions.find((m) => m.chapterIndex === 1)!;
+    expect(ch0.status).toBe("available");
+    expect(ch1.status).toBe("locked");
+    const r = reduceCommand(s, cmd("accept", [ch1.id]), ctx())!;
+    expect(r.lines[0].text).toContain("locked");
+  });
+
+  it("completing a chapter advances the spine, unlocks the next, and Mercer speaks", () => {
+    const base = createInitialState({ now: 0 });
+    const ch0 = base.activeMissions.find((m) => m.chapterIndex === 0)!; // exfil hq-node /secrets.txt
+    const accepted = reduceCommand(base, cmd("accept", [ch0.id]), ctx())!.state;
+    const armed = {
+      ...accepted,
+      inventory: [{ id: "i", label: "x", source: "hq-node", path: "/secrets.txt", content: "x" }],
+    };
+    const r = reduceCommand(armed, cmd("submit", [ch0.id]), ctx())!;
+    expect(r.state.campaign.chapter).toBe(1);
+    expect(r.state.activeMissions.find((m) => m.chapterIndex === 1)!.status).toBe("available");
+    expect(r.lines.some((l) => l.text.startsWith("MERCER:"))).toBe(true);
+  });
+
+  it("the campaign command reports progress + the current brief", () => {
+    const s = createInitialState({ now: 0 });
+    const r = reduceCommand(s, cmd("campaign"), ctx())!;
+    expect(r.lines[0].text).toContain("Act I");
+    expect(r.lines.some((l) => l.text.includes("[ now]"))).toBe(true);
+    expect(r.lines.some((l) => l.text.startsWith("MERCER:"))).toBe(true);
+  });
+});
+
 describe("gameReducer — evidence-assembly missions", () => {
   const ctx = () => createDeterministicContext("missions", 0);
 

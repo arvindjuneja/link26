@@ -13,6 +13,7 @@ import ExposureBoard from "./components/ExposureBoard";
 import EvidencePanel from "./components/EvidencePanel";
 import HandlerPanel from "./components/HandlerPanel";
 import Codex from "./components/Codex";
+import CampaignPanel from "./components/CampaignPanel";
 import Disclaimer from "./components/Disclaimer";
 import { AuthModal } from "./components/AuthModal";
 import { useGameStore } from "./lib/persistence/store";
@@ -164,6 +165,9 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {/* Campaign spine — the narrative thread, prominent below the cockpit */}
+        <CampaignPanel />
 
         {/* Secondary panels — reference material, below the fold */}
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">

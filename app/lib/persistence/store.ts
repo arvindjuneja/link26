@@ -146,6 +146,7 @@ export const useGameStore = create<GameStoreState>()((set, get) => ({
     if (cloudState) {
       // Discard pre-exposure saves rather than crash on the new schema.
       if (!cloudState.exposure) return false;
+      if (!cloudState.campaign) cloudState.campaign = { chapter: 0 };
       // Convert scannedHosts array back to Set
       if (cloudState.session && Array.isArray(cloudState.session.scannedHosts)) {
         cloudState.session.scannedHosts = new Set(cloudState.session.scannedHosts);
@@ -185,6 +186,7 @@ export const useGameStore = create<GameStoreState>()((set, get) => ({
     if (saved) {
       // Discard pre-exposure saves rather than crash on the new schema.
       if (!saved.exposure) return;
+      if (!saved.campaign) saved.campaign = { chapter: 0 };
       // Convert scannedHosts array back to Set
       if (saved.session && Array.isArray(saved.session.scannedHosts)) {
         saved.session.scannedHosts = new Set(saved.session.scannedHosts);

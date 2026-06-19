@@ -10,6 +10,7 @@ export const commandRegistry: Record<string, CommandDefinition> = {
   clear: { syntax: "clear", description: "Clear the terminal buffer" },
   status: { syntax: "status", description: "Show core stats" },
   inbox: { syntax: "inbox", description: "List open missions" },
+  campaign: { syntax: "campaign", description: "Show the campaign spine + Mercer's brief" },
   read: { syntax: "read <id>", description: "Show mission detail" },
   accept: { syntax: "accept <id>", description: "Accept a mission" },
   missions: { syntax: "missions", description: "List active missions" },

@@ -6,6 +6,8 @@ import type { GameState, ToolId, ToolInstance } from "@/types/game";
 import { generateWorld } from "@/app/lib/game/worldgen";
 import { generateMissions } from "@/app/lib/game/missions";
 import { createExposure } from "@/app/lib/game/exposure";
+import { buildCampaignMissions } from "@/app/lib/game/campaign";
+import { syncInbox } from "@/app/lib/game/missionLogic";
 
 export interface InitialStateOptions {
   /** Timestamp baked into the fresh state. Inject for deterministic builds. */
@@ -18,7 +20,10 @@ export function createInitialState(options: InitialStateOptions = {}): GameState
   const now = options.now ?? Date.now();
   const seed = options.seed ?? now;
   const world = generateWorld(now, seed);
-  const { inbox, missions } = generateMissions(world, now, seed);
+  const contracts = generateMissions(world, now, seed).missions;
+  // Campaign spine first, then the freeform contract board.
+  const missions = [...buildCampaignMissions(now, 0), ...contracts];
+  const inbox = syncInbox(missions);
 
   const tools: Record<ToolId, ToolInstance> = {
     scanner: {
@@ -67,5 +72,6 @@ export function createInitialState(options: InitialStateOptions = {}): GameState
     evidence: [],
     gear: {},
     streak: 0,
+    campaign: { chapter: 0 },
   };
 }
