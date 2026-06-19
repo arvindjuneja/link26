@@ -237,7 +237,7 @@ export default function Terminal() {
       lines.push(
         <pre
           key={line.id}
-          className={`m-0 text-xs leading-5 ${
+          className={`m-0 whitespace-pre-wrap break-words text-xs leading-5 ${
             isSystemLine ? "text-cyan-500/40 italic" : (typeClass[line.type as keyof typeof typeClass] ?? typeClass.info)
           }`}
         >
@@ -253,7 +253,7 @@ export default function Terminal() {
       lines.push(
         <pre
           key={currentLine.id + "-typing"}
-          className={`m-0 text-xs leading-5 ${
+          className={`m-0 whitespace-pre-wrap break-words text-xs leading-5 ${
             isSystemLine ? "text-cyan-500/40 italic" : (typeClass[currentLine.type as keyof typeof typeClass] ?? typeClass.info)
           }`}
         >

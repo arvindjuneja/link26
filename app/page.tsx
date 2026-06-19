@@ -98,7 +98,7 @@ export default function Home() {
   }, [setUser]);
 
   return (
-    <div className={`relative min-h-screen bg-[#000102] text-white transition-colors duration-500 ${traceStyle.bg}`}>
+    <div className={`relative min-h-screen overflow-x-hidden bg-[#000102] text-white transition-colors duration-500 ${traceStyle.bg}`}>
       <VfxThreeOverlay />
       <AudioController />
       <Disclaimer />
@@ -165,7 +165,7 @@ export default function Home() {
         {/* COCKPIT: map (2/3) beside the Exposure Board + Terminal (1/3), all
             visible at once — no scrolling between "where I look" and "where I type". */}
         <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
-          <section className="relative lg:w-2/3">
+          <section className="relative min-w-0 lg:w-2/3">
             <MapCanvas
               world={world}
               route={route}
@@ -177,11 +177,11 @@ export default function Home() {
             />
           </section>
 
-          <div className="flex min-h-0 flex-1 flex-col gap-3">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
             <div className={`rounded border ${traceStyle.border} ${traceStyle.glow} bg-black/60 p-4 transition-all duration-300`}>
               <ExposureBoard />
             </div>
-            <div className="min-h-[280px] flex-1">
+            <div className="min-h-[280px] min-w-0 flex-1">
               <Terminal />
             </div>
           </div>
