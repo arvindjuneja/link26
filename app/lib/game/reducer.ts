@@ -106,6 +106,7 @@ const HANDLED = new Set([
   "probe",
   "fingerprint",
   "osint",
+  "sweep",
   "collect rf",
   "deploy sensor",
   "acquire",
@@ -922,6 +923,27 @@ export function reduceCommand(
           "info"
         ),
       ];
+      result.soundCue = "scan";
+      result.vfx = { type: "scan" };
+      break;
+    }
+
+    case "sweep": {
+      const emitters = Object.values(state.world.emitters);
+      result.lines = [
+        line("[ELINT] Sweeping the RF spectrum — wide-band passive scan..."),
+        ...emitters.map((e) => {
+          const known = state.evidence.some(
+            (c) => c.sourceId === e.id && c.factKind === "signature"
+          );
+          return line(
+            `  ${e.band.padEnd(8)} ${e.label.padEnd(26)} ${known ? "[characterized]" : "[unknown emitter]"}`,
+            known ? "success" : "info"
+          );
+        }),
+        line("  characterize one with: collect rf <host|emitter>", "info"),
+      ];
+      result.state = applyExposure(state, "RF", 4, ctx);
       result.soundCue = "scan";
       result.vfx = { type: "scan" };
       break;

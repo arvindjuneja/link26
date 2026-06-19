@@ -11,6 +11,7 @@ import MissionGuidance from "./components/MissionGuidance";
 import DemoMode from "./components/DemoMode";
 import ExposureBoard from "./components/ExposureBoard";
 import PivotGraph from "./components/PivotGraph";
+import SpectrumWaterfall from "./components/SpectrumWaterfall";
 import HandlerPanel from "./components/HandlerPanel";
 import Codex from "./components/Codex";
 import CampaignPanel from "./components/CampaignPanel";
@@ -196,6 +197,9 @@ export default function Home() {
 
           {/* OSINT pivot graph — recon breadcrumbs connect into dossiers */}
           <PivotGraph />
+
+          {/* ELINT spectrum waterfall — the RF environment in 3D */}
+          <SpectrumWaterfall />
 
           {/* Secondary panels — reference material, below the fold */}
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">

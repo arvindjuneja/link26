@@ -25,6 +25,7 @@ export const commandRegistry: Record<string, CommandDefinition> = {
   probe: { syntax: "probe <host> <port>", description: "Probe a single port" },
   fingerprint: { syntax: "fingerprint <host>", description: "Guess the OS" },
   osint: { syntax: "osint <subject> [--active]", description: "Footprint a person (active = more, louder)" },
+  sweep: { syntax: "sweep", description: "ELINT: sweep the RF spectrum for emitters" },
   "collect rf": { syntax: "collect rf <host|emitter>", description: "Characterize an RF emitter (RF exposure)" },
   "deploy sensor": { syntax: "deploy sensor <host>", description: "Task a remote sensor at a site" },
   acquire: { syntax: "acquire <host> [--spray]", description: "Attempt access with harvested creds" },
