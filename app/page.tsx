@@ -10,7 +10,7 @@ import MarketPanel from "./components/MarketPanel";
 import MissionGuidance from "./components/MissionGuidance";
 import DemoMode from "./components/DemoMode";
 import ExposureBoard from "./components/ExposureBoard";
-import EvidencePanel from "./components/EvidencePanel";
+import PivotGraph from "./components/PivotGraph";
 import HandlerPanel from "./components/HandlerPanel";
 import Codex from "./components/Codex";
 import CampaignPanel from "./components/CampaignPanel";
@@ -169,12 +169,14 @@ export default function Home() {
         {/* Campaign spine — the narrative thread, prominent below the cockpit */}
         <CampaignPanel />
 
+        {/* OSINT pivot graph — recon breadcrumbs connect into dossiers */}
+        <PivotGraph />
+
         {/* Secondary panels — reference material, below the fold */}
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           <HandlerPanel />
           <MissionGuidance />
           <InboxPanel />
-          <EvidencePanel />
           <InventoryPanel />
           <MarketPanel />
           <DemoMode />
