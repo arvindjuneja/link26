@@ -1,4 +1,14 @@
-import { Host, ProxyNode, Service, FileSystemEntry, World } from "@/types/game";
+import {
+  Host,
+  ProxyNode,
+  Service,
+  FileSystemEntry,
+  World,
+  Person,
+  PersonFact,
+  RfEmitter,
+} from "@/types/game";
+import { mulberry32, hashSeed, type Rng } from "@/app/lib/util/rng";
 
 // Realistic geographic coordinates for regions - spread out across the world
 const regionCoords: Record<string, { lat: number; lon: number }> = {
@@ -14,55 +24,58 @@ const regionCoords: Record<string, { lat: number; lon: number }> = {
   "Pacific": { lat: 20, lon: -160 },            // Hawaii area
 };
 
+// Targets are named like real engagement scope: an org plus the role the box
+// actually plays on the network. A practitioner should recognize each as a
+// plausible asset (mail relay, jump host, object store, substation gateway...).
 const hostTemplates = [
   {
     id: "hq-node",
-    label: "Nova Satellite HQ",
+    label: "Meridian Logistics — mail relay",
     region: "North America",
   },
   {
     id: "orbital",
-    label: "Orbital Data Exchange",
+    label: "Orbital Freight — telemetry API",
     region: "Europe",
   },
   {
     id: "aurora",
-    label: "Aurora Bioware Labs",
+    label: "Aurora Diagnostics — lab LIMS",
     region: "Asia",
   },
   {
     id: "charon",
-    label: "Charon Defense Grid",
+    label: "Charon Industrial — SCADA historian",
     region: "Africa",
   },
   {
     id: "iris",
-    label: "Iris Cloud Archive",
+    label: "Iris Backups — object store",
     region: "Oceania",
   },
   {
     id: "helix",
-    label: "Helix Genomics",
+    label: "Helix Genomics — sequencing cluster",
     region: "South America",
   },
   {
     id: "polaris",
-    label: "Polaris Financial Mesh",
+    label: "Polaris Capital — settlement mesh",
     region: "Middle East",
   },
   {
     id: "solstice",
-    label: "Solstice Power Grid",
+    label: "Solstice Grid Ops — substation gateway",
     region: "Scandinavia",
   },
   {
     id: "mosaic",
-    label: "Mosaic Media Nest",
+    label: "Mosaic Media — CDN origin",
     region: "Central Europe",
   },
   {
     id: "axion",
-    label: "Axion Research Cluster",
+    label: "Axion Research — HPC login node",
     region: "Pacific",
   },
 ];
@@ -90,16 +103,40 @@ const serviceRoster: Service[][] = [
   ],
 ];
 
+// Credible-but-abstract artifacts — the kind of internal file an operator would
+// actually pull. No real secrets, creds, or anything that transfers to reality.
 const rootFiles: FileSystemEntry[] = [
-  { path: "/secrets.txt", name: "secrets.txt", type: "file" as const, content: "TOP SECRET: Prototype diagnostics" },
-  { path: "/payload.bin", name: "payload.bin", type: "file" as const, content: "[binary blob]" },
+  {
+    path: "/secrets.txt",
+    name: "asset_register.txt",
+    type: "file" as const,
+    content:
+      "INTERNAL // restricted\nendpoints: 412  privileged_accounts: 9\noffsite_backup: iris-objstore\nowner: secops@meridian.example",
+  },
+  {
+    path: "/payload.bin",
+    name: "vault_export.enc",
+    type: "file" as const,
+    content: "[encrypted container — 4.2 MB, AES-256-GCM]",
+  },
   { path: "/logs", name: "logs", type: "dir" as const },
-  { path: "/data/vault.txt", name: "vault.txt", type: "file" as const, content: "Ledger entries: 42" },
+  {
+    path: "/logs/manifest.log",
+    name: "manifest.log",
+    type: "file" as const,
+    content: "window=nominal state=scheduled seq=0x1f checksum=ok",
+  },
+  {
+    path: "/data/vault.txt",
+    name: "ledger_snapshot.txt",
+    type: "file" as const,
+    content: "ledger snapshot 2026-Q1 — 1,284 entries — reconciled",
+  },
 ];
 
-const makeLogs = (label: string) =>
+const makeLogs = (label: string, now: number) =>
   Array.from({ length: 3 }).map((_, index) => ({
-    timestamp: Date.now() - index * 1000 * 60,
+    timestamp: now - index * 1000 * 60,
     level: index === 2 ? "warning" : "info",
     message: `${label} audit record ${index}`,
   }));
@@ -118,7 +155,65 @@ const hostLocations: Record<string, { lat: number; lon: number }> = {
   "axion": { lat: 21.3, lon: -157.8 },            // Honolulu, Hawaii
 };
 
-export function generateWorld(): World {
+// --- procedural-skin pools (selected by the seeded RNG) ---
+const handlePool = [
+  "nullbyte", "r3dwire", "ghoststack", "packetwitch", "coldboot", "drift0",
+  "m4yhem", "sl0wloris", "binwalker", "tracepop", "kr4ken", "blu3jay",
+  "ferrous", "quietfox", "ampersand", "lasthop", "deaddrop", "vlan0",
+];
+const tzByRegion: Record<string, string> = {
+  "North America": "UTC-5", "Europe": "UTC+0", "Asia": "UTC+9", "Africa": "UTC+2",
+  "Oceania": "UTC+11", "South America": "UTC-3", "Middle East": "UTC+4",
+  "Scandinavia": "UTC+1", "Central Europe": "UTC+1", "Pacific": "UTC-10",
+};
+const rfBands = ["2.4 GHz", "900 MHz", "5.8 GHz", "433 MHz", "1.2 GHz"];
+const rfModulation = ["FHSS", "DSSS", "OFDM", "FSK", "GFSK"];
+const rfDuty = ["bursty", "continuous", "low duty", "periodic beacon"];
+
+const pick = <T>(arr: T[], rng: Rng): T => arr[Math.floor(rng() * arr.length)];
+const hex = (rng: Rng, n: number) =>
+  Array.from({ length: n }, () => Math.floor(rng() * 16).toString(16)).join("");
+
+const orgSlug = (label: string) =>
+  label.split("—")[0].trim().toLowerCase().replace(/[^a-z]+/g, "");
+
+function makePerson(host: Host, index: number, rng: Rng): Person {
+  const handle = `${pick(handlePool, rng)}${Math.floor(rng() * 90 + 10)}`;
+  const slug = orgSlug(host.label);
+  const tz = tzByRegion[host.geo.region] ?? "UTC+0";
+  const facts: PersonFact[] = [
+    { kind: "handle", label: "online handle", value: handle, passive: true },
+    { kind: "email", label: "work email", value: `${handle}@${slug}.example`, passive: true },
+    { kind: "employer", label: "employer", value: host.label, passive: true },
+    { kind: "timezone", label: "active hours", value: tz, passive: true },
+    { kind: "breach", label: "breach record", value: `appears in the 2023 forum dump`, passive: false },
+    { kind: "device", label: "device MAC", value: `${hex(rng, 2)}:${hex(rng, 2)}:${hex(rng, 2)}:${hex(rng, 2)}`, passive: false },
+    { kind: "location", label: "frequent location", value: `${host.geo.region} metro`, passive: false },
+  ];
+  return {
+    id: `person-${host.id}`,
+    label: handle,
+    geo: { ...host.geo },
+    org: host.label,
+    timezone: tz,
+    watched: index % 3 === 0, // a third are actively monitored
+    facts,
+  };
+}
+
+function makeEmitter(host: Host, rng: Rng): RfEmitter {
+  return {
+    id: `emitter-${host.id}`,
+    label: `${orgSlug(host.label)}-site-rf`,
+    geo: { ...host.geo },
+    band: pick(rfBands, rng),
+    signature: `${pick(rfModulation, rng)}, ${pick(rfDuty, rng)}`,
+    siteHostId: host.id,
+  };
+}
+
+export function generateWorld(now: number = Date.now(), seed?: number): World {
+  const rng = mulberry32(seed ?? hashSeed(String(now)));
   const hosts: Record<string, Host> = {};
   hostTemplates.forEach((template, index) => {
     const services = serviceRoster[index % serviceRoster.length];
@@ -127,17 +222,29 @@ export function generateWorld(): World {
     hosts[template.id] = {
       id: template.id,
       label: template.label,
-      geo: { 
-        lat: location.lat, 
-        lon: location.lon, 
-        region: template.region 
+      geo: {
+        lat: location.lat,
+        lon: location.lon,
+        region: template.region
       },
-      monitoring: 0.15 + (index % 3) * 0.2,
+      // seeded jitter so monitoring posture varies run to run
+      monitoring: Math.min(0.95, 0.15 + (index % 3) * 0.2 + rng() * 0.12),
       services,
       filesystem: rootFiles.map((entry) => ({ ...entry })) as FileSystemEntry[],
-      logs: makeLogs(template.label),
+      logs: makeLogs(template.label, now),
       flags: { honeypot: index === 3, rateLimited: index % 4 === 0 },
     } as Host;
+  });
+
+  // People (footprint targets) and RF emitters (collection targets), one per site.
+  const people: Record<string, Person> = {};
+  const emitters: Record<string, RfEmitter> = {};
+  hostTemplates.forEach((template, index) => {
+    const host = hosts[template.id];
+    const person = makePerson(host, index, rng);
+    people[person.id] = person;
+    const emitter = makeEmitter(host, rng);
+    emitters[emitter.id] = emitter;
   });
 
   const proxies: Record<string, ProxyNode> = {};
@@ -181,5 +288,7 @@ export function generateWorld(): World {
   return {
     hosts,
     proxies,
+    people,
+    emitters,
   };
 }

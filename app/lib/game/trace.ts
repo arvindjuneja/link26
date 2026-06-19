@@ -38,10 +38,12 @@ export function addTraceNoise(
   };
 }
 
-export function decayTrace(trace: TraceInfo): TraceInfo {
+export function decayTrace(trace: TraceInfo, scale = 1): TraceInfo {
   // Decay slower - only when disconnected/idle
   // Decay faster if trace is high (pressure to disconnect)
-  const decayRate = trace.level > 50 ? 1.2 : trace.level > 25 ? 0.8 : 0.4;
+  // `scale` lets different exposure channels cool at different rates
+  // (e.g. ATTRIBUTION barely decays).
+  const decayRate = (trace.level > 50 ? 1.2 : trace.level > 25 ? 0.8 : 0.4) * scale;
   const nextLevel = clampLevel(trace.level - decayRate);
   return {
     ...trace,

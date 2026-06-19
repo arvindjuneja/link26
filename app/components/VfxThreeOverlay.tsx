@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useGameStore } from "@/app/lib/persistence/store";
+import { overallTrace } from "@/app/lib/game/exposure";
 
 // Matrix/binary rain character set
 const chars = "01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン";
@@ -16,7 +17,7 @@ interface RainDrop {
 }
 
 export default function VfxThreeOverlay() {
-  const traceStatus = useGameStore((state) => state.gameState.trace.status);
+  const traceStatus = useGameStore((state) => overallTrace(state.gameState.exposure).status);
   const lastEvent = useGameStore((state) => state.lastVfxEvent);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });

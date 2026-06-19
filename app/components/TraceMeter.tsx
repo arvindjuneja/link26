@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useGameStore } from "@/app/lib/persistence/store";
+import { overallTrace } from "@/app/lib/game/exposure";
 
 // Narrative status messages based on trace level and status
 const narrativeMessages: Record<string, string[]> = {
@@ -77,7 +78,8 @@ const microEvents = [
 ];
 
 export default function TraceMeter() {
-  const trace = useGameStore((state) => state.gameState.trace);
+  const exposure = useGameStore((state) => state.gameState.exposure);
+  const trace = overallTrace(exposure);
   const [pulse, setPulse] = useState(false);
   const [narrativeIndex, setNarrativeIndex] = useState(0);
   const [microEvent, setMicroEvent] = useState<string | null>(null);

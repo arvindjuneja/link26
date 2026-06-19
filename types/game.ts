@@ -52,9 +52,50 @@ export interface ProxyNode {
   costPerUse: number;
 }
 
+// A discoverable fact about a person — the raw material of OSINT evidence cards.
+// `passive` facts come from public/cached sources (near-zero FOOTPRINT); active
+// facts require probing a watched entity and cost FOOTPRINT exposure.
+export interface PersonFact {
+  kind:
+    | "handle"
+    | "email"
+    | "domain"
+    | "breach"
+    | "device"
+    | "timezone"
+    | "employer"
+    | "location";
+  label: string;
+  value: string; // fictional datum
+  passive: boolean;
+}
+
+export interface Person {
+  id: string;
+  label: string; // online handle
+  geo: GeoPoint;
+  org?: string; // employing org / host label
+  timezone: string;
+  watched: boolean; // active recon against a watched entity spikes FOOTPRINT
+  facts: PersonFact[];
+}
+
+// An RF emitter co-located with a target site. ELINT thinking, fully abstract:
+// you characterize a signature, you never decode content.
+export interface RfEmitter {
+  id: string;
+  label: string;
+  geo: GeoPoint;
+  band: string; // e.g. "2.4 GHz"
+  signature: string; // descriptive parameters (PRF/modulation/duty), never a recipe
+  siteHostId?: string;
+}
+
 export interface World {
   hosts: Record<string, Host>;
   proxies: Record<string, ProxyNode>;
+  people: Record<string, Person>;
+  emitters: Record<string, RfEmitter>;
 }
 
 export interface TraceInfo {
@@ -62,6 +103,15 @@ export interface TraceInfo {
   status: TraceStatus;
   lastEvent?: string;
 }
+
+// The Exposure Board: UPLINK's single trace tracker, instantiated per detection
+// vector. The skill is triaging multiple rising bars, not zeroing one.
+//   NETWORK     — "are they tracing the packet back?"  (scan/connect/log ops)
+//   RF          — "is someone in that building noticing me?" (deployed sensors)
+//   FOOTPRINT   — "did I tip them off just by looking?" (active OSINT)
+//   ATTRIBUTION — the slow one: "they're profiling ME" (kit/TTP reuse; persists)
+export type ExposureChannel = "NETWORK" | "RF" | "FOOTPRINT" | "ATTRIBUTION";
+export type ExposureState = Record<ExposureChannel, TraceInfo>;
 
 export interface RouteState {
   hops: string[];
@@ -85,11 +135,23 @@ export interface MissionReward {
 
 export type MissionStatus = "available" | "accepted" | "completed" | "failed";
 
+export type MissionObjectiveType =
+  | "exfil"
+  | "modify"
+  | "plant"
+  | "identify" // assemble evidence cards about a person
+  | "characterize"; // collect an RF emitter signature
+
 export interface MissionObjective {
-  type: "exfil" | "modify" | "plant";
-  hostId: string;
-  targetPath: string;
+  type: MissionObjectiveType;
+  hostId?: string;
+  targetPath?: string;
   marker?: string;
+  // identify: assemble cards of these fact kinds about this person
+  targetPersonId?: string;
+  requiredKinds?: string[];
+  // characterize: collect a signature card for this emitter
+  emitterId?: string;
 }
 
 export interface MissionSummary {
@@ -106,6 +168,7 @@ export interface Mission extends MissionSummary {
   objective: MissionObjective;
   completed: boolean;
   evidenceTag?: string;
+  scopeNote?: string; // Rules of Engagement: what is in-scope (display + discipline)
 }
 
 export interface InventoryItem {
@@ -116,18 +179,32 @@ export interface InventoryItem {
   content?: string;
 }
 
+// A piece of intel collected from recon. The OSINT "identify" missions are
+// completed by ASSEMBLING the right set of cards (a deterministic predicate),
+// never by typing free text — that is what keeps grading crisp and fair.
+export interface EvidenceCard {
+  id: string;
+  sourceKind: "person" | "emitter";
+  sourceId: string;
+  factKind: string; // a PersonFact kind, or "signature" for an emitter
+  label: string;
+  value: string;
+}
+
 export interface SessionState {
   currentTarget?: string;
   connectedHost?: string;
   workingDir?: string;
   scannedHosts?: Set<string>;
+  acquired?: string[]; // host ids the player has acquired access credentials for
 }
 
 export interface GameState {
   time: number;
+  seed: number; // world seed — same seed reproduces the same skeleton
   cash: number;
   reputation: number;
-  trace: TraceInfo;
+  exposure: ExposureState;
   route: RouteState;
   playerTools: Record<ToolId, ToolInstance>;
   inbox: MissionSummary[];
@@ -135,6 +212,9 @@ export interface GameState {
   world: World;
   session: SessionState;
   inventory: InventoryItem[];
+  evidence: EvidenceCard[]; // collected OSINT/RF intel (assembled for identify missions)
+  gear: Record<string, number>; // gearId -> owned tier; each tier flattens a channel's noise
+  streak: number; // consecutive clean (ghost) exits — a cash multiplier
 }
 
 export interface TerminalLine {
