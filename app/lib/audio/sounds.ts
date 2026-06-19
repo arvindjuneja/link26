@@ -114,6 +114,56 @@ export function playTyping() {
   playTone(1800, 0.02, "square", 0.3);
 }
 
+// Ambient bed — a low detuned drone (cyberpunk isolation) that brightens and
+// swells as tension rises. Two oscillators a few cents apart give a slow beat.
+let ambient: { osc: OscillatorNode; osc2: OscillatorNode; gain: GainNode; filter: BiquadFilterNode } | null = null;
+
+export function startAmbient() {
+  const ctx = ensureAudio();
+  if (!ctx || ambient) return;
+  const osc = ctx.createOscillator();
+  const osc2 = ctx.createOscillator();
+  osc.type = "sine";
+  osc2.type = "sine";
+  osc.frequency.value = 55;
+  osc2.frequency.value = 55.5; // slight detune -> slow beat
+  const filter = ctx.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.value = 300;
+  const gain = ctx.createGain();
+  gain.gain.value = 0.0001;
+  osc.connect(filter);
+  osc2.connect(filter);
+  filter.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start();
+  osc2.start();
+  gain.gain.linearRampToValueAtTime(volume * 0.22, ctx.currentTime + 1.5);
+  ambient = { osc, osc2, gain, filter };
+}
+
+export function setAmbientTension(t: number) {
+  if (!audioCtx || !ambient) return;
+  const now = audioCtx.currentTime;
+  ambient.filter.frequency.setTargetAtTime(280 + t * 900, now, 0.4);
+  ambient.gain.gain.setTargetAtTime(volume * (0.2 + t * 0.18), now, 0.5);
+}
+
+export function stopAmbient() {
+  if (!ambient || !audioCtx) return;
+  const a = ambient;
+  ambient = null;
+  a.gain.gain.setTargetAtTime(0.0001, audioCtx.currentTime, 0.3);
+  setTimeout(() => {
+    try {
+      a.osc.stop();
+      a.osc2.stop();
+    } catch {
+      /* already stopped */
+    }
+  }, 600);
+}
+
 // The Exposure Board heartbeat — a soft lub-dub. Driven at BPM by the worst
 // channel's status; silence at CALM is the reward, a hammering pulse the dread.
 export function playHeartbeat(intensity = 1) {

@@ -36,6 +36,19 @@ describe("exposure engine", () => {
     expect(idle.NETWORK.level).toBeLessThan(e.NETWORK.level);
   });
 
+  it("the dwell clock closes the window: holding a session reaches HUNT, idle cools it", () => {
+    let e = createExposure(8);
+    let ticks = 0;
+    while (e.NETWORK.status !== "HUNT" && ticks < 60) {
+      e = tickExposure(e, { connected: true, route: DIRECT });
+      ticks++;
+    }
+    expect(e.NETWORK.status).toBe("HUNT"); // the window actually closes
+    expect(ticks).toBeLessThan(40); // within a felt window (~<2min at 3s/tick)
+    const cooled = tickExposure(e, { connected: false, route: DIRECT });
+    expect(cooled.NETWORK.level).toBeLessThan(e.NETWORK.level);
+  });
+
   it("ATTRIBUTION cools far slower than the other channels", () => {
     const hot: ExposureState = {
       ...createExposure(0),

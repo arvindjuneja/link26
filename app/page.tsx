@@ -14,6 +14,7 @@ import PivotGraph from "./components/PivotGraph";
 import HandlerPanel from "./components/HandlerPanel";
 import Codex from "./components/Codex";
 import CampaignPanel from "./components/CampaignPanel";
+import AudioController from "./components/AudioController";
 import Disclaimer from "./components/Disclaimer";
 import { AuthModal } from "./components/AuthModal";
 import { useGameStore } from "./lib/persistence/store";
@@ -59,6 +60,15 @@ export default function Home() {
   const { world, route, session, cash, reputation, streak } = gameState;
   const trace = overallTrace(gameState.exposure);
   const traceStyle = traceStyles[trace.status as keyof typeof traceStyles] ?? traceStyles.CALM;
+  // Status-driven screen reaction: an edge-glow that deepens as the worst
+  // channel climbs, and tunnel-vision dimming of non-essential panels at LOCKDOWN.
+  const edgeGlow = {
+    CALM: "transparent",
+    ALERT: "rgba(245,158,11,0.10)",
+    HUNT: "rgba(249,115,22,0.16)",
+    LOCKDOWN: "rgba(244,63,94,0.24)",
+  }[trace.status];
+  const tunnel = trace.status === "LOCKDOWN";
 
   const handleAuthChange = useCallback((newUser: typeof user) => {
     setUser(newUser);
@@ -88,7 +98,16 @@ export default function Home() {
   return (
     <div className={`relative min-h-screen bg-[#000102] text-white transition-colors duration-500 ${traceStyle.bg}`}>
       <VfxThreeOverlay />
+      <AudioController />
       <Disclaimer />
+      {/* Edge-glow that deepens with the worst exposure channel */}
+      <div
+        aria-hidden
+        className={`pointer-events-none fixed inset-0 z-20 transition-all duration-700 ${
+          trace.status === "HUNT" || trace.status === "LOCKDOWN" ? "animate-pulse" : ""
+        }`}
+        style={{ boxShadow: `inset 0 0 140px 10px ${edgeGlow}` }}
+      />
       <AuthModal
         isOpen={authModalOpen} 
         onClose={() => setAuthModalOpen(false)}
@@ -166,20 +185,23 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Campaign spine — the narrative thread, prominent below the cockpit */}
-        <CampaignPanel />
+        {/* Non-essential panels dim at LOCKDOWN — tunnel vision forces focus. */}
+        <div className={`flex flex-col gap-3 transition-opacity duration-700 ${tunnel ? "opacity-40" : ""}`}>
+          {/* Campaign spine — the narrative thread, prominent below the cockpit */}
+          <CampaignPanel />
 
-        {/* OSINT pivot graph — recon breadcrumbs connect into dossiers */}
-        <PivotGraph />
+          {/* OSINT pivot graph — recon breadcrumbs connect into dossiers */}
+          <PivotGraph />
 
-        {/* Secondary panels — reference material, below the fold */}
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          <HandlerPanel />
-          <MissionGuidance />
-          <InboxPanel />
-          <InventoryPanel />
-          <MarketPanel />
-          <DemoMode />
+          {/* Secondary panels — reference material, below the fold */}
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            <HandlerPanel />
+            <MissionGuidance />
+            <InboxPanel />
+            <InventoryPanel />
+            <MarketPanel />
+            <DemoMode />
+          </div>
         </div>
       </div>
     </div>

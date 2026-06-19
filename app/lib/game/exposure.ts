@@ -40,8 +40,19 @@ const DECAY_SCALE: Record<ExposureChannel, number> = {
 
 // Per-tick exposure added to NETWORK while a session is held open — the
 // connection-time dwell clock. Holding a session is never free; the heartbeat
-// climbs the longer you stay in.
-const DWELL_NOISE = 3;
+// climbs the longer you stay in. Tuned so ~50-80s of dwell crosses into HUNT
+// (the "get out" window), and a fast in-and-out stays clean.
+const DWELL_NOISE = 2.5;
+
+// The dwell rise applies more directly than per-action packet noise: a held
+// session ages regardless of host monitoring. Anonymity (a deep route) slows it
+// but never stops it; gear mitigation flattens it.
+function dwellRise(net: TraceInfo, route: RouteState, mitigation: number): TraceInfo {
+  const anon = route?.anonymity ?? 0;
+  const rise = DWELL_NOISE * (1 - mitigation) * (0.55 + 0.45 * (1 - anon));
+  const level = Math.max(0, Math.min(100, net.level + rise));
+  return { level, status: getTraceStatus(level), lastEvent: "dwell" };
+}
 
 const channel = (level: number, lastEvent: string): TraceInfo => ({
   level,
@@ -99,7 +110,7 @@ export function tickExposure(
 ): ExposureState {
   return {
     NETWORK: opts.connected
-      ? addTraceNoise(exp.NETWORK, DWELL_NOISE * (1 - (opts.networkMitigation ?? 0)), opts.route, opts.host)
+      ? dwellRise(exp.NETWORK, opts.route, opts.networkMitigation ?? 0)
       : decayTrace(exp.NETWORK, DECAY_SCALE.NETWORK),
     RF: decayTrace(exp.RF, DECAY_SCALE.RF),
     FOOTPRINT: decayTrace(exp.FOOTPRINT, DECAY_SCALE.FOOTPRINT),
