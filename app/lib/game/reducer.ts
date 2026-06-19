@@ -329,14 +329,28 @@ export function reduceCommand(
       }
 
       if (push) {
-        cash = Math.round(cash * 1.6);
-        outcomeLines.unshift(line("[RISK] Pushed for bonus intel — exposure spiked.", "warning"));
+        // The greed pays off only if you didn't get burned — pushing into a
+        // lockdown loses you the bonus, so push can't out-earn caution.
+        if (outcome === "burned") {
+          outcomeLines.unshift(line("[RISK] Pushed too hard — burned. No bonus.", "error"));
+        } else {
+          cash = Math.round(cash * 1.6);
+          outcomeLines.unshift(line("[RISK] Pushed for bonus intel — exposure spiked.", "warning"));
+        }
       }
 
       // Non-clean exits feed ATTRIBUTION (your profile builds when you get noticed).
+      // Honour the 'launder' gear, which exists specifically to flatten this channel.
       let exposure = afterPush.exposure;
       if (outcome !== "clean") {
-        exposure = applyChannelNoise(exposure, "ATTRIBUTION", outcome === "burned" ? 18 : 8, afterPush.route);
+        exposure = applyChannelNoise(
+          exposure,
+          "ATTRIBUTION",
+          outcome === "burned" ? 18 : 8,
+          afterPush.route,
+          undefined,
+          channelMitigation(afterPush.gear, "ATTRIBUTION")
+        );
       }
 
       const activeMissions = afterPush.activeMissions.map((m) =>
@@ -636,9 +650,14 @@ export function reduceCommand(
     case "disconnect":
     case "exit": {
       const wasConnected = !!state.session.connectedHost;
+      // End the live session but keep persistent intel: scanned hosts and any
+      // acquired access credentials (the player paid exposure for those).
       result.state = {
         ...state,
-        session: { scannedHosts: asSet(state.session.scannedHosts) },
+        session: {
+          scannedHosts: asSet(state.session.scannedHosts),
+          acquired: state.session.acquired ?? [],
+        },
       };
       result.lines = [
         line(

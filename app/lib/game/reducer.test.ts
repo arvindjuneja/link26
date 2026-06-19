@@ -291,6 +291,26 @@ describe("gameReducer — exits & scoring (clean / hot / burned + risk-dial)", (
     expect(r.state.cash).toBe(armed.cash + Math.round(2200 * 1.6));
     expect(r.state.exposure.NETWORK.level).toBeGreaterThan(armed.exposure.NETWORK.level);
   });
+
+  it("pushing into a burned exit forfeits the bonus (greed can't out-earn caution)", () => {
+    const armed = {
+      ...armedGhost(),
+      exposure: { ...armedGhost().exposure, RF: { level: 90, status: "LOCKDOWN" as const } },
+    };
+    const r = reduceCommand(armed, cmd("submit", ["mission-ghost"], ["push"]), ctx())!;
+    expect(r.state.cash).toBe(armed.cash + 1100); // half pay, NO 1.6x bonus
+    expect(r.lines.some((l) => l.text.includes("No bonus"))).toBe(true);
+  });
+
+  it("ATTRIBUTION gear (launder) flattens the attribution spike on a hot exit", () => {
+    const hot = {
+      ...armedGhost(),
+      exposure: { ...armedGhost().exposure, NETWORK: { level: 60, status: "HUNT" as const } },
+    };
+    const plain = reduceCommand(hot, cmd("submit", ["mission-ghost"]), ctx())!;
+    const geared = reduceCommand({ ...hot, gear: { launder: 3 } }, cmd("submit", ["mission-ghost"]), ctx())!;
+    expect(geared.state.exposure.ATTRIBUTION.level).toBeLessThan(plain.state.exposure.ATTRIBUTION.level);
+  });
 });
 
 describe("gameReducer — evidence-assembly missions", () => {
@@ -425,11 +445,15 @@ describe("gameReducer — filesystem & the exfil loop", () => {
     expect(r.state.exposure.NETWORK.level).toBeGreaterThan(base.exposure.NETWORK.level);
   });
 
-  it("disconnect drops the session but preserves scanned hosts", () => {
+  it("disconnect drops the session but preserves scanned hosts AND acquired creds", () => {
     const base = connectedTo(createInitialState({ now: 0 }), "hq-node");
-    const armed: GameState = { ...base, session: { ...base.session, scannedHosts: new Set(["hq-node"]) } };
+    const armed: GameState = {
+      ...base,
+      session: { ...base.session, scannedHosts: new Set(["hq-node"]), acquired: ["hq-node"] },
+    };
     const r = reduceCommand(armed, cmd("disconnect"), ctx())!;
     expect(r.state.session.connectedHost).toBeUndefined();
     expect(r.state.session.scannedHosts).toEqual(new Set(["hq-node"]));
+    expect(r.state.session.acquired).toEqual(["hq-node"]); // creds survive a disconnect
   });
 });

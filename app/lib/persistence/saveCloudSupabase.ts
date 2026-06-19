@@ -64,12 +64,19 @@ export const cloudSaveProvider: SaveProvider = {
         return;
       }
 
-      // Convert Set to array for JSON serialization
-      const serializableState: GameState = { ...state };
-      if (serializableState.session?.scannedHosts instanceof Set) {
-        (serializableState.session as { scannedHosts?: string[] }).scannedHosts = 
-          Array.from(serializableState.session.scannedHosts);
-      }
+      // Convert Set to array for JSON serialization. Deep-copy `session` so we
+      // never mutate the live in-memory game state (a shallow {...state} shares
+      // the session object, which would turn the live scannedHosts Set into an array).
+      const serializableState = {
+        ...state,
+        session: {
+          ...state.session,
+          scannedHosts:
+            state.session?.scannedHosts instanceof Set
+              ? Array.from(state.session.scannedHosts)
+              : state.session?.scannedHosts,
+        },
+      } as unknown as GameState;
 
       const { error } = await supabase
         .from("saves")

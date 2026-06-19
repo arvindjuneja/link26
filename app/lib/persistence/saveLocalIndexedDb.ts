@@ -30,11 +30,18 @@ export const localSaveProvider: SaveProvider = {
   },
   async save(state: GameState) {
     try {
-      // Convert Set to array for JSON serialization
-      const serializableState: GameState = { ...state };
-      if (serializableState.session?.scannedHosts instanceof Set) {
-        (serializableState.session as { scannedHosts?: string[] }).scannedHosts = Array.from(serializableState.session.scannedHosts);
-      }
+      // Convert Set to array for JSON serialization. Deep-copy `session` so we
+      // never mutate the live game state (a shallow {...state} shares session).
+      const serializableState = {
+        ...state,
+        session: {
+          ...state.session,
+          scannedHosts:
+            state.session?.scannedHosts instanceof Set
+              ? Array.from(state.session.scannedHosts)
+              : state.session?.scannedHosts,
+        },
+      } as unknown as GameState;
       await db.saves.put({ key: "default", state: serializableState, updatedAt: Date.now() });
     } catch (error) {
       console.error("save failed", error);
