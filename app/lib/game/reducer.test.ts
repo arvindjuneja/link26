@@ -3,6 +3,7 @@ import type { GameState } from "@/types/game";
 import { createInitialState } from "@/app/lib/game/initialState";
 import { createDeterministicContext } from "@/app/lib/game/context";
 import { isReducerCommand, reduceCommand, type ParsedCommand } from "@/app/lib/game/reducer";
+import { CAMPAIGN } from "@/app/lib/game/campaign";
 
 const cmd = (key: string, args: string[] = [], flags: string[] = []): ParsedCommand => ({
   key,
@@ -346,6 +347,55 @@ describe("gameReducer — campaign spine", () => {
     expect(r.lines[0].text).toContain("Act I");
     expect(r.lines.some((l) => l.text.includes("[ now]"))).toBe(true);
     expect(r.lines.some((l) => l.text.startsWith("MERCER:"))).toBe(true);
+  });
+});
+
+describe("gameReducer — ATTRIBUTION meta (Act II)", () => {
+  const ctx = () => createDeterministicContext("act2", 0);
+
+  it("churn resets ATTRIBUTION for a steep cost and clears recon footing", () => {
+    const base = createInitialState({ now: 0 });
+    const dirty = {
+      ...base,
+      cash: 5000,
+      session: { ...base.session, acquired: ["hq-node"] },
+      exposure: { ...base.exposure, ATTRIBUTION: { level: 60, status: "HUNT" as const } },
+    };
+    const r = reduceCommand(dirty, cmd("churn"), ctx())!;
+    expect(r.state.exposure.ATTRIBUTION.level).toBe(0);
+    expect(r.state.cash).toBe(2000); // 5000 - 3000
+    expect(r.state.session.acquired).toEqual([]);
+  });
+
+  it("churn refuses when ATTRIBUTION is clean or cash is short", () => {
+    const base = createInitialState({ now: 0 });
+    expect(reduceCommand(base, cmd("churn"), ctx())!.lines[0].text).toContain("already clean");
+    const broke = {
+      ...base,
+      cash: 100,
+      exposure: { ...base.exposure, ATTRIBUTION: { level: 60, status: "HUNT" as const } },
+    };
+    expect(reduceCommand(broke, cmd("churn"), ctx())!.lines[0].type).toBe("error");
+  });
+
+  it("reusing a hot proxy builds ATTRIBUTION", () => {
+    const base = createInitialState({ now: 0 });
+    const hot = {
+      ...base,
+      world: {
+        ...base.world,
+        proxies: { ...base.world.proxies, "proxy-2": { ...base.world.proxies["proxy-2"], heat: 0.8 } },
+      },
+    };
+    const r = reduceCommand(hot, cmd("route add", ["proxy-2"]), ctx())!;
+    expect(r.state.exposure.ATTRIBUTION.level).toBeGreaterThan(0);
+  });
+
+  it("the campaign now spans two acts", () => {
+    const acts = new Set(CAMPAIGN.map((c) => c.act));
+    expect(acts.has("I")).toBe(true);
+    expect(acts.has("II")).toBe(true);
+    expect(CAMPAIGN.length).toBeGreaterThanOrEqual(10);
   });
 });
 

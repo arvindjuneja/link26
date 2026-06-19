@@ -126,6 +126,7 @@ const HANDLED = new Set([
   // misc
   "market",
   "buy",
+  "churn",
 ]);
 
 export function isReducerCommand(key: string): boolean {
@@ -401,21 +402,23 @@ export function reduceCommand(
 
     case "campaign": {
       const cur = state.campaign.chapter;
+      const chapter = CAMPAIGN[cur];
       result.lines = [
-        line(`Campaign — Act I  (${Math.min(cur, CAMPAIGN.length)}/${CAMPAIGN.length} done)`),
+        line(
+          `Campaign${chapter ? ` — Act ${chapter.act}` : ""}  (${Math.min(cur, CAMPAIGN.length)}/${CAMPAIGN.length} done)`
+        ),
         ...CAMPAIGN.map((c, i) =>
           line(
-            `  ${i < cur ? "[done]" : i === cur ? "[ now]" : "[lock]"} ${c.title}`,
+            `  ${i < cur ? "[done]" : i === cur ? "[ now]" : "[lock]"} ${c.title}  ·  Act ${c.act}`,
             i === cur ? "success" : "info"
           )
         ),
       ];
-      const chapter = CAMPAIGN[cur];
       result.lines.push(
         line(""),
         chapter
           ? line(`MERCER: ${chapter.intro}`, "info")
-          : line("MERCER: Act I's done. The board's yours now, operator.", "info")
+          : line("MERCER: Campaign's done. The board's yours now, operator.", "info")
       );
       break;
     }
@@ -485,12 +488,31 @@ export function reduceCommand(
           line(`CRITICAL: Proxy ${proxyId} has burned out and is unusable.`, "error")
         );
       }
+      // Reusing already-warm infrastructure builds your ATTRIBUTION profile —
+      // overlap is how operators get correlated across jobs. Fresh proxies cost
+      // nothing here; hot ones leave a recognizable shape.
+      const attrib = proxy.heat * 6;
+      const exposure =
+        attrib > 0.5
+          ? applyChannelNoise(
+              state.exposure,
+              "ATTRIBUTION",
+              attrib,
+              state.route,
+              undefined,
+              channelMitigation(state.gear, "ATTRIBUTION")
+            )
+          : state.exposure;
       result.state = {
         ...state,
         world: { ...state.world, proxies },
         route: buildRouteState([...state.route.hops, proxyId], proxies),
+        exposure,
       };
       result.lines = [...warnings, line(`Proxy ${proxyId} appended.`, "success")];
+      if (attrib > 2) {
+        result.lines.push(line("  reused warm infra — ATTRIBUTION noted (rotate, or churn).", "warning"));
+      }
       result.soundCue = "routeAdd";
       result.vfx = { type: "scan" };
       break;
@@ -1055,6 +1077,39 @@ export function reduceCommand(
         }),
         line(`Cash: ${state.cash}c — buy with 'buy <id>'.`),
       ];
+      break;
+    }
+
+    case "churn": {
+      const COST = 3000;
+      if (state.exposure.ATTRIBUTION.level < 1) {
+        result.lines = [line("ATTRIBUTION already clean — nothing to burn.", "info")];
+        break;
+      }
+      if (state.cash < COST) {
+        result.lines = [
+          line(`Identity churn costs ${COST}c (new infra + handle). You have ${state.cash}c.`, "error"),
+        ];
+        break;
+      }
+      result.state = {
+        ...state,
+        cash: state.cash - COST,
+        reputation: Math.max(0, state.reputation - 8),
+        exposure: {
+          ...state.exposure,
+          ATTRIBUTION: { level: 0, status: "CALM", lastEvent: "identity burned" },
+        },
+        // Fresh start: drop your recon footing (scanned hosts, acquired creds).
+        // Collected intel/evidence is data you keep.
+        session: { ...state.session, scannedHosts: new Set(), acquired: [] },
+      };
+      result.lines = [
+        line("[CHURN] Burning your identity — new proxies, new handle, fresh infrastructure...", "warning"),
+        line(`  ATTRIBUTION reset to zero.  -${COST}c, -8 rep.  Scanned hosts + acquired creds cleared.`, "success"),
+      ];
+      result.soundCue = "success";
+      result.vfx = { type: "success" };
       break;
     }
 

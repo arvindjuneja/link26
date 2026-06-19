@@ -40,8 +40,9 @@ export const commandRegistry: Record<string, CommandDefinition> = {
   rm: { syntax: "rm <path>", description: "Remove a file" },
   edit: { syntax: "edit <file> key=value", description: "Edit simple metadata" },
   "wipe logs": { syntax: "wipe logs", description: "Clear the log trail" },
-  market: { syntax: "market", description: "Inspect the market" },
-  buy: { syntax: "buy <item>", description: "Buy a tool" },
+  market: { syntax: "market", description: "Inspect the gear market" },
+  buy: { syntax: "buy <item>", description: "Buy gear (flattens a channel)" },
+  churn: { syntax: "churn", description: "Burn your identity — reset ATTRIBUTION (steep cost)" },
 };
 
 export function helpOutput(): TerminalLine[] {

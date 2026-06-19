@@ -13,7 +13,9 @@ export default function CampaignPanel() {
   return (
     <div className="rounded-lg border border-cyan-500/20 bg-black/60 p-4 font-mono">
       <div className="mb-2 flex items-center justify-between text-[0.7rem]">
-        <span className="tracking-[0.2em] text-cyan-300">CAMPAIGN · ACT I</span>
+        <span className="tracking-[0.2em] text-cyan-300">
+          CAMPAIGN{cur ? ` · ACT ${cur.act}` : ""}
+        </span>
         <span className="text-zinc-500">
           {Math.min(chapter, CAMPAIGN.length)}/{CAMPAIGN.length}
         </span>
@@ -33,8 +35,8 @@ export default function CampaignPanel() {
 
       {done ? (
         <p className="text-[0.72rem] leading-snug text-zinc-300">
-          Act I complete — the network knows your handle now.{" "}
-          <span className="text-zinc-500">More chapters to come.</span>
+          Campaign complete — you came in scared and left an operator.{" "}
+          <span className="text-zinc-500">The contract board is yours.</span>
         </p>
       ) : (
         <>

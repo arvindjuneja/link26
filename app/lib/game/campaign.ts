@@ -85,7 +85,74 @@ export const CAMPAIGN: CampaignChapter[] = [
     reward: { cash: 3400, reputation: 30 },
     scopeNote: "In scope: aurora LIMS read paths. The bonus is in the silence — exit clean.",
     outro:
-      "Silence. Not a single tracer, not a flag. That's the work, operator. You came in scared and you're leaving a ghost. Act I's done — the network knows your handle now. Mercer out.",
+      "Silence. Not a single tracer, not a flag. That's the work. You came in scared and you're leaving a ghost. Act I's done — but the network knows your handle now, and that changes the game. Act II when you're ready.",
+  },
+
+  // --- Act II: "The Operator" — you're known now; ATTRIBUTION is the new fear ---
+  {
+    id: "ch-known-quantity",
+    act: "II",
+    title: "Known Quantity",
+    intro:
+      "Word's out that you're good — and that cuts both ways. People watch HOW you work now. Pull the register off Helix's sequencing cluster, but mind your ATTRIBUTION: reusing the same proxy hops over and over builds a profile of you. Rotate your infrastructure.",
+    objective: { type: "exfil", hostId: "helix", targetPath: "/secrets.txt" },
+    reward: { cash: 3000, reputation: 24 },
+    scopeNote: "In scope: helix read paths. Watch ATTRIBUTION — rotate proxies, don't reuse the same chain.",
+    outro:
+      "Got it. Notice how the ATTRIBUTION bar barely fell afterward? That one doesn't forget. Every job you do leaves a little more of a shape they can recognize.",
+  },
+  {
+    id: "ch-crossed-wires",
+    act: "II",
+    title: "Crossed Wires",
+    intro:
+      "Mosaic's CDN origin has an emitter on the rack that shouldn't be there — someone's exfiltrating over RF. Characterize it: 'collect rf mosaic'. Use 'sweep' first to find it on the waterfall if you like.",
+    objective: { type: "characterize", hostId: "mosaic", emitterId: "emitter-mosaic" },
+    reward: { cash: 2600, reputation: 22 },
+    scopeNote: "In scope: emitter-mosaic characterization. Passive listen only.",
+    outro:
+      "That signature matches a known smuggling rig. The client now knows their 'secure' origin has been leaking for months. Good ear.",
+  },
+  {
+    id: "ch-the-tell",
+    act: "II",
+    title: "The Tell",
+    intro:
+      "Polaris Capital has an operator moving money they shouldn't. Build the full dossier — handle, email, breach AND device. That's a deep active sweep ('osint person-polaris --active'); it'll cost FOOTPRINT, so route deep and pace it.",
+    objective: {
+      type: "identify",
+      hostId: "polaris",
+      targetPersonId: "person-polaris",
+      requiredKinds: ["handle", "email", "breach", "device"],
+    },
+    reward: { cash: 3400, reputation: 28 },
+    scopeNote: "In scope: person-polaris OSINT, passive + active. Full attribution package required.",
+    outro:
+      "Four corroborating data points on one human. That holds up. The client has what they need and you never went near their network.",
+  },
+  {
+    id: "ch-burn-notice",
+    act: "II",
+    title: "Burn Notice",
+    intro:
+      "Charon's historian again — the hot one. We need a manifest entry doctored ('edit /logs/manifest.log'). If your ATTRIBUTION is already high, this is exactly the job that gets you made. If it is, consider burning your identity first ('churn') — fresh start, steep price.",
+    objective: { type: "modify", hostId: "charon", targetPath: "/logs/manifest.log" },
+    reward: { cash: 3800, reputation: 30 },
+    scopeNote: "In scope: charon single manifest edit. High monitoring — go quiet, exit fast.",
+    outro:
+      "Done, and you're still a rumour instead of a name. That's the whole game in Act II: the better you get, the harder you have to work to stay nobody.",
+  },
+  {
+    id: "ch-operator",
+    act: "II",
+    title: "Operator",
+    intro:
+      "Last of the set. Axion's HPC login node — the crown jewel. I want the vault AND a ghost exit, every channel calm, ATTRIBUTION included. Route deep, churn first if you have to, buy a quiet rig. Show me you're not just good — you're an operator.",
+    objective: { type: "exfil", hostId: "axion", targetPath: "/data/vault.txt" },
+    reward: { cash: 4800, reputation: 40 },
+    scopeNote: "In scope: axion read paths. The mark of an operator is the silence — exit clean on every channel.",
+    outro:
+      "Clean. Across every vector, including the one that follows you home. You're not the scared freelancer who took First Light. You're an operator now — and the network still doesn't have a name. That's the job. Mercer out.",
   },
 ];
 
