@@ -14,6 +14,7 @@ import PivotGraph from "./components/PivotGraph";
 import HandlerPanel from "./components/HandlerPanel";
 import Codex from "./components/Codex";
 import CampaignPanel from "./components/CampaignPanel";
+import TutorialPanel from "./components/TutorialPanel";
 import AudioController from "./components/AudioController";
 import Disclaimer from "./components/Disclaimer";
 import { AuthModal } from "./components/AuthModal";
@@ -184,6 +185,9 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {/* Onboarding — guides the first job, then retires itself. Always lit. */}
+        <TutorialPanel />
 
         {/* Non-essential panels dim at LOCKDOWN — tunnel vision forces focus. */}
         <div className={`flex flex-col gap-3 transition-opacity duration-700 ${tunnel ? "opacity-40" : ""}`}>

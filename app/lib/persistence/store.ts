@@ -89,10 +89,11 @@ const welcomeMessage = (): TerminalLine[] => [
   createLine("║         A sentimental road back to Uplink times        ║", "info"),
   createLine("╚═══════════════════════════════════════════════════════╝", "info"),
   createLine("", "info"),
-  createLine("Welcome back, operator. The network awaits.", "info"),
-  createLine("Your mission inbox contains 3 contracts.", "info"),
+  createLine("Welcome, operator. Mercer here — I run your contracts.", "info"),
   createLine("", "info"),
-  createLine("Type 'inbox' to view missions. Type 'help' for commands.", "info"),
+  createLine("New to the chair? Type 'campaign' to take your first job — I'll walk", "success"),
+  createLine("you through it step by step (or use the TUTORIAL panel below the map).", "success"),
+  createLine("'help' lists every command. 'inbox' shows the contract board.", "info"),
   createLine("", "info"),
 ];
 
