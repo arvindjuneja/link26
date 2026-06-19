@@ -140,42 +140,40 @@ export default function Home() {
           </div>
         </header>
 
-        {/* MAIN: Large map with trace overlay */}
-        <section className="relative flex-shrink-0">
-          <MapCanvas
-            world={world}
-            route={route}
-            trace={trace}
-            focusHost={session.currentTarget ?? session.connectedHost}
-            session={session}
-            onProxyAdd={(id) => runCommand(`route add ${id}`)}
-            large
-          />
-        </section>
+        {/* COCKPIT: map (2/3) beside the Exposure Board + Terminal (1/3), all
+            visible at once — no scrolling between "where I look" and "where I type". */}
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
+          <section className="relative lg:w-2/3">
+            <MapCanvas
+              world={world}
+              route={route}
+              trace={trace}
+              focusHost={session.currentTarget ?? session.connectedHost}
+              session={session}
+              onProxyAdd={(id) => runCommand(`route add ${id}`)}
+              large
+            />
+          </section>
 
-        {/* Bottom section: Terminal + Side panels */}
-        <div className="grid flex-1 gap-3 lg:grid-cols-[1fr_320px]">
-          {/* Left: Terminal + Inbox */}
-          <div className="flex flex-col gap-3">
-            <div className="flex-1 min-h-[200px]">
-              <Terminal />
-            </div>
-            <InboxPanel />
-          </div>
-
-          {/* Right: Exposure Board + Panels */}
-          <div className="flex flex-col gap-3">
-            {/* The Exposure Board — the heartbeat, in the prominent position */}
+          <div className="flex min-h-0 flex-1 flex-col gap-3">
             <div className={`rounded border ${traceStyle.border} ${traceStyle.glow} bg-black/60 p-4 transition-all duration-300`}>
               <ExposureBoard />
             </div>
-            <HandlerPanel />
-            <MissionGuidance />
-            <EvidencePanel />
-            <InventoryPanel />
-            <MarketPanel />
-            <DemoMode />
+            <div className="min-h-[280px] flex-1">
+              <Terminal />
+            </div>
           </div>
+        </div>
+
+        {/* Secondary panels — reference material, below the fold */}
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          <HandlerPanel />
+          <MissionGuidance />
+          <InboxPanel />
+          <EvidencePanel />
+          <InventoryPanel />
+          <MarketPanel />
+          <DemoMode />
         </div>
       </div>
     </div>
