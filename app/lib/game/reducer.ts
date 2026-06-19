@@ -32,6 +32,7 @@ import {
   missionSummaryLine,
 } from "@/app/lib/game/formatting";
 import { evaluateMission, setMissionStatus, syncInbox } from "@/app/lib/game/missionLogic";
+import { CAMPAIGN } from "@/app/lib/game/campaign";
 import { applyChannelNoise, EXPOSURE_CHANNELS, missionOutcome } from "@/app/lib/game/exposure";
 import { GEAR, channelMitigation, gearById, nextCost } from "@/app/lib/game/gear";
 import {
@@ -92,6 +93,7 @@ const HANDLED = new Set([
   "missions",
   "accept",
   "submit",
+  "campaign",
   // proxy / route
   "proxy list",
   "proxy info",
@@ -269,6 +271,10 @@ export function reduceCommand(
         result.lines = [line(`Mission ${missionId} not found.`, "error")];
         break;
       }
+      if (mission.status === "locked") {
+        result.lines = [line(`${mission.title} is locked — finish the prior chapter first.`, "warning")];
+        break;
+      }
       if (mission.status !== "available") {
         result.lines = [line(`${mission.title} is already ${mission.status}.`, "info")];
         break;
@@ -353,9 +359,16 @@ export function reduceCommand(
         );
       }
 
-      const activeMissions = afterPush.activeMissions.map((m) =>
-        m.id === missionId ? { ...m, status: "completed" as const, completed: true } : m
-      );
+      // Mark complete; if this was a campaign chapter, unlock the next one.
+      const isChapter = mission.chapterIndex !== undefined;
+      const nextChapter = isChapter ? mission.chapterIndex! + 1 : -1;
+      const activeMissions = afterPush.activeMissions.map((m) => {
+        if (m.id === missionId) return { ...m, status: "completed" as const, completed: true };
+        if (isChapter && m.chapterIndex === nextChapter && m.status === "locked") {
+          return { ...m, status: "available" as const };
+        }
+        return m;
+      });
       result.state = {
         ...afterPush,
         exposure,
@@ -364,14 +377,45 @@ export function reduceCommand(
         streak,
         activeMissions,
         inbox: syncInbox(activeMissions),
+        campaign: isChapter
+          ? { chapter: Math.max(afterPush.campaign.chapter, nextChapter) }
+          : afterPush.campaign,
       };
       result.lines = [
         line(`Mission ${mission.title} completed!`, "success"),
         ...outcomeLines,
         line(`+${cash}c  +${reputation} reputation`, outcome === "burned" ? "warning" : "success"),
       ];
+      // Mercer's payoff + the next chapter's briefing.
+      if (isChapter) {
+        const chapter = CAMPAIGN[mission.chapterIndex!];
+        if (chapter) result.lines.push(line(""), line(`MERCER: ${chapter.outro}`, "info"));
+        const next = CAMPAIGN[nextChapter];
+        if (next) result.lines.push(line(`MERCER: Next — "${next.title}". ${next.intro}`, "info"));
+      }
       result.soundCue = outcome === "clean" ? "success" : "alert";
       result.vfx = outcome === "burned" ? { type: "alert" } : { type: "success" };
+      break;
+    }
+
+    case "campaign": {
+      const cur = state.campaign.chapter;
+      result.lines = [
+        line(`Campaign — Act I  (${Math.min(cur, CAMPAIGN.length)}/${CAMPAIGN.length} done)`),
+        ...CAMPAIGN.map((c, i) =>
+          line(
+            `  ${i < cur ? "[done]" : i === cur ? "[ now]" : "[lock]"} ${c.title}`,
+            i === cur ? "success" : "info"
+          )
+        ),
+      ];
+      const chapter = CAMPAIGN[cur];
+      result.lines.push(
+        line(""),
+        chapter
+          ? line(`MERCER: ${chapter.intro}`, "info")
+          : line("MERCER: Act I's done. The board's yours now, operator.", "info")
+      );
       break;
     }
 
