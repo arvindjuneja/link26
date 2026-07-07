@@ -75,12 +75,19 @@ export default function VfxThreeOverlay() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    let yOffsets = raindropsRef.current.map(drop => -drop.delay);
+    const yOffsets = raindropsRef.current.map(drop => -drop.delay);
     let lastTime = 0;
+    let lastDraw = 0;
+    const FRAME_MS = 1000 / 20; // a faint background — 20fps is imperceptible vs 60
 
     const animate = (time: number) => {
-      const delta = time - lastTime;
+      frameRef.current = requestAnimationFrame(animate);
+      // Throttle this full-screen redraw and skip it entirely when the tab is
+      // hidden. It was repainting the whole viewport with text every frame.
+      if (document.hidden || time - lastDraw < FRAME_MS) return;
+      const delta = lastTime ? time - lastTime : 16;
       lastTime = time;
+      lastDraw = time;
 
       ctx.clearRect(0, 0, dimensions.width, dimensions.height);
       
@@ -121,8 +128,6 @@ export default function VfxThreeOverlay() {
           ctx.fillText(char, drop.x, y);
         });
       });
-
-      frameRef.current = requestAnimationFrame(animate);
     };
 
     frameRef.current = requestAnimationFrame(animate);

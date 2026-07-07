@@ -1,4 +1,7 @@
-// The campaign spine — Act I: "The Scared Freelancer".
+// The campaign spine — a three-act trilogy.
+//   Act I  "The Scared Freelancer" — learn the verbs; the fear is the trace.
+//   Act II "The Operator"          — you're known; the fear is ATTRIBUTION.
+//   Act III "The Hunt"             — the script flips; now YOU are the target.
 //
 // A short, ordered narrative arc that teaches the verbs in-world (Mercer talks
 // you through the first job) and gives the sandbox a thread to pull on. Each
@@ -153,6 +156,73 @@ export const CAMPAIGN: CampaignChapter[] = [
     scopeNote: "In scope: axion read paths. The mark of an operator is the silence — exit clean on every channel.",
     outro:
       "Clean. Across every vector, including the one that follows you home. You're not the scared freelancer who took First Light. You're an operator now — and the network still doesn't have a name. That's the job. Mercer out.",
+  },
+
+  // --- Act III: "The Hunt" — the script flips; now YOU are the target ---
+  {
+    id: "ch-tripwire",
+    act: "III",
+    title: "Tripwire",
+    intro:
+      "Something's wrong. A job came back wrong — someone's been pulling the sites you worked in Act II, asking who ran them. That's not a client; that's a hunter. Iris Backups isn't a backup shop, it's an attribution contractor, and they've been pointed at you. Find the analyst doing the pulling: 'osint person-iris --active' until you've tied a handle, an email and a breach record to one person. We learn who's looking before they learn who we are.",
+    objective: {
+      type: "identify",
+      hostId: "iris",
+      targetPersonId: "person-iris",
+      requiredKinds: ["handle", "email", "breach"],
+    },
+    reward: { cash: 3600, reputation: 26 },
+    scopeNote: "In scope: person-iris OSINT only. You're profiling the hunter — don't trip their own footprint alarms.",
+    outro:
+      "There's your hunter — a freelance attribution analyst, competent but not careful. Now we know the shape of the thing. Strange feeling, isn't it: being the footprint instead of the one taking it. This is the set that decides whether you ever work again. Stay sharp.",
+  },
+  {
+    id: "ch-listening-post",
+    act: "III",
+    title: "Listening Post",
+    intro:
+      "Your analyst doesn't work blind. There's a collection rig parked on Iris's rack, sweeping for the RF signature of the kit you run — that's how they'd tie a job to your hardware. I need to know exactly what it can hear before we move. 'sweep' to find it on the waterfall, then 'collect rf iris'. Passive only. We do not let them hear us listening.",
+    objective: { type: "characterize", hostId: "iris", emitterId: "emitter-iris" },
+    reward: { cash: 3200, reputation: 24 },
+    scopeNote: "In scope: emitter-iris characterization. Passive listen — no host contact, no transmit.",
+    outro:
+      "Narrowband, tuned right onto your field-kit's band. They've been building a profile of your gear for weeks. The good news is now you know to change rigs before the next job. You can't beat a hunter you can't see — and you just saw theirs.",
+  },
+  {
+    id: "ch-cold-storage",
+    act: "III",
+    title: "Cold Storage",
+    intro:
+      "Everything they have on you lives in one place: an encrypted dossier in Iris's object store. I want a copy — I need to know how much they've actually got versus what they're bluffing. Do it clean: surface a breach record on their admin ('osint person-iris --active'), 'acquire iris' to ride those creds, 'connect', then 'cp /data/vault.txt @local'. No cold pops on this one — if they see a forced door, they'll know that you know.",
+    objective: { type: "exfil", hostId: "iris", targetPath: "/data/vault.txt" },
+    reward: { cash: 4200, reputation: 30 },
+    scopeNote: "In scope: iris object store, credentialed access required. Read-only exfil — leave the dossier exactly as you found it.",
+    outro:
+      "Got it. Read it on the way out: they have your handle, two job sites and a partial gear signature. Enough to make an accusation — not yet enough to make it stick. Which means we still have one move before they close the gap.",
+  },
+  {
+    id: "ch-scrub",
+    act: "III",
+    title: "Scrub",
+    intro:
+      "Here's the move. The one record that turns their pile of maybes into a case is a single manifest line tying your handle to the Polaris job. Break that link: 'edit /logs/manifest.log' on iris. This is the most exposed thing you'll ever do — editing the hunter's own evidence while they watch the rack. If your ATTRIBUTION is warm, 'churn' first. No heroics: in, one edit, out.",
+    objective: { type: "modify", hostId: "iris", targetPath: "/logs/manifest.log" },
+    reward: { cash: 4600, reputation: 34 },
+    scopeNote: "In scope: iris single manifest edit. Maximum monitoring — go quiet, move once, exit fast.",
+    outro:
+      "The chain's broken. Their case falls apart at the one joint that mattered — and the best part, they can't prove the manifest was touched without admitting how sloppy they kept it. You just out-tradecrafted a firm whose entire job is tradecraft. One left.",
+  },
+  {
+    id: "ch-nobody",
+    act: "III",
+    title: "Nobody",
+    intro:
+      "Last job on this handle. Ever. After this you 'churn' for good and the operator they were hunting simply stops existing. So make it the one they tell stories about: Solstice Grid Ops, the hardest target on the board, the vault, and a perfect ghost — every channel calm, ATTRIBUTION included. Route deep, fresh rig from 'market', take your time. Then you vanish. Show me nobody.",
+    objective: { type: "exfil", hostId: "solstice", targetPath: "/data/vault.txt" },
+    reward: { cash: 6000, reputation: 50 },
+    scopeNote: "In scope: solstice read paths. The whole grade is the silence — exit clean on every vector, then burn the handle.",
+    outro:
+      "Silence. Every vector flat, including the one that follows you home — and then the handle's gone, churned to nothing, the hunt closing on a name that no longer answers. They'll keep looking. They won't find anyone, because there's no longer anyone to find. You came in a scared freelancer; you leave a ghost story. Good work, operator. Mercer out — for real, this time.",
   },
 ];
 

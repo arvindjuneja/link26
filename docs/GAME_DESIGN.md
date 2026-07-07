@@ -21,6 +21,18 @@ Owner-made calls. These override any conflicting text below.
 
 ---
 
+## Career-sim pivot (2026-06-23) — supersedes the single-seat framing
+
+> **This note supersedes the single-operator framing of everything below. The GHOST26 spec is NOT discarded — it is now the RED seat of a larger whole.**
+
+The single-seat operator fantasy is **reframed into a three-seat cybersecurity career sim** — **Blue (SOC analyst — deduction/triage)**, **Red (authorized red team / pentest)**, **Blackhat (the criminal path)** — three chairs sharing **one world, one engine**. The entire GHOST26 design below remains valid **verbatim as the RED seat**: the kill chain, the four-channel Exposure Board, the six surfaces, the seeded reducer, the evidence-assembly grading, and the codex are all reused — now one seat of three.
+
+- **Why.** An *arcade* career sim (not a training platform) with an **education-affiliate on-ramp**; the Blue seat is the entry chair real newcomers actually start in.
+- **Status.** Decided in the team's working memory; this doc was locked 2026-06-18 and never updated, so it was **stale** relative to the direction. This note + **§1b** reconcile it without gutting the locked content.
+- **Grounding.** The Blue Tier-1 SOC role is researched in `docs/research/soc-tier1-research.md` (verified, adversarial). A first Blue-seat prototype is **already built and playable**: the engine in `app/lib/soc/` (`types.ts` / `engine.ts` / `cases.ts` + `*.test.ts`) plus a console UI at the **`/soc` route** (`app/soc/page.tsx` → `app/components/soc/SocConsole.tsx` + `SocOnboarding.tsx`, a first-shift coach). See **§1b** for what it is and how it shares the engine.
+
+---
+
 ## 0. Verified ground truth (what actually exists today)
 
 I read the code. These facts are load-bearing for everything below.
@@ -58,6 +70,69 @@ The same line that clears App Store review *also* earns cybersec respect:
 | Abstracted minigames (pivot graph, spectrogram, scene analysis) | Real IPs, creds, target data, real CVEs-as-instructions |
 | Trace/heat tradeoffs as game stats | Actual evasion/jamming techniques that work |
 | Codex concepts + links to *legal* sandboxes | Step-by-step "how to attack X" |
+
+---
+
+## 1b. The three seats (career-sim pivot)
+
+One world, three chairs. The same target, telemetry, and codex are seen from three vantage points; the engine **primitives are shared, not reimplemented per seat**.
+
+| Seat | Role | Core loop | Outcome shape |
+|---|---|---|---|
+| **Blue** | Tier-1 SOC analyst — the **entry chair** | triage a queue of alerts; per alert pull the right sources, assemble evidence, make ONE call | TP / FP / Benign-TP → escalate or close |
+| **Red** | authorized red team / pentest (**= the entire GHOST26 spec above**) | recon → access → action-on-objective → exfil against one target; minimize your *own* exposure | Clean / Hot / Burned |
+| **Blackhat** | the criminal path | the Red verbs **without** RoE/scope — the line the game must walk to stay credible | (future) |
+
+**What the seats share (engine reuse, not a fork):**
+- The **Exposure Board** (`trace.ts` thresholds CALM/ALERT/HUNT/LOCKDOWN, instantiated per meter). Red's *own-detection* meter becomes Blue's **breach-risk** meter, **inverted**: now the dread is the **adversary's dwell when you MISS** (which, paired with noise, drives the headline heartbeat).
+- **Evidence assembly + deterministic predicate grading.** Blue's call is graded by a pure predicate over ground truth (`gradeCall`/`scoreShift`) — the same crisp, un-gameable shape as Red's `evaluateMission`. **No LLM referee on either seat.**
+- The **seeded reducer**, the tagged entity/world graph, and the **~80-card codex** (concepts + ethics, never procedures).
+
+### The Blue Tier-1 loop (as actually built — `app/lib/soc/` + `/soc` route)
+A **shift** presents a **queue of alerts** (the first shift deliberately leans toward not-a-threat — 4 of 7 — to cover all three verdicts and all three archetypes early; later shifts tilt more FP-heavy to mirror real triage, where most alerts aren't a threat). Per alert the analyst:
+1. reads the **trigger** (what fired); the tool's severity is deliberately often wrong;
+2. **pulls the right data sources** — each source carries the *question it answers*, teaching "**which log answers which question**" (auth → 4624/4625/4672; C2 → DNS; lineage → EDR process tree). Pulling the decisive sources is the move; pulling irrelevant ones just burns shift-minutes;
+3. **assembles evidence** (cards weighted decisive / supporting / neutral / **noise** — the FP-dominant red herring) toward a verdict;
+4. makes **ONE call** — `close-false-positive` / `close-benign` / `escalate-tier2` / `escalate-ir-isolate` — folding the **three-way classification AND the escalate/contain disposition into a single move**.
+
+Two pressure meters reuse `trace.ts`: **breach-risk** (a missed or under-escalated TP is now dwelling) and **noise** (crying wolf — escalating FPs or *isolating authorized activity* erodes trust and buries the next analyst). The headline **heartbeat is driven by the worse of the two** (mirroring Red's max-status-vector), with breach-risk the dread that's *new* to the blue chair. Grading is deliberately **asymmetric**: missing a live threat is the cardinal sin; crying wolf is the chronic one.
+
+**First content — three verified archetypes**, each shipping as a malicious AND an authorized/false-positive variant (same detection, opposite verdict — the thesis):
+
+| Archetype | MITRE | The read |
+|---|---|---|
+| Encoded PowerShell | **T1059.001** | encoding ≠ threat — decode, then read the parent (Word→PS→outbound vs SCCM agent + change ticket) |
+| Auth brute-force | **T1110** (4624/4625/4672) | burst→success is only a threat when source/time/account don't fit the user |
+| DNS C2 / beaconing | **T1071.004** | fixed-interval + high-entropy + NXDOMAIN — but confirm it's a temp-path binary, not a browser/CDN |
+
+**Round 2 (2026-06-28, [`soc-tier1-cases-round2.md`](research/soc-tier1-cases-round2.md)) added a second shift** over four more archetypes — again each malicious **and** authorized/FP: **Phishing** (SPF/DKIM/DMARC + sanctioned-simulation B-TP; `T1566`), **Impossible-travel / MFA-fatigue** (Entra ID Protection risk detections; **`T1621`**, **`T1078.004`** — verified), **EDR malware** (Defender for Endpoint *True positive / Informational-expected / False positive*; `T1204`), **Data exfil to cloud storage** (personal-cloud TP vs sanctioned-backup B-TP; **`T1567.002`** — verified). The three-way verdict is now anchored in **Microsoft's own taxonomy**: Defender for Cloud Apps ships a literal *True positive / **Benign true positive** / False positive* scheme whose B-TP example is "an authorized penetration test" — exactly the game's bridge. The console (`/soc`) rotates through the shifts on "New shift". **Round 3 (2026-07-04,
+[`soc-tier1-cases-round3.md`](research/soc-tier1-cases-round3.md))** verified the last
+open MITRE ids (`T1566`/`T1204`/`T1547.001` — so phishing + EDR are cleared) and added an
+**account-lockout** shift (the archetype where *most* alerts are benign: the #1 real cause
+is a device caching an OLD password — Event 4740's Caller Computer Name is often blank, so
+the read is to correlate Kerberos 4771 / NTLM 4776). Cross-vendor check: **Microsoft
+Sentinel** ships a literal *Benign Positive - suspicious but expected* close-class — another
+primary-source validation of the mechanic (the "benign positive" *disposition* is a
+Sentinel/Splunk-style concept, not universal; named *signals* are cross-vendor). **Round 4
+(2026-07-04, [`soc-tier1-cases-round4.md`](research/soc-tier1-cases-round4.md))** grounded the
+**insider-threat** archetype (Microsoft Purview Insider Risk Management + CISA): the *same*
+action is malicious or benign by **intent / authorization / role** — a departing employee's
+exfil to a personal cloud (TP) vs a data-scientist's in-role baseline (FP, the UEBA anomaly
+misfired) vs a ticketed corporate migration (Benign-TP). And the lesson that *inverts the usual
+instinct*: the insider TP **escalates — hands up to a multi-stakeholder insider-risk / HR / legal
+program — and must NOT isolate/confront** (that burns the case). This needed one engine tweak
+(the "wrong containment" grade message is now direction-agnostic, since here *isolating* is the
+over-action). **Now 21 hand-authored + 3 generated cases across 10 archetypes, 5 shifts.**
+
+**The Red↔Blue handoff (2026-07-02, `app/lib/soc/handoff.ts`) makes the bridge a MECHANIC.** A red-seat run is turned into a blue case: the operator's tradecraft becomes the analyst's evidence — `cred-spray → password-spray→4624`, `proxy-chain → anonymized source`, `exfil-copy → scoped read+egress`, `log-wipe → audit log cleared (1102)`. `caseFromRedRun()` is pure/deterministic; a single impact-centred resolver drives archetype + title + detection rule + MITRE together (so they never diverge). The pivot is authorization: an **authorized** run (RoE on file) → **Benign-TP / close-benign**; the **identical tradecraft off-book** (your handle, no engagement) → **TP / escalate-IR**. **Authorization, not authorship**, decides the verdict — the same-board-two-seats thesis as a playable "Shift 4 · the other chair," with a fuchsia "↔ from your red seat" badge. This is the strongest demo of the pivot: your own red run, adjudicated from the blue chair.
+
+**The same-board-two-seats bridge, made concrete:** a sanctioned pentest is a **Benign True Positive** — *a red-team run seen from the blue chair.* The shipped `soc-auth-pentest` case is exactly this: textbook credential-spray behaviour (the detection is **correct**) plus a signed RoE/deconfliction record → **close benign**, never escalate. The player's *own* Red-seat run is precisely what the Blue seat must recognize and not isolate.
+
+### Career ladder & the education on-ramp
+- The ladder is the meta: **T1 → T2 → T3** (monitoring/triage → investigation/containment → threat-hunting/detection-engineering), branching off to IR / threat-intel / **Red** / detection engineering. **BTL1 (Blue Team Level 1)** is the verified real-world **entry cert** the Blue seat models toward.
+- The **education-affiliate on-ramp** lives on this seat: each case carries "learn this for real" pointers (MITRE pages, legal sandboxes such as LetsDefend) — the codex's affiliate surface, kept educational about concepts, silent on procedures.
+
+> **Accuracy/credibility matters MORE on the Blue side** because it ties to **real recruitment**, so the research brief's caveats are load-bearing: **no unverified salary/pay data is ever presented as fact** (every concrete band was refuted — label any money illustrative/in-game); the SOC role, tiers, Windows event IDs, and ATT&CK mappings are kept accurate; and the "tierless-SOC / AI-automation" trend means manual-triage T1 is the *conventional baseline*, not a permanent truth. On this seat, **credibility is the product.**
 
 ---
 
@@ -386,3 +461,4 @@ One fictional OS, **Gateway**, where each pillar is a runnable *app* (`term`, `n
 | "Wardrive" from a chair | **Deployed/tasked RF sensors**, not personal wardriving | Category error practitioners catch instantly. |
 | ELINT vs COMINT | **ELINT** — characterize emitters by parameters, never decode content | Distinct disciplines; pick the lane and model it right. |
 | Determinism "instant in Phase 0" | **It's an audit + a 4-6 wk reducer refactor + a CI harness; replay-anti-cheat is a spike** | The hard 90% can't be both "instant" and "the foundation of Phase 4." |
+| Single-seat operator vs career sim | **Three seats, one world (Blue SOC / Red / Blackhat)** — GHOST26 below is the Red seat | Blue is the entry chair tied to real recruitment; shared engine + codex; first Blue prototype built (`app/lib/soc/`). See the pivot note + §1b. |

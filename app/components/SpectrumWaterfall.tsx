@@ -86,6 +86,19 @@ export default function SpectrumWaterfall() {
     }
   }, []);
 
+  // Only run the WebGL render loop while the waterfall is actually on screen.
+  // Off-screen (scrolled away or display:none during onboarding) it was still
+  // rendering at 60fps — wasted GPU/CPU. IntersectionObserver flips frameloop.
+  const viewRef = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = viewRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), { threshold: 0.05 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [mounted]);
+
   return (
     <div className="rounded-lg border border-cyan-500/20 bg-black/60 p-4 font-mono">
       <div className="mb-2 flex items-center justify-between text-[0.7rem]">
@@ -94,9 +107,14 @@ export default function SpectrumWaterfall() {
           {characterized.size}/{emitters.length} characterized
         </span>
       </div>
-      <div className="h-44 w-full overflow-hidden rounded bg-[#02060c]">
+      <div ref={viewRef} className="h-44 w-full overflow-hidden rounded bg-[#02060c]">
         {mounted && webgl ? (
-          <Canvas camera={{ position: [0, 2.1, 3.3], fov: 52 }} dpr={[1, 1.5]} gl={{ alpha: true }}>
+          <Canvas
+            camera={{ position: [0, 2.1, 3.3], fov: 52 }}
+            dpr={[1, 1.5]}
+            gl={{ alpha: true }}
+            frameloop={visible ? "always" : "never"}
+          >
             <Waterfall emitters={emitters} characterized={characterized} />
           </Canvas>
         ) : (
