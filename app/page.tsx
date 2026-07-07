@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import Terminal from "./components/Terminal";
 import MapCanvas from "./components/MapCanvas";
 import VfxThreeOverlay from "./components/VfxThreeOverlay";
@@ -130,6 +131,15 @@ export default function Home() {
             )}
           </div>
           <div className="flex items-center gap-4">
+            {/* Seat switch — the SOC (blue-team) chair. Tinted blue/emerald so the
+                other role is discoverable from the red seat without knowing the URL. */}
+            <Link
+              href="/soc"
+              title="Switch seat — the SOC blue-team analyst desk"
+              className="rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 font-medium text-emerald-300 transition-colors hover:bg-emerald-500/20"
+            >
+              SOC desk →
+            </Link>
             <Codex />
             {/* Execution indicator */}
             {isExecuting && (
