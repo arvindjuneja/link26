@@ -104,9 +104,20 @@ const STEPS: Step[] = [
     cmd: "scan hq-node",
     done: (g) => Array.from(g.session.scannedHosts ?? []).includes("hq-node"),
     // scan flips `scannedHosts` instantly but streams its ports table over ~1.2s;
-    // hold ~2s so the player sees it land in the lit terminal before we move on
-    // (otherwise the result renders behind the next step's overlay).
-    advanceDelayMs: 2000,
+    // hold ~1.5s so the table finishes rendering in the terminal before the coach
+    // moves to the "read it" beat below (nothing is dimmed now, so it stays visible).
+    advanceDelayMs: 1500,
+  },
+  {
+    // A read-and-understand beat: pause on the scan result (now visible, not dimmed)
+    // and explain WHAT it showed + WHY you scan, before the next instruction. Manual
+    // advance (a button) so the player is never rushed past their first scan.
+    kind: "intro",
+    anchor: "terminal",
+    title: "There it is — read the terminal.",
+    body:
+      "That's the scan: the file we came for — /secrets.txt — and the target's alarm state, laid out. THIS is why you look before you leap; you never walk in blind. Take a second to see it. When you're ready, we go in.",
+    button: "Got it — go in ▸",
   },
   {
     kind: "type",
@@ -296,19 +307,20 @@ export default function GuidedOnboarding({
 
   return (
     <>
-      {/* Backdrop. With a spotlight, a huge box-shadow punches a lit hole over the
-          target — pointer-events:none so the real element (esp. the terminal) is
-          fully usable underneath. Without one, a flat dim that blocks stray clicks. */}
+      {/* Highlight. A glowing RING on the target — NOT a screen-dimming spotlight, so
+          command output (esp. the scan's ports table) stays fully readable instead of
+          being buried behind an overlay. Ring is pointer-events:none. For no-anchor
+          story beats (intro/outro), a flat dim is fine — there's nothing to read. */}
       {rect ? (
         <div
           aria-hidden
-          className="pointer-events-none fixed z-[70] rounded-xl border border-cyan-400/60 transition-all duration-300"
+          className="pointer-events-none fixed z-[70] rounded-xl border-2 border-cyan-400/70 transition-all duration-300"
           style={{
             left: rect.left - 8,
             top: rect.top - 8,
             width: rect.width + 16,
             height: rect.height + 16,
-            boxShadow: "0 0 0 9999px rgba(2,4,8,0.84), 0 0 24px -2px rgba(34,211,238,0.5) inset",
+            boxShadow: "0 0 30px -2px rgba(34,211,238,0.6), 0 0 22px -4px rgba(34,211,238,0.45) inset",
           }}
         />
       ) : (
