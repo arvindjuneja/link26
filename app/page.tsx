@@ -19,6 +19,7 @@ import CampaignPanel from "./components/CampaignPanel";
 import GuidedOnboarding from "./components/GuidedOnboarding";
 import AudioController from "./components/AudioController";
 import Disclaimer from "./components/Disclaimer";
+import DesktopHint from "./components/DesktopHint";
 import { AuthModal } from "./components/AuthModal";
 import { useGameStore } from "./lib/persistence/store";
 import { overallTrace } from "./lib/game/exposure";
@@ -120,9 +121,12 @@ export default function Home() {
         onAuthChange={handleAuthChange}
       />
       <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1600px] flex-col gap-3 px-3 py-4">
+        {/* Mobile-only heads-up: the cockpit is desktop-first (dismissible). */}
+        <DesktopHint />
+
         {/* Compact top bar with trace-reactive styling */}
-        <header className={`flex items-center justify-between rounded border ${traceStyle.border} ${traceStyle.glow} bg-black/60 px-4 py-2 text-[0.7rem] transition-all duration-300`}>
-          <div className="flex items-center gap-6">
+        <header className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded border ${traceStyle.border} ${traceStyle.glow} bg-black/60 px-4 py-2 text-[0.7rem] transition-all duration-300`}>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <div><span className="text-zinc-500">CASH</span> <span className="font-semibold text-amber-400">{cash}c</span></div>
             <div><span className="text-zinc-500">REP</span> <span className="font-semibold text-cyan-300">{reputation}r</span></div>
             <div><span className="text-zinc-500">ROUTE</span> <span className="font-semibold">{route.hops.length} hops</span></div>
@@ -130,7 +134,7 @@ export default function Home() {
               <div><span className="text-zinc-500">STREAK</span> <span className="font-semibold text-cyan-400">×{streak}</span></div>
             )}
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center justify-end gap-3">
             {/* Seat switch — the SOC (blue-team) chair. Tinted blue/emerald so the
                 other role is discoverable from the red seat without knowing the URL. */}
             <Link
