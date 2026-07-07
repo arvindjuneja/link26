@@ -68,17 +68,25 @@ export default function MapCanvas({ world, route, trace, focusHost, session, onP
   );
 
   useEffect(() => {
+    // Throttle the pulse/marching-ants animation to ~20fps and pause when the
+    // tab is hidden. At 60fps this fired setState every frame, re-rendering and
+    // fully repainting the map canvas continuously — a needless CPU hog. The
+    // per-tick increments are scaled up 3x so the on-screen motion is unchanged.
     let frame: number;
-    const animate = () => {
+    let last = 0;
+    const FRAME_MS = 1000 / 20;
+    const animate = (t: number) => {
+      frame = requestAnimationFrame(animate);
+      if (document.hidden || t - last < FRAME_MS) return;
+      last = t;
       if (route.hops.length !== routeLengthRef.current) {
         routeLengthRef.current = route.hops.length;
         setRouteAnimationPhase(0);
       }
-      setPhase((current) => (current + 0.02) % (Math.PI * 2));
-      setRouteAnimationPhase((current) => (current + 0.03) % (Math.PI * 2));
-      frame = requestAnimationFrame(animate);
+      setPhase((current) => (current + 0.06) % (Math.PI * 2));
+      setRouteAnimationPhase((current) => (current + 0.09) % (Math.PI * 2));
     };
-    animate();
+    frame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(frame);
   }, [route.hops.length]);
 

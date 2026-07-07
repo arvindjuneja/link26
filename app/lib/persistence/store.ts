@@ -5,6 +5,7 @@ import { channelMitigation } from "@/app/lib/game/gear";
 import { coolProxies } from "@/app/lib/game/worldQueries";
 import { createInitialState } from "@/app/lib/game/initialState";
 import { reduceCommand, type SoundCue } from "@/app/lib/game/reducer";
+import { RED_RUN_CUT, awardRedRun, loadCareer, saveCareer } from "@/app/lib/career/state";
 import { createLiveContext } from "@/app/lib/game/context";
 import type { ScanAnimation, ExecutionPhase, TimedEffect } from "@/app/lib/game/effects";
 import { localSaveProvider } from "./saveLocalIndexedDb";
@@ -91,8 +92,8 @@ const welcomeMessage = (): TerminalLine[] => [
   createLine("", "info"),
   createLine("Welcome, operator. Mercer here — I run your contracts.", "info"),
   createLine("", "info"),
-  createLine("New to the chair? Type 'campaign' to take your first job — I'll walk", "success"),
-  createLine("you through it step by step (or use the TUTORIAL panel below the map).", "success"),
+  createLine("New to the chair? I'll walk you through your first job click-by-click —", "success"),
+  createLine("just follow the prompts. After that, 'campaign' shows your missions.", "success"),
   createLine("'help' lists every command. 'inbox' shows the contract board.", "info"),
   createLine("", "info"),
 ];
@@ -245,6 +246,26 @@ export const useGameStore = create<GameStoreState>()((set, get) => ({
       terminalLines.push(createLine(`Unknown command: ${key}`, "error"));
       soundCue = "alert";
     }
+
+    // Cross-seat economy: a completed RED run credits the shared career wallet (your
+    // personal cut) and records the run — which is what opens the blue seat's handoff
+    // desk. Best-effort; the career layer must never break a red run.
+    const doneBefore = state.activeMissions.filter((m) => m.completed).length;
+    const doneAfter = nextState.activeMissions.filter((m) => m.completed).length;
+    if (doneAfter > doneBefore) {
+      try {
+        saveCareer(awardRedRun(loadCareer()));
+        terminalLines.push(
+          createLine(
+            `MERCER: +${RED_RUN_CUT}c to your personal account. The blue desk noticed — that's the handoff chair unlocked over there.`,
+            "success"
+          )
+        );
+      } catch {
+        /* ignore — career credit is a bonus, not a dependency */
+      }
+    }
+
     const commandLine = createLine(`lnk> ${trimmed}`, "command");
 
     set((state) => {

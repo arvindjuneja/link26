@@ -15,7 +15,7 @@ import SpectrumWaterfall from "./components/SpectrumWaterfall";
 import HandlerPanel from "./components/HandlerPanel";
 import Codex from "./components/Codex";
 import CampaignPanel from "./components/CampaignPanel";
-import TutorialPanel from "./components/TutorialPanel";
+import GuidedOnboarding from "./components/GuidedOnboarding";
 import AudioController from "./components/AudioController";
 import Disclaimer from "./components/Disclaimer";
 import { AuthModal } from "./components/AuthModal";
@@ -58,6 +58,9 @@ export default function Home() {
   const cloudSyncEnabled = useGameStore((state) => state.cloudSyncEnabled);
 
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  // While the first-run onboarding is up, hide every advanced panel so a newcomer
+  // sees a calm three-box cockpit instead of the full wall of surfaces.
+  const [onboarding, setOnboarding] = useState(false);
 
   const { world, route, session, cash, reputation, streak } = gameState;
   const trace = overallTrace(gameState.exposure);
@@ -164,8 +167,8 @@ export default function Home() {
 
         {/* COCKPIT: map (2/3) beside the Exposure Board + Terminal (1/3), all
             visible at once — no scrolling between "where I look" and "where I type". */}
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
-          <section className="relative min-w-0 lg:w-2/3">
+        <div className="flex flex-col gap-3 lg:h-[72vh] lg:flex-row lg:items-stretch">
+          <section data-onboarding="map" className="relative min-w-0 lg:w-2/3">
             <MapCanvas
               world={world}
               route={route}
@@ -178,20 +181,25 @@ export default function Home() {
           </section>
 
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
-            <div className={`rounded border ${traceStyle.border} ${traceStyle.glow} bg-black/60 p-4 transition-all duration-300`}>
+            <div data-onboarding="exposure" className={`rounded border ${traceStyle.border} ${traceStyle.glow} bg-black/60 p-4 transition-all duration-300`}>
               <ExposureBoard />
             </div>
-            <div className="min-h-[280px] min-w-0 flex-1">
+            <div data-onboarding="terminal" className="min-h-[280px] max-h-[60vh] min-w-0 flex-1 overflow-hidden lg:max-h-none">
               <Terminal />
             </div>
           </div>
         </div>
 
-        {/* Onboarding — guides the first job, then retires itself. Always lit. */}
-        <TutorialPanel />
+        {/* First-run spotlight onboarding — overlays the cockpit, then retires. */}
+        <GuidedOnboarding onActiveChange={setOnboarding} />
 
-        {/* Non-essential panels dim at LOCKDOWN — tunnel vision forces focus. */}
-        <div className={`flex flex-col gap-3 transition-opacity duration-700 ${tunnel ? "opacity-40" : ""}`}>
+        {/* Advanced surfaces — hidden entirely during first-run onboarding so a
+            newcomer isn't buried; dim at LOCKDOWN for tunnel-vision focus. */}
+        <div
+          className={`flex flex-col gap-3 transition-opacity duration-700 ${
+            onboarding ? "hidden" : tunnel ? "opacity-40" : ""
+          }`}
+        >
           {/* Campaign spine — the narrative thread, prominent below the cockpit */}
           <CampaignPanel />
 

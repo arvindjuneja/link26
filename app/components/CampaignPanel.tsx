@@ -35,8 +35,9 @@ export default function CampaignPanel() {
 
       {done ? (
         <p className="text-[0.72rem] leading-snug text-zinc-300">
-          Campaign complete — you came in scared and left an operator.{" "}
-          <span className="text-zinc-500">The contract board is yours.</span>
+          Three acts done — scared freelancer, then operator, then ghost story. The handle&apos;s
+          burned and the hunt closed on nobody.{" "}
+          <span className="text-zinc-500">The contract board is yours now.</span>
         </p>
       ) : (
         <>
