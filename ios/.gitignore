@@ -1,0 +1,8 @@
+# The .xcodeproj and Info.plist are GENERATED from ios/project.yml by XcodeGen (D24).
+SentrySOC.xcodeproj/
+SentrySOC/Info.plist
+
+# Build products.
+.build/
+DerivedData/
+*.xcuserdatad
