@@ -140,3 +140,69 @@ Wherever `SPEC.md` says "`ios-design-spec.md` §N" read `docs/ios/DESIGN.md` §N
 Stage 1: **C1** (whole ticket; `schema.ts` first). Stage 2: **C2**. Stage 3: **C3 ‖ C4 ‖ C6**.
 Stage 4: **C5 ‖ C7**. Stage 5: **C8 ‖ C9 ‖ C10**. Stage 6: **C11**. Each ticket runs
 implement → independent review → fix; the lead commits + pushes a checkpoint after every stage.
+
+## 5. Stage-3 rulings (lead, 2026-09-05 — after C1–C6 reviews)
+
+- **R1 · Blue-only inbox (DV-7).** The exporter keeps WRAPPING the real engine: for the iOS list call
+  `inboxFor({ ...c, redRunsDone: Math.max(1, c.redRunsDone) }, ev)` — the engine itself then never
+  emits `tip-redrun`, BEFORE its own 4-message cap — and post-process only the two re-voicings
+  (`ev-unlock-handoff-shift`, the t2 `ev-rankup`) by swapping in the exported `*-blue-only`
+  templates (sender `vale`). `messagesAll` stays the raw `inboxFor(c, ev)`. The exporter asserts, per
+  scenario, that `messagesAll` and `messagesBlueOnly` differ ONLY by the absence of `tip-redrun` and
+  those two re-voicings (report any other diff). Swift `.iOS` implements the same rule (treat
+  `redRunsDone` as ≥ 1 for selection, then re-voice). handler.json + shift-runs.json regenerated;
+  `GoldenInboxTests` updated to the new fixture. Addendum S3 is superseded by this ruling.
+- **R2 · `Tone` gains `"orange"`** (schema.ts union + exporter); `severityMeta.High.tone = "orange"`.
+  Swift `Tone` is lenient so no model change; C7's `Theme` maps `orange` (the HUNT hue).
+- **R3 ·** `ExportedDailyTemplate` and `DAILY_TEMPLATE` gain `requiresRedRun: false` so
+  `dailyShift(on:)` is a pure field copy.
+- **R4 ·** Coach step 2 body (approved): "Findings land here — the evidence, not the tool's 'High'
+  guess. Not sure yet? Pull more logs from SOURCES. When you can justify a call, hit Got it."
+- **R5 ·** `daily.test.ts` totality test steps by 1 day over 2026–2030 and asserts `n > 1800`.
+- **R6 ·** `tuning.handler = { inboxCapacity: 4, redRunNudgeStanding: 90 }` → **31** tuning numbers;
+  `Inbox.swift` reads both from the bundle; `TuningExpectationTests` enumerates 31.
+- **R7 ·** `SOCEngine.content` stays `internal`; the app threads its own `ContentPack` (GameModel
+  already holds it). SPEC §3.3 is correct as written.
+- **R8 · Doc corrections for C11:** SPEC §1/§3.2 Engine file list is `TraceOps.swift · Grading.swift ·
+  ShiftOps.swift · Scoring.swift` (basename must not collide with `Model/Trace.swift` in one target);
+  §3.5 adds DV: `rankFor` traps on an empty ladder and `ContentPack.bundled` traps on decode failure
+  (corrupt bundle = programmer error); §6 font roster is the six faces actually shipped (see R11);
+  `applyCall` grades twice on purpose (literal parity) — one doc-comment line in `ShiftOps.swift`.
+- **R9 · C5 scope extended (C6 is complete, nobody else touches these paths).** C5 additionally owns
+  `ios/SentrySOC/Sources/State/` (delete `SessionStubs.swift`; switch `GameModel`/`EffectRunner` to
+  `SentryCore` Session/Feel types; `.resume(SessionState)` carries the snapshot THROUGH the reducer —
+  no direct `session =` assignment in the model; `buy()` compares `rules.buyKit` before/after and on
+  refusal fires `denied` and persists nothing; `.clearSession` uses a monotonic generation token so a
+  suspended write can't resurrect a cleared snapshot; delete dead `resetPerformedLog()`; the reducer
+  emits `.markDailyDone` and the model stops stamping it itself), `ios/SentrySOC/Sources/App/PhaseHost.swift`
+  (read the model's registry, not `ScreenRegistry.shared`), `ios/SentrySOC/Sources/Services/QAJump.swift`
+  (derive `first-shift` / first source id from `ContentPack`; DEBUG-assert they resolve),
+  `ios/SentrySOC/Sources/Services/Flags.swift` (remove unused `Key.init(_ setting:)` /
+  `hasSeenOnboarding` or use them), `ios/SentrySOC/Sources/Services/SafariView.swift` (one comment
+  naming C9 as the consumer), and `ios/SentrySOC/Tests/` (delete `SessionStubTripwireTests.swift`; fix
+  `EffectScheduleTests.oneSendOnePass` to remove its persistent domain). C5 acceptance adds: "the app
+  target builds against `SentryCore` Session/Feel with `SessionStubs.swift` gone, and
+  `xcodebuild test -only-testing:SentrySOCTests` is green".
+- **R10 · Ratified:** `PlayScreenFactory.view(for:model:) -> AnyView?` and
+  `MetaScreenFactory.view(for:model:) -> AnyView?` (nil = "not mine"; PhaseHost falls through play →
+  meta → placeholder); `project.yml` Resources `excludes: ["FONTS.md"]`.
+- **R11 · Font roster (as shipped):** IBM Plex Mono Light/Regular/Medium/SemiBold + Space Grotesk
+  Regular/Medium (SemiBold Grotesk does not exist upstream). C7 binds Plex **Light** to the quiet
+  log/meta style and Plex **SemiBold** to the stamp and grade numerals, so no face is dead.
+- **R12 · Pay-figure guard in `verify.sh` (C11):** the `\$\s?\d` alternative must not match Swift
+  closure arguments (`$0`, `$1`) — run the guard over STRING LITERALS extracted from Swift sources
+  (`grep -o '"[^"]*"'`) plus the exported JSON, never over raw Swift.
+- **R13 ·** Remove `Tests/CareerTests/.gitkeep` and `Tests/EngineTests/.gitkeep` (F1);
+  `Tests/SessionTests/.gitkeep` (C5).
+- **F1 · follow-up ticket (runs BEFORE C5/C7):** implements R1–R6, R8's doc comment, R13. Paths:
+  `app/lib/soc/exporter/` · `ios/SentryCore/Sources/SentryContent/` · `ios/SentryCore/Sources/SentryFixtures/` ·
+  `ios/SentryCore/Sources/SentryCore/Career/Inbox.swift` · `ios/SentryCore/Tests/CareerTests/` ·
+  `ios/SentryCore/Tests/EngineTests/TuningExpectationTests.swift` · `ios/SentryCore/Sources/SentryCore/Engine/ShiftOps.swift` (doc comment only).
+  Acceptance: `npm run soc:export` idempotent, `npm test`, `swift test` green; drift guard green;
+  fixtures show the R1 property; 31 tuning numbers.
+- **Simulator driving for screen tickets:** the app is `pl.oumm.sentry.soc` on simulator
+  `C2136147-48…` (see SPEC §7). Launch straight to a screen with
+  `xcrun simctl launch <UDID> pl.oumm.sentry.soc -SentryQAScreen <name>` (Debug build), then
+  `idb screenshot --udid <UDID> <out.png>`; drive with `idb ui tap <x> <y> --udid <UDID>`,
+  `idb ui swipe`, `idb ui text`, and read the accessibility tree with `idb ui describe-all --udid <UDID>`.
+  Every screen ticket LOOKS at its screenshots (Read the PNG) before reporting.
