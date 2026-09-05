@@ -50,15 +50,12 @@ struct CallSheet: View {
           .foregroundStyle(Theme.textTertiary)
           .fixedSize(horizontal: false, vertical: true)
 
-        // BLOCKED ON C1/F1: `callSheetMeta` is `{n} sources pulled · {t}m` with no
-        // singular — `1 sources pulled` on a one-pull call. See `EvidenceBoard`.
+        // `1 source pulled` on a one-pull call: the arm comes from the bundle
+        // (P1-5), so the screen still authors nothing.
         Text(
-          copy.render(
-            copy.chromeText("callSheetMeta"),
-            [
-              "n": String(pulledCount(socCase)),
-              "t": String(session.timeSpentOnCurrentCase(model.content)),
-            ])
+          copy.plural(
+            "callSheetMeta", pulledCount(socCase),
+            ["t": String(session.timeSpentOnCurrentCase(model.content))])
         )
         .font(Typography.meta)
         .tabularNumbers()

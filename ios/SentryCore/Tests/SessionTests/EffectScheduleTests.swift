@@ -99,12 +99,48 @@ struct EffectScheduleTests {
     let settlement = try #require(run.state.settlement)
     let board = try #require(run.state.shift)
     let expectedScore = Deck.engine.scoreShift(board)
-    let expectedReward = Deck.rules.awardForShift(.initial, expectedScore)
+    var expectedReward = Deck.rules.awardForShift(.initial, expectedScore)
+    // DV-9 (P1-3): the settlement is `awardForShift` plus the board's own id in the
+    // cleared ledger, and nothing else. `awardForShift` stays parity-guarded against
+    // a TypeScript that has no such field, so the ledger is added here, once.
+    var settledState = expectedReward.state
+    settledState.clearedShiftIDs.insert(Deck.firstShift.id)
+    expectedReward = ShiftReward(
+      state: settledState, cashGain: expectedReward.cashGain,
+      standingGain: expectedReward.standingGain, rankUp: expectedReward.rankUp)
 
     #expect(settlement.score == expectedScore)
     #expect(settlement.reward == expectedReward)
     #expect(settlement.careerBefore == .initial)
     #expect(run.career == expectedReward.state)
+    #expect(run.career.clearedShiftIDs == [Deck.firstShift.id])
+  }
+
+  /// DV-9 (P1-3) — the ledger the hub's "cleared" state and §2.3's third Dock label
+  /// both read. It has to be exact, campaign-only, and idempotent across a replay.
+  @Test("a settled campaign board records itself in the cleared ledger, once")
+  func clearedLedger() throws {
+    var run = Deck.Run()
+    #expect(run.career.clearedShiftIDs.isEmpty, "a fresh career has cleared nothing")
+
+    run.startAndBegin(Deck.firstShift.id)
+    run.playToCompletion()
+    #expect(run.career.clearedShiftIDs == [Deck.firstShift.id])
+
+    // A replay of the same board does not double the entry, and does not lose it.
+    let banked = run.career
+    var replay = Deck.Run(career: banked)
+    replay.startAndBegin(Deck.firstShift.id)
+    replay.playToCompletion()
+    #expect(replay.career.clearedShiftIDs == [Deck.firstShift.id])
+
+    // The daily board keeps itself OUT of the ledger: its id carries a date, so a
+    // year of dailies would be 365 dead strings in the save.
+    let daily = Deck.pack.dailyShift(on: Date())
+    var dailyRun = Deck.Run(career: CareerState(standing: daily.unlockStanding))
+    dailyRun.startAndBegin(daily.id)
+    dailyRun.playToCompletion()
+    #expect(dailyRun.career.clearedShiftIDs.isEmpty, "a daily board is not a campaign board")
   }
 
   @Test("a board that opens another announces it exactly once")

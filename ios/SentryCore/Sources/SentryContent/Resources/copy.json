@@ -30,7 +30,6 @@
     "callFileAction": "File this call",
     "callHoldToFile": "Hold to file · {disposition}",
     "callKeepInvestigating": "Keep investigating",
-    "callSheetMeta": "{n} sources pulled · {t}m",
     "callSheetTitle": "MAKE THE CALL",
     "caseAsset": "asset:",
     "caseEmptyBoard": "Pull a source to surface findings.",
@@ -38,12 +37,10 @@
     "caseEvidenceEyebrow": "Evidence board",
     "caseEvidenceFrom": "FROM {source}",
     "caseEvidenceTab": "EVIDENCE",
-    "caseFindingsCount": "{n} findings",
     "caseHandoffChip": "↔ red-team run",
     "caseSeverityChip": "{severity} · as flagged",
     "caseSourceHint": "Pulls this log",
     "caseSourcePulled": "pulled",
-    "caseSourceSpoken": "{label}. Answers: {question}. Costs {n} shift-minutes.",
     "caseSourcesEyebrow": "Pull a data source — which log answers the question?",
     "caseSourcesTab": "SOURCES",
     "cashHint": "cash — earned by the work; spent on kit",
@@ -63,12 +60,12 @@
     "debriefTruth": "truth:",
     "debriefWhy": "Why",
     "debriefYourCall": "your call:",
-    "dockArmed": "{n} findings · {t}m",
+    "deltaFormat": "+{n}",
+    "deltaZero": "±0",
     "dockClockIn": "Clock in · {shift}",
     "dockDaily": "Daily shift · {date}",
     "dockResume": "Resume {shift} · alert {n}/{m}",
     "hubAbout": "About · fiction simulator · privacy",
-    "hubAlertCount": "{n} alerts",
     "hubCleared": "cleared · replay",
     "hubDailyDone": "done today ✓",
     "hubDailyLabel": "Daily shift · {date}",
@@ -97,6 +94,7 @@
     "minutes": "{n}m",
     "queueCount": "{n}/{m}",
     "queueLabel": "QUEUE",
+    "rangeArrow": "{from} → {to}",
     "rankUpContinue": "Continue ▸",
     "rankUpEyebrow": "Promoted",
     "rankUpFinaleEyebrow": "The desk is yours",
@@ -118,8 +116,6 @@
     "settingsSaveNotice": "Your last save couldn't be read, so the desk started fresh. The old file is kept on the device.",
     "settingsTitle": "Settings",
     "sourceCost": "COST  {n} shift-min",
-    "sourceFindingMany": "{n} FINDINGS SURFACED",
-    "sourceFindingOne": "1 FINDING SURFACED",
     "sourcePull": "Pull the log ▸",
     "sourcePullAnother": "Pull another",
     "sourceQuerying": "querying {source}…",
@@ -134,8 +130,6 @@
     "statMissed": "Missed threats",
     "statusCalm": "QUIET",
     "summaryBack": "Back to the desk ▸",
-    "summaryBlindMany": "{n} calls made blind",
-    "summaryBlindOne": "1 call made blind",
     "summaryBoard": "The board",
     "summaryCash": "+{n} ¢",
     "summaryPayout": "Payout",
@@ -144,6 +138,36 @@
     "summaryUnlocked": "UNLOCKED",
     "summaryUnlockedLine": "New queue unlocked — {queue}",
     "wordmark": "SENTRY · SOC"
+  },
+  "chromePlurals": {
+    "callSheetMeta": {
+      "one": "{n} source pulled · {t}m",
+      "other": "{n} sources pulled · {t}m"
+    },
+    "caseFindingsCount": {
+      "one": "{n} finding",
+      "other": "{n} findings"
+    },
+    "caseSourceSpoken": {
+      "one": "{label}. Answers: {question}. Costs {n} shift-minute.",
+      "other": "{label}. Answers: {question}. Costs {n} shift-minutes."
+    },
+    "dockArmed": {
+      "one": "{n} finding · {t}m",
+      "other": "{n} findings · {t}m"
+    },
+    "hubAlertCount": {
+      "one": "{n} alert",
+      "other": "{n} alerts"
+    },
+    "sourceFindings": {
+      "one": "{n} FINDING SURFACED",
+      "other": "{n} FINDINGS SURFACED"
+    },
+    "summaryBlind": {
+      "one": "{n} call made blind",
+      "other": "{n} calls made blind"
+    }
   },
   "coachSteps": [
     {
@@ -168,7 +192,7 @@
       "title": "Now make the call"
     }
   ],
-  "contentHash": "sha256:371a99720baef85824672fd2fceed15250c3ab5c876b2f56b1c76336640eca78",
+  "contentHash": "sha256:e4f99102f2bb3a340a3e1f38a0b7a214a191339d2db23aa4fe707e96ae9315c7",
   "debriefHeadlines": {
     "good": "Good call",
     "verdictOnly": "Right verdict, off on the response",

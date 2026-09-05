@@ -9,7 +9,7 @@
 // against `gradeCall` for all 96 (case × disposition) pairs at export time (D2), so a
 // wording change there aborts the export naming the pair.
 
-import { CHROME } from "@/app/lib/soc/exporter/chrome";
+import { CHROME, CHROME_PLURALS } from "@/app/lib/soc/exporter/chrome";
 import { pinnedText } from "@/app/lib/soc/exporter/sourcePins";
 import {
   CONTENT_SCHEMA_VERSION,
@@ -128,6 +128,7 @@ export const COPY: ExportedCopy = {
   schemaVersion: CONTENT_SCHEMA_VERSION,
   contentHash: "",
   chrome: CHROME,
+  chromePlurals: CHROME_PLURALS,
 
   verdictLabels: {
     "true-positive": "True Positive",

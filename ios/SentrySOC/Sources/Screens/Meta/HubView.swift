@@ -21,13 +21,14 @@ struct HubView: View {
 
   /// §5.1: "a tap still fires `denied` once per hub visit".
   ///
-  /// Re-armed on **two** events, because the hub has two ways of being visited.
-  /// `onAppear` covers the phase leaving `.hub` and coming back (`PhaseHost` keys the
-  /// phase view on `session.phase`). But a sheet — Settings, Kit — is presented *over*
-  /// the hub and never removes it from the hierarchy, so with `onAppear` alone one
-  /// refused tap silenced the cue for the rest of the app session. Coming back from a
-  /// sheet is a new visit to the player, so `session.view` returning to `nil` re-arms
-  /// it too.
+  /// **A visit is a visit to the hub, not a return from a sheet** (P1-7). This
+  /// re-armed on `session.view` going back to `nil` as well, which turned the rule
+  /// into "once per sheet dismissal": open Settings and close it, and the locked row
+  /// buzzes again — and the abandon/kit/settings sheets are exactly what a player
+  /// opens while browsing the ladder, so the cue the rule exists to ration came back
+  /// on a loop. `onAppear` is the whole rule: `PhaseHost` keys the phase view on
+  /// `session.phase`, so leaving the hub and coming back rebuilds this screen and
+  /// re-arms the cue, and a sheet presented *over* it does not.
   @State private var deniedFired = false
 
   private var content: ContentPack { model.content }
@@ -64,9 +65,6 @@ struct HubView: View {
       dock.background(Theme.ground.ignoresSafeArea(edges: .bottom))
     }
     .onAppear { deniedFired = false }
-    .onChange(of: model.session.view) { _, now in
-      if now == nil { deniedFired = false }
-    }
     .accessibilityIdentifier("hub.root")
   }
 
@@ -268,27 +266,29 @@ struct HubView: View {
     return toppedOut ? [today] + campaign : campaign + [today]
   }
 
-  /// **How "cleared" is derived, and why.**
+  /// **"Cleared" is recorded, not derived** (P1-3, DV-9).
   ///
-  /// `CareerState` keeps no per-board ledger — only `standing`, `cash` and
-  /// `shiftsCleaned` — so "have I played Shift 2?" has no stored answer. It has a
-  /// sound derived one: standing is earned by finishing boards and the ladder is
-  /// monotonic (0/40/80/120/160), so every board below the highest one you have
-  /// unlocked is a board you were paid for. The highest unlocked board is therefore
-  /// the open one, and the rest are cleared and replayable.
+  /// It used to be inferred from the unlock ladder: standing is earned by finishing
+  /// boards and the ladder is monotonic, so "every board below the highest one you
+  /// have unlocked was paid for". Sound, and wrong twice. It called a board you had
+  /// never opened *cleared* the moment your standing passed the next gate — a clean
+  /// Shift 1 pays ⬢ 40, which opens Shift 2, which promptly claimed Shift 1 was the
+  /// cleared one and Shift 2 the open one before a single alert of it was read. And
+  /// it made the top unlocked board permanently "open", so §2.3's third Dock label
+  /// ("Daily shift · <date>" once every campaign board is cleared) could never be
+  /// reached at all.
   ///
-  /// **Request to the lead:** a `shiftsPlayed: [String]` on `CareerState` would make
-  /// this exact rather than sound, and would light up §2.3's third Dock label
-  /// (`Daily shift · …` once every campaign board is cleared), which is unreachable
-  /// under this derivation because the top board is always "open".
+  /// `career.clearedShiftIDs` is the answer to the question actually being asked. The
+  /// reducer writes it at 16:00, so a board is cleared when it has been *played to a
+  /// settlement* and at no other moment.
   private func entry(forCampaign shift: ShiftDef) -> QueueEntry {
     let unlocked = rules.isUnlocked(career, shift)
-    let isOpen = unlocked && shift.id == openShiftID
+    let isOpen = unlocked && !career.clearedShiftIDs.contains(shift.id)
     let state: QueueRow.State = !unlocked ? .locked : (isOpen ? .open : .cleared)
     return QueueEntry(
       id: shift.id,
       title: shift.label,
-      count: copy.render(copy.chromeText("hubAlertCount"), ["n": "\(shift.caseIds.count)"]),
+      count: copy.plural("hubAlertCount", shift.caseIds.count),
       statusLine: unlocked
         ? copy.chromeText(isOpen ? "hubOpen" : "hubCleared")
         : copy.render(copy.chromeText("hubLocked"), ["n": "\(shift.unlockStanding)"]),
@@ -309,7 +309,7 @@ struct HubView: View {
     return QueueEntry(
       id: shift.id,
       title: shift.label,
-      count: copy.render(copy.chromeText("hubAlertCount"), ["n": "\(shift.caseIds.count)"]),
+      count: copy.plural("hubAlertCount", shift.caseIds.count),
       statusLine: !unlocked
         ? copy.render(copy.chromeText("hubLocked"), ["n": "\(shift.unlockStanding)"])
         : copy.chromeText(done ? "hubDailyDone" : "hubDailyNote"),
@@ -322,11 +322,6 @@ struct HubView: View {
         ? nil
         : copy.render(copy.chromeText("hubLockedSpoken"), ["n": "\(shift.unlockStanding)"]),
       isLocked: !unlocked)
-  }
-
-  /// The board you are on: the highest one your standing has opened.
-  private var openShiftID: String? {
-    content.shifts.last(where: { rules.isUnlocked(career, $0) })?.id
   }
 
   // MARK: - Kit and About
@@ -374,12 +369,61 @@ struct HubView: View {
     Dock(title: dockTitle, action: dockAction)
   }
 
-  /// `Resume Shift 2 · alert 3/8` when a snapshot exists, else
-  /// `Clock in · <next open shift>`, else (every campaign board cleared)
-  /// `Daily shift · <date>`.
+  /// **§2.3's three-label rule, as one value** (P1-3).
+  ///
+  /// `Resume Shift 2 · alert 3/8` when a snapshot is waiting · `Clock in · <the next
+  /// board you have not cleared>` · `Daily shift · <date>` once every campaign board
+  /// is cleared.
+  ///
+  /// A rule, not a rendering: the label and the tap have to agree — a CTA that reads
+  /// `Clock in · Shift 2` and starts Shift 3 is worse than either — so both come off
+  /// this one enum, and a test can read it without a view (`HubDockTests`).
+  ///
+  /// The fourth arm has no §2.3 label because §2.3 assumed the third was the end of
+  /// the ladder. It is not: a player can clear every board their standing has opened
+  /// while boards above them are still locked (a rough Shift 1 pays ⬢ 15 and Shift 2
+  /// opens at ⬢ 40). "Daily shift" would be a lie there — the daily itself opens at
+  /// ⬢ 40 — so the CTA offers the replay that is actually available, which is what
+  /// the queue rows already call `cleared · replay`.
+  enum DockTarget: Equatable {
+    case resume(ShiftState)
+    /// A board to clock in to — the next uncleared one, or the highest cleared one
+    /// when the ladder is gated above you.
+    case clockIn(ShiftDef)
+    case daily(ShiftDef)
+  }
+
+  /// The rule. Pure — career, bundle, clock in; one target out.
+  static func dockTarget(
+    resumable: ShiftState?, career: CareerState, content: ContentPack, rules: CareerRules,
+    today: Date
+  ) -> DockTarget? {
+    if let resumable { return .resume(resumable) }
+
+    let campaign = content.shifts.filter { $0.kind == .campaign }
+    let unlocked = campaign.filter { rules.isUnlocked(career, $0) }
+
+    if let next = unlocked.first(where: { !career.clearedShiftIDs.contains($0.id) }) {
+      return .clockIn(next)
+    }
+    // Every campaign board cleared — §2.3's third label, reachable at last.
+    if !campaign.isEmpty, campaign.allSatisfy({ career.clearedShiftIDs.contains($0.id) }) {
+      return .daily(content.dailyShift(on: today))
+    }
+    // Everything open has been cleared, but the ladder goes on: replay the last one.
+    if let last = unlocked.last { return .clockIn(last) }
+    return nil
+  }
+
+  private var dockTarget: DockTarget? {
+    Self.dockTarget(
+      resumable: model.resumable?.shift, career: career, content: content, rules: rules,
+      today: Date())
+  }
+
   private var dockTitle: String {
-    if let snapshot = model.resumable {
-      let shift = snapshot.shift
+    switch dockTarget {
+    case .resume(let shift):
       return copy.render(
         copy.chromeText("dockResume"),
         [
@@ -387,27 +431,27 @@ struct HubView: View {
           "n": "\(min(shift.index + 1, shift.caseIds.count))",
           "m": "\(shift.caseIds.count)",
         ])
-    }
-    if let open = content.shifts.last(where: { rules.isUnlocked(career, $0) }) {
+    case .clockIn(let shift):
       return copy.render(
-        copy.chromeText("dockClockIn"), ["shift": CopyPack.shortLabel(open.label)])
+        copy.chromeText("dockClockIn"), ["shift": CopyPack.shortLabel(shift.label)])
+    case .daily(let shift):
+      // `chrome.dockDaily` and the daily template's own label are the same sentence
+      // (`Daily shift · {date}`), and the label arrives with the date already
+      // interpolated — so the board's label *is* the CTA, with no second render.
+      return shift.label
+    case nil:
+      return ""
     }
-    // `chrome.dockDaily` and the daily template's own label are the same sentence
-    // (`Daily shift · {date}`), and the label arrives with the date already
-    // interpolated — so the board's label *is* the CTA, with no second render.
-    return content.dailyShift(on: Date()).label
   }
 
+  /// The same rule, so the CTA does what it says.
   private func dockAction() {
-    if model.resumable != nil {
-      model.resume()
-      return
+    switch dockTarget {
+    case .resume: model.resume()
+    case .clockIn(let shift): model.send(.startShift(shift.id))
+    case .daily(let shift): model.send(.startShift(shift.id))
+    case nil: break
     }
-    if let open = content.shifts.last(where: { rules.isUnlocked(career, $0) }) {
-      model.send(.startShift(open.id))
-      return
-    }
-    model.send(.startShift(content.dailyShift(on: Date()).id))
   }
 
   // MARK: - Lookups

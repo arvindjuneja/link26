@@ -5,9 +5,10 @@ import Foundation
 /// zero-Swift-change operation, and `TuningExpectationTests` holds the hardcoded
 /// table that makes a silent retune loud in review.
 ///
-/// 29 numbers (S8): trace 5 · bpm 4 · timeBudgetDefault 1 · grade 8 · shift 2 ·
-/// career 6 · heartbeat 3. Property names are the JSON keys 1:1 — including the
-/// upper-case bpm bands, which are the `TraceStatus` raw values.
+/// **31** numbers (S8, amended by R6): trace 5 · bpm 4 · timeBudgetDefault 1 ·
+/// grade 8 · shift 2 · career 6 · heartbeat 3 · handler 2. Property names are the
+/// JSON keys 1:1 — including the upper-case bpm bands, which are the `TraceStatus`
+/// raw values.
 public struct Tuning: Codable, Sendable, Hashable {
   /// The two meters' bands. Shared with `game/trace.ts`.
   public struct TraceTuning: Codable, Sendable, Hashable {
@@ -126,6 +127,20 @@ public struct Tuning: Codable, Sendable, Hashable {
     }
   }
 
+  /// The two numbers `career/handler.ts` owns (R6): the inbox wall
+  /// (`out.slice(0, 4)`) and the standing at which the red seat starts pulling at you
+  /// (`c.standing >= 90`). Not economy values, which is why they were literals until
+  /// R6 — content all the same, so a retune is a re-export.
+  public struct HandlerTuning: Codable, Sendable, Hashable {
+    public let inboxCapacity: Int
+    public let redRunNudgeStanding: Int
+
+    public init(inboxCapacity: Int, redRunNudgeStanding: Int) {
+      self.inboxCapacity = inboxCapacity
+      self.redRunNudgeStanding = redRunNudgeStanding
+    }
+  }
+
   public let trace: TraceTuning
   public let bpm: BPMTuning
   /// Shift-minutes on the clock when a board is assembled.
@@ -134,10 +149,12 @@ public struct Tuning: Codable, Sendable, Hashable {
   public let shift: ShiftTuning
   public let career: CareerTuning
   public let heartbeat: HeartbeatTuning
+  public let handler: HandlerTuning
 
   public init(
     trace: TraceTuning, bpm: BPMTuning, timeBudgetDefault: Int, grade: GradeTuning,
-    shift: ShiftTuning, career: CareerTuning, heartbeat: HeartbeatTuning
+    shift: ShiftTuning, career: CareerTuning, heartbeat: HeartbeatTuning,
+    handler: HandlerTuning
   ) {
     self.trace = trace
     self.bpm = bpm
@@ -146,5 +163,6 @@ public struct Tuning: Codable, Sendable, Hashable {
     self.shift = shift
     self.career = career
     self.heartbeat = heartbeat
+    self.handler = handler
   }
 }

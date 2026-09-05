@@ -162,17 +162,19 @@ struct DebriefView: View {
     }
   }
 
-  /// The meter delta, exactly as §2.10's wireframe draws it.
+  /// The meter delta, exactly as §2.10's wireframe draws it — **from the bundle**
+  /// (P1-6).
   ///
-  /// **Known gap, left as-is for v1 (C1/C11):** these two forms are player-facing
-  /// text assembled in Swift rather than drawn from the bundle. They survive the S1
-  /// grep because they contain no letter, which is a real limit of that grep and not
-  /// a licence — a re-voiced or localised delta (`up 30`, `no change`) would be
-  /// invisible to the copy pipeline. The fix, if it is ever wanted, is a `meterDelta`
-  /// chrome key with `{n}`, plus a `meterDeltaZero`; the same applies to the
-  /// summary's `before → after` standing caption.
+  /// These two forms used to be assembled here. They survived the S1 grep because
+  /// they contain no letter, which is a limit of that grep rather than a licence:
+  /// `+` and `±` are glyphs the deck spends deliberately, and a re-voiced delta
+  /// (`up 30`, `no change`) would have been invisible to the copy pipeline. Now the
+  /// format is `chrome.deltaFormat` / `chrome.deltaZero`, so the rule "no screen
+  /// authors what the player reads" is true of the numerals too.
   private func deltaText(_ delta: Int) -> String {
-    delta > 0 ? "+\(delta)" : "±0"
+    delta > 0
+      ? copy.render(copy.chromeText("deltaFormat"), ["n": String(delta)])
+      : copy.chromeText("deltaZero")
   }
 
   // MARK: - The lesson

@@ -15,6 +15,10 @@ public struct DailyCalendar: Codable, Sendable, Hashable {
     public let label: String
     public let note: String?
     public let unlockStanding: Int
+    /// R3 put this on the template precisely so `dailyShift(on:)` is a field copy and
+    /// not a Swift literal sitting next to the copied fields. It was exported and
+    /// never read (P1-10); it is read now.
+    public let requiresRedRun: Bool
     public let kind: ShiftKind
   }
 

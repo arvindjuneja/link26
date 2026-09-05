@@ -163,7 +163,7 @@ struct ReducerTests {
     #expect(allowed == [.haptic(.select)])
   }
 
-  @Test("PULL_SOURCE is idempotent, commits, and persists")
+  @Test("PULL_SOURCE is idempotent, selects, and persists")
   func pullSource() {
     var run = Deck.Run()
     run.startAndBegin(Deck.firstShift.id)
@@ -171,7 +171,9 @@ struct ReducerTests {
 
     let first = run.send(.pullSource(sourceID))
     #expect(run.state.queried == [sourceID])
-    #expect(first == [.haptic(.commitSoft), .persistSession])
+    // `select`, not `commitSoft` (P1-10): DESIGN §2.15 spends commit-soft on four
+    // named events and a source pull is not one of them.
+    #expect(first == [.haptic(.select), .persistSession])
 
     let again = run.send(.pullSource(sourceID))
     #expect(run.state.queried == [sourceID], "a source cannot be pulled twice")

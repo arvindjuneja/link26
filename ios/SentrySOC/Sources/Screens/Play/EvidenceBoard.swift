@@ -38,16 +38,12 @@ struct EvidenceBoard: View {
       let groups = groups
       let count = groups.reduce(0) { $0 + $1.findings.count }
 
-      // BLOCKED ON C1/F1 — `caseFindingsCount` is `{n} findings` with no singular
-      // form, so the first alert reads `1 findings` here. The bundle already carries
-      // the pattern (`sourceFindingOne`/`Many`, `summaryBlindOne`/`Many`), so this is
-      // an omission in `exporter/chrome.ts`, not a choice. The moment
-      // `caseFindingsCountOne` exists this becomes the same two-line branch as
-      // `SourceSheet.surfacedLabel`. S1 forbids inventing the string here.
+      // `1 finding` on the first pull. The pair is data (P1-5): `chromePlurals`
+      // carries both arms and `CopyPack.plural` picks one, so a screen never has to
+      // author the singular S1 forbids it from authoring.
       PlayEyebrow(
         text: copy.chromeText("caseEvidenceEyebrow"),
-        trailing: count > 0
-          ? copy.render(copy.chromeText("caseFindingsCount"), ["n": String(count)]) : nil)
+        trailing: count > 0 ? copy.plural("caseFindingsCount", count) : nil)
 
       if groups.isEmpty {
         EvidenceEmptyState(

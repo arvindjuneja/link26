@@ -135,10 +135,13 @@ public func reduce(
     guard state.phase == .investigating, !state.queried.contains(sourceID) else { break }
     next.queried.append(sourceID)
     next.coachStep = advancedCoach(state, on: .onFirstSourcePulled, content)
-    // The commit (§2.7), not the findings: each finding fires its own `findingLand`
-    // as it lands in the sheet, capped at three (§5.5), and firing one here as well
-    // would double every pull.
-    effects.append(.haptic(.commitSoft))
+    // `select`, not `commitSoft` (P1-10). DESIGN §2.15 assigns commit-soft to exactly
+    // four events — "Start the shift" · Buy kit · Unlock card appears · payout
+    // count-up ends — and a source pull is none of them; the table files it under
+    // "source row tap → select". The findings are not fired here either: each one
+    // fires its own `findingLand` as it lands in the sheet, capped at three (§5.5),
+    // and a cue here as well would double every pull.
+    effects.append(.haptic(.select))
     effects.append(.persistSession)
 
   case .pickDisposition(let disposition):
@@ -187,7 +190,10 @@ public func reduce(
 
     if state.phase.isReadOnly {
       // G5: a read-only debrief returns to the phase it was opened from — the board
-      // (still investigating) or the summary (the board is finished).
+      // (still investigating) or the summary (the board is finished). VIEW_RESULT
+      // names those two phases and no others, and a board is complete in exactly one
+      // of them, so `shiftComplete` here reads back the phase it came from rather
+      // than guessing at it.
       next.last = nil
       next.phase = engine.shiftComplete(shift) ? .complete : .investigating
       break
@@ -236,6 +242,14 @@ public func reduce(
     effects.append(.clearSession)
 
   case .viewResult(let caseID):
+    // **The originating phases, named** (P1-10). G5 says a read-only debrief
+    // "returns to the phase it was opened from", and there are exactly two places
+    // that can open one: the board sheet's done rows (still `.investigating`) and the
+    // summary's glyph strip (`.complete`). Naming them here is what makes NEXT_CASE's
+    // return a fact rather than an inference — and it stops a QA jump or a stray
+    // VIEW_RESULT from the hub or a live debrief opening a screen with nowhere to go
+    // back to.
+    guard state.phase == .investigating || state.phase == .complete else { break }
     // G5's guard: `caseId ∈ shift.results`. Re-grading the stored call is how the
     // re-read debrief gets its `CallGrade` — the fold is pure, so it cannot differ
     // from what was shown when the call was filed.
@@ -324,6 +338,19 @@ public func settlement(
     state.standing = career.standing
     reward = ShiftReward(
       state: state, cashGain: reward.cashGain, standingGain: 0, rankUp: nil)
+  }
+
+  // DV-9 (P1-3): record the board. **After** the award, so the ledger travels on the
+  // settled career the model adopts and `persistCareer` writes; and campaign boards
+  // only, because a daily id carries its date and the daily's own state is
+  // `dailyDoneOn`. `awardForShift` is left alone — it is parity-guarded against the
+  // TypeScript, which has no such field.
+  if !isDaily {
+    var state = reward.state
+    state.clearedShiftIDs.insert(shift.shiftId)
+    reward = ShiftReward(
+      state: state, cashGain: reward.cashGain, standingGain: reward.standingGain,
+      rankUp: reward.rankUp)
   }
 
   // The diff is taken across the award, so a board that opened on this payout is

@@ -54,6 +54,24 @@ public struct CopyPack: Codable, Sendable, Hashable {
     }
   }
 
+  /// A counted string in both English forms (P1-1).
+  ///
+  /// `other` covers zero as well as many — that is the English rule ("0 findings"),
+  /// which is why the arms are `one`/`other` and not `singular`/`plural`. Both arms
+  /// carry `{n}`, so a caller interpolates once and never has to know which it got.
+  public struct Plural: Codable, Sendable, Hashable {
+    public let one: String
+    public let other: String
+
+    public init(one: String, other: String) {
+      self.one = one
+      self.other = other
+    }
+
+    /// The arm for a count.
+    public func arm(_ count: Int) -> String { count == 1 ? one : other }
+  }
+
   /// One pressure meter, as the briefing introduces it.
   public struct Meter: Codable, Sendable, Hashable {
     public let label: String
@@ -176,6 +194,8 @@ public struct CopyPack: Codable, Sendable, Hashable {
   public let contentHash: String
   /// Screen chrome — labels, CTAs, eyebrows (S1). Free-form keys by design.
   public let chrome: [String: String]
+  /// Counted chrome (P1-1). Disjoint from `chrome`, asserted by the drift guard.
+  public let chromePlurals: [String: Plural]
   public let verdictLabels: [SocVerdict: String]
   public let dispositionMeta: [Disposition: DispositionMeta]
   /// All 11 (D12). A key outside `OutcomeKey` fails the decode and names itself.
@@ -215,6 +235,25 @@ public struct CopyPack: Codable, Sendable, Hashable {
     }
     return text
   }
+
+  /// A **counted** chrome string, arm picked and interpolated in one call (P1-1).
+  ///
+  /// `count` fills `{n}` itself, so no caller has to spell it twice, and any other
+  /// placeholder in the pair (`{t}`, `{label}`, `{question}`) travels in `params`.
+  /// This is the whole plural machinery: one arm rule, one interpolation, no Swift
+  /// literal anywhere — `"1 findings"` cannot come back without an exporter edit.
+  public func plural(_ key: String, _ count: Int, _ params: [String: String] = [:]) -> String {
+    guard let pair = chromePlurals[key] else {
+      assertionFailure("copy.json chromePlurals is missing \(key)")
+      return ""
+    }
+    var all = params
+    all[Self.countPlaceholder] = String(count)
+    return render(pair.arm(count), all)
+  }
+
+  /// The `{n}` run every plural arm carries.
+  private static let countPlaceholder = "n"
 
   /// The severity chip, with the S5 fallback for a severity authored after this build.
   public func severity(_ value: ToolSeverity) -> ToneMeta {

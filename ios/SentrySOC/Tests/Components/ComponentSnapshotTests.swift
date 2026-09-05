@@ -39,7 +39,7 @@ struct ComponentSnapshotTests {
       try shot("SystemBar", status.rawValue.lowercased()) {
         SystemBar(
           leading: "‹ 3/7", leadingAction: {},
-          trace: .init(status: status, label: label, bpm: bpm),
+          trace: .init(status: status, label: label, bpm: bpm, now: Self.clock),
           pill: .init(text: "QUEUE 3/7", action: {}),
           settingsLabel: "Settings", settingsAction: {})
       }
@@ -52,7 +52,7 @@ struct ComponentSnapshotTests {
       try shot("ECGCanvas", status.rawValue.lowercased()) {
         HStack(spacing: 14) {
           Text(label).trackedLabel(Theme.status(status).text).frame(width: 92, alignment: .leading)
-          ECGCanvas(status: status, bpm: bpm).frame(height: 30)
+          ECGCanvas(status: status, bpm: bpm, now: Self.clock).frame(height: 30)
         }
         .padding(20)
       }
@@ -548,7 +548,8 @@ struct ComponentSnapshotTests {
     // for exactly this, and the two halves together are the whole kit.
     try shot("ComponentKit", "chrome", scale: 2) {
       ComponentKitView(
-        scrolls: false, blocks: [.chrome, .controls, .sheet, .pressure, .tones])
+        scrolls: false, blocks: [.chrome, .controls, .sheet, .pressure, .tones],
+        now: Self.clock)
     }
     try shot("ComponentKit", "content", scale: 2) {
       ComponentKitView(scrolls: false, blocks: [.rows, .ceremony, .ladder, .prose])
@@ -585,7 +586,7 @@ struct ComponentSnapshotTests {
           ForEach(Self.bands, id: \.0) { status, label, bpm in
             SystemBar(
               leading: "‹ 3/7", leadingAction: {},
-              trace: .init(status: status, label: label, bpm: bpm),
+              trace: .init(status: status, label: label, bpm: bpm, now: Self.clock),
               pill: .init(text: "QUEUE 3/7", action: {}),
               settingsLabel: "Settings", settingsAction: {})
           }
@@ -647,6 +648,32 @@ struct ComponentSnapshotTests {
 
   // MARK: - Machinery
 
+  /// **The clock these PNGs are drawn at** (P1-9).
+  ///
+  /// Eleven of the images below contain a live `ECGCanvas`, whose scroll phase is a
+  /// function of `Date()`. They therefore changed on every single run, which made
+  /// `git status` after `xcodebuild test` a wall of modified binaries and made the one
+  /// artefact that should shout about a visual regression impossible to read. A
+  /// pinned instant — an arbitrary one, chosen only for being fixed — makes them
+  /// byte-stable, and `ECGCanvas.now` is the seam that takes it.
+  ///
+  /// It is deliberately not a round number of beats: at phase 0 every band draws the
+  /// same flat run-in, and a snapshot that hides the difference between CALM and
+  /// LOCKDOWN is worse than a noisy one.
+  private static let clock = Date(timeIntervalSinceReferenceDate: 812_345_678.137)
+
+  /// Whether this run may write to `docs/screenshots/ios/components/`.
+  ///
+  /// **Off by default** (P1-9). A test suite that rewrites eleven committed binaries
+  /// as a side effect of `xcodebuild test` dirties the working tree on every CI run
+  /// and every local check, and a dirty tree is how a real change gets committed by
+  /// accident. The rendering still happens either way — an `ImageRenderer` that
+  /// returns nothing, or a view that traps, still fails the test — so the coverage is
+  /// unchanged; only the write is opt-in. Regenerate with
+  /// `SENTRY_SNAPSHOTS=1 xcodebuild test …`.
+  private static let writesPNGs: Bool =
+    ProcessInfo.processInfo.environment["SENTRY_SNAPSHOTS"] == "1"
+
   /// The four bands with the BPM the bundle actually carries — never a literal, so
   /// a retune in `tuning.ts` re-times the ECG in these PNGs too (D7).
   private static let bands: [(TraceStatus, String, Int)] = {
@@ -685,6 +712,7 @@ struct ComponentSnapshotTests {
       renderer.uiImage, "ImageRenderer produced nothing for \(component)-\(state)")
     let data = try #require(image.pngData(), "PNG encoding failed for \(component)-\(state)")
 
+    guard Self.writesPNGs else { return }
     let url = Self.outputDirectory.appending(path: "\(component)-\(state).png")
     try FileManager.default.createDirectory(
       at: Self.outputDirectory, withIntermediateDirectories: true)

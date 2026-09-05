@@ -73,7 +73,7 @@ struct HeartbeatTests {
       trace: tuning.trace,
       bpm: Tuning.BPMTuning(CALM: 50, ALERT: 76, HUNT: 112, LOCKDOWN: 200),
       timeBudgetDefault: tuning.timeBudgetDefault, grade: tuning.grade, shift: tuning.shift,
-      career: tuning.career, heartbeat: tuning.heartbeat)
+      career: tuning.career, heartbeat: tuning.heartbeat, handler: tuning.handler)
 
     let plan = try #require(heartbeatPlan(status: .lockdown, tuning: panicked))
     #expect(plan.periodMs == 400, "the floor did not hold")
@@ -85,7 +85,7 @@ struct HeartbeatTests {
       trace: tuning.trace,
       bpm: Tuning.BPMTuning(CALM: 0, ALERT: 0, HUNT: 0, LOCKDOWN: 0),
       timeBudgetDefault: tuning.timeBudgetDefault, grade: tuning.grade, shift: tuning.shift,
-      career: tuning.career, heartbeat: tuning.heartbeat)
+      career: tuning.career, heartbeat: tuning.heartbeat, handler: tuning.handler)
 
     let plan = try #require(heartbeatPlan(status: .hunt, tuning: broken))
     #expect(plan.periodMs == 60_000, "one beat a minute is the degenerate answer, not a crash")
@@ -149,7 +149,8 @@ struct HeartbeatTests {
       bpm: Tuning.BPMTuning(CALM: 50, ALERT: 76, HUNT: 60, LOCKDOWN: 90),
       timeBudgetDefault: tuning.timeBudgetDefault, grade: tuning.grade, shift: tuning.shift,
       career: tuning.career,
-      heartbeat: Tuning.HeartbeatTuning(minPeriodMs: 100, autoSuspendMs: 5_000, dubOffsetMs: 240))
+      heartbeat: Tuning.HeartbeatTuning(minPeriodMs: 100, autoSuspendMs: 5_000, dubOffsetMs: 240),
+      handler: tuning.handler)
 
     let plan = try #require(heartbeatPlan(status: .hunt, tuning: retuned))
     #expect(plan.periodMs == 1_000)

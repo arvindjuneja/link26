@@ -244,9 +244,10 @@ struct RankUpView: View {
   private var ladder: some View {
     MetaSection(eyebrow: copy.ladder.eyebrow, tone: Theme.textQuiet) {
       VStack(alignment: .leading, spacing: 14) {
-        // `RankLadder`, not C7's `LadderTrack` — see the defect written up on the
-        // type. Same track, with a gutter.
-        RankLadder(rungs: rungs, tone: tone)
+        // C7's component (P1-7). The fork this screen used to draw is gone: the
+        // gutter and the flexible-frame fix it existed for now live in `LadderTrack`
+        // itself, so the kit screenshot and the rank-up screen show the same ladder.
+        LadderTrack(rungs: rungs, tone: tone)
 
         // The BTL1 / NICE framing and the "not a certification, no pay claims" line,
         // verbatim from the bundle — the credibility guardrail of Appendix A G21.
@@ -259,8 +260,8 @@ struct RankUpView: View {
   /// The four rungs, built from the exported ranks so the track can never disagree
   /// with `CareerRules.rankFor`. Spelled as a `for` loop rather than a `map` for the
   /// same R12 reason as `recap`: no `$0` inside a string interpolation.
-  private var rungs: [RankLadder.Rung] {
-    var out: [RankLadder.Rung] = []
+  private var rungs: [LadderTrack.Rung] {
+    var out: [LadderTrack.Rung] = []
     for rung in content.ranks {
       let threshold = rung.min
       out.append(

@@ -80,7 +80,8 @@ struct LenientSchemaTests {
           "cashPerCorrect": 50, "cleanBonus": 150, "standingClean": 40,
           "standingRough": 15, "standingBreached": 5, "redRunCut": 150
         },
-        "heartbeat": { "minPeriodMs": 400, "autoSuspendMs": 40000, "dubOffsetMs": 120 }
+        "heartbeat": { "minPeriodMs": 400, "autoSuspendMs": 40000, "dubOffsetMs": 120 },
+        "handler": { "inboxCapacity": 4, "redRunNudgeStanding": 90 }
       }
     }
     """

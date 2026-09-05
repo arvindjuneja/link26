@@ -78,13 +78,37 @@ struct PhaseHost: View {
   private var sheetBinding: Binding<ViewID?> {
     Binding(
       get: { model.session.view.flatMap { $0.isFullScreen ? nil : $0 } },
-      set: { if $0 == nil { model.send(.closeView) } })
+      set: { if $0 == nil { PhaseHost.dismiss(model, fullScreen: false) } })
   }
 
   private var coverBinding: Binding<ViewID?> {
     Binding(
       get: { model.session.view.flatMap { $0.isFullScreen ? $0 : nil } },
-      set: { if $0 == nil { model.send(.closeView) } })
+      set: { if $0 == nil { PhaseHost.dismiss(model, fullScreen: true) } })
+  }
+
+  /// **One dismissal, one action** (P1-1).
+  ///
+  /// SwiftUI writes `nil` into an item binding when the presentation goes away — and
+  /// it does that whether the player swiped it down or the *app* cleared the item.
+  /// So a sheet that closes itself (`SourceSheet`'s "To the board", Settings' Close,
+  /// a QA jump) used to send `CLOSE_VIEW` twice: once from the screen, once from the
+  /// binding catching up.
+  ///
+  /// That is not a harmless repeat, because `CLOSE_VIEW` is overloaded on purpose:
+  /// with nothing on top it is the coach bubble's "Got it" (S4's `advance: "button"`),
+  /// which is how the machine stays at seventeen actions. The second dispatch
+  /// therefore silently advanced — or ended — the Shift-1 coach, one step per sheet.
+  ///
+  /// The guard is on the **current view**, not on a `didDismiss` flag: two conditions,
+  /// both readable from the model, and no state to get out of sync. A binding may only
+  /// dismiss a presentation that is actually up *and* is its own kind — so the sheet
+  /// binding never closes a cover, the cover binding never closes a sheet, and neither
+  /// speaks when nothing is presented. `.closeView` reaches the reducer exactly once
+  /// per dismissal, and its coach arm stays reachable from the one place that means it.
+  static func dismiss(_ model: GameModel, fullScreen: Bool) {
+    guard let current = model.session.view, current.isFullScreen == fullScreen else { return }
+    model.send(.closeView)
   }
 
   @ViewBuilder private func sheetContent(for view: ViewID) -> some View {

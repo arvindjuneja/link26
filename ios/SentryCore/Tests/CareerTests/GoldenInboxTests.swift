@@ -61,14 +61,15 @@ struct GoldenInboxTests {
   /// That promotion is the point of `cap-four`, and the whole of R1's behaviour change.
   @Test("the cap is four, and the nudge never occupies one of them")
   func capIsFour() throws {
-    #expect(HandlerVoice.capacity == 4)
+    let capacity = ContentPack.bundled.tuning.handler.inboxCapacity
+    #expect(capacity == 4)
     for scenario in try Golden.handler().scenarios {
       #expect(
         Golden.voice.inboxFor(scenario.career, scenario.event, features: .all).count
-          <= HandlerVoice.capacity)
+          <= capacity)
       #expect(
         Golden.voice.inboxFor(scenario.career, scenario.event, features: .iOS).count
-          <= HandlerVoice.capacity)
+          <= capacity)
     }
 
     let capped = try #require(try Golden.handler().scenarios.first { $0.name == "cap-four" })
@@ -134,8 +135,9 @@ struct GoldenInboxTests {
 
     // …and it is the standing-90 rule that emits it on the web, unchanged — the
     // threshold now read from `content.tuning.handler` (R6).
-    #expect(HandlerVoice.redRunNudgeStanding == 90)
-    let nudge = CareerState(standing: HandlerVoice.redRunNudgeStanding, redRunsDone: 0)
+    let nudgeStanding = ContentPack.bundled.tuning.handler.redRunNudgeStanding
+    #expect(nudgeStanding == 90)
+    let nudge = CareerState(standing: nudgeStanding, redRunsDone: 0)
     #expect(Golden.voice.inboxFor(nudge, features: .all).map(\.id) == ["tip-redrun"])
     #expect(Golden.voice.inboxFor(nudge, features: .iOS).isEmpty)
 

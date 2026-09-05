@@ -11,7 +11,6 @@ import SwiftUI
 /// show. Here they are **visible 11 pt captions and** the VoiceOver hint (§5.3): the
 /// meter says what it costs you, not what it computes.
 struct MeterView: View {
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   let label: String
   /// Already formatted by the screen — `30`, `30%`, `22 / 90 shift-min`.

@@ -23,27 +23,51 @@ struct SegmentedTabs<Tab: Hashable>: View {
     }
   }
 
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
   let items: [Item]
   @Binding var selection: Tab
   var tone: Color = Theme.falsePositive
 
+  /// **Wrap rather than clip** (P1-9). `SOURCES 3/6` and `EVIDENCE 3` are each wider
+  /// than half a 320 pt track at the §4.5 ceiling, and the track was clipped to its
+  /// own radius — so what a player at `.accessibility1` saw was a tab label cut off
+  /// mid-word by a rounded corner, which reads as a rendering fault rather than as
+  /// text that did not fit. Below the ceiling the two halves are side by side, as
+  /// §2.6 draws them; at accessibility sizes the same two rows stack, keep their
+  /// hairline, and every letter survives. Scaling further is not the answer: 0.7 of
+  /// an 11 pt tracked label is already the floor of legible.
+  private var wraps: Bool { dynamicTypeSize >= .accessibility1 }
+
   var body: some View {
-    HStack(spacing: 0) {
-      ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-        if index > 0 {
-          Rectangle()
-            .fill(Theme.hairline)
-            .frame(width: 1)
-            .padding(.vertical, 6)
+    Group {
+      if wraps {
+        VStack(spacing: 0) {
+          ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+            if index > 0 {
+              Rectangle()
+                .fill(Theme.hairline)
+                .frame(height: 1)
+                .padding(.horizontal, 6)
+            }
+            segment(item)
+          }
         }
-        segment(item)
+      } else {
+        HStack(spacing: 0) {
+          ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+            if index > 0 {
+              Rectangle()
+                .fill(Theme.hairline)
+                .frame(width: 1)
+                .padding(.vertical, 6)
+            }
+            segment(item)
+          }
+        }
       }
     }
     .frame(minHeight: Theme.Hit.minimum)
-    // Clipped to the track's own radius: at the largest type on the narrowest
-    // glass a segment's ink can still exceed its half, and a selected fill that
-    // spills past the border reads as a rendering fault rather than a tab.
-    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
     .panelCard(fill: Theme.panel.opacity(0.7))
     .accessibilityElement(children: .contain)
   }

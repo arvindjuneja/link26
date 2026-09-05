@@ -162,10 +162,24 @@ extension SensoryCue {
     return true
   }
 
-  /// What this host should play, or `nil` because the ticket belongs to a host above
-  /// it.
+  /// What this host should play, or `nil` because the ticket belongs to another host.
+  ///
+  /// **Re-targeting** (P1-8). A ticket names the host that was topmost when the cue
+  /// was fired, and between firing and playing that host can be gone — which is not a
+  /// rare case but the *common* one for the cues that matter most: a sheet fires a
+  /// cue on the way out (the source sheet's "To the board", the call sheet filing),
+  /// and the modifier that would have played it unmounts in the same frame. The
+  /// ticket was then addressed to nobody and the cue was silently lost.
+  ///
+  /// So a host may also claim a ticket whose named host is no longer mounted, and
+  /// only if it is the topmost one — still exactly one host per ticket, so nothing
+  /// doubles. When no host is mounted at all the ticket is simply not claimed: the
+  /// cue is dropped, quietly, because a cue is a courtesy and a log line about a
+  /// missing one is not.
   func feedback(for ticket: Ticket?, host: Int) -> SensoryFeedback? {
-    guard let ticket, ticket.host == host else { return nil }
+    guard let ticket else { return nil }
+    if ticket.host == host { return ticket.cue.feedback }
+    guard !hosts.contains(ticket.host), hosts.last == host else { return nil }
     return ticket.cue.feedback
   }
 

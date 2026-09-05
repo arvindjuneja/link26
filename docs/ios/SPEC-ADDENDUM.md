@@ -224,3 +224,168 @@ with `DEVELOPMENT_TEAM: "${SENTRY_DEV_TEAM}"` (XcodeGen env substitution):
   guard and CI additionally pass `CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO` on the command
   line. C11's `Makefile`, `verify.sh` and `ios.yml` MUST use those flags; SPEC §7 step 6 / §11 rule 3
   are amended accordingly.
+
+## 7. P1 decisions (integration polish, 2026-09-06)
+
+The P1 pass against a feature-complete C1–C10. Ten items; each was reproduced before
+it was fixed and verified after. Where a frozen contract moved, it is ratified here.
+
+### 7.1 What changed, by item
+
+- **P1-1 · `.sheet(item:)` dispatched `CLOSE_VIEW` twice per dismissal.** SwiftUI writes
+  `nil` into an item binding whenever the presentation goes away — including when the
+  *app* cleared the item — so a sheet that closes itself (the source sheet's "To the
+  board", Settings' Close, a QA jump) sent the action twice. The second arrives with
+  nothing on top, which is a **different transition**: the coach bubble's "Got it"
+  (S4 `advance: "button"`). One dismissal therefore ate a coach step.
+  `PhaseHost.dismiss(_:fullScreen:)` now guards on the current view *and* on its
+  presentation kind, so a sheet binding can never close a cover, a cover binding can
+  never close a sheet, and neither speaks when nothing is presented.
+  `SentrySOCTests/PhaseHostDismissTests` (4 cases) proves it; with the pre-fix rule
+  restored, three of them fail with `coachStep 1 → 2`.
+- **P1-2 · Reset career reset half a career.** A view sent `.abandon` and built a
+  **second** `SaveStore` to write `CareerState.initial`: the file went to zero, the
+  model kept the old wallet, and the next `persistCareer` wrote the old career back
+  over the reset. `GameModel.resetCareer()` is now the whole path — adopt `.initial`,
+  drop the resumable, `.abandon` through the reducer, then `.persistCareer` +
+  `.setFlag` through the model's own runner and store. `SaveStore.resetCareer()` is
+  deleted (a store method only a view could want is how the halves came apart).
+  Flags: `sentry.firstRun.v1` **stays acknowledged** — the disclaimer was accepted by
+  a person and this is still that person; `sentry.onboarding.v1` → false and
+  `sentry.coaching` → true, because both describe the *career* and there is a new one.
+  `SentrySOCTests/CareerResetTests` (3 cases) covers seed → reset → kill → relaunch.
+- **P1-3 · "cleared" is recorded, not derived.** New `CareerState.clearedShiftIDs`
+  (**DV-9**, below). The hub's old derivation called a board cleared as soon as
+  standing opened the next one, and made the top unlocked board permanently *open* —
+  so §2.3's third Dock label was unreachable by construction. §2.3's rule is now one
+  pure function, `HubView.dockTarget(...)`, shared by the label and the tap, with a
+  fourth arm §2.3 does not name (see 7.3). `SentrySOCTests/HubDockTests` walks the
+  ladder; `SessionTests/EffectScheduleTests.clearedLedger` covers the write.
+- **P1-4 · Privacy policy.** `app/privacy/page.tsx` is new — a static server component
+  with a real policy for SENTRY — SOC (no data collected, on-device save, no network,
+  no purchases beyond the up-front price, GDPR, contact `arvind@oumm.pl`, last-updated
+  date), styled to the site. `npm run build` prerenders it as `○ /privacy`.
+  The link is `https://link26.arvind.workers.dev/privacy` — see the FOUNDER STEP in
+  7.4. About prints the privacy **summary inline** and the URL as selectable text
+  under the link, so 5.1.1(i) is satisfied by the app itself.
+- **P1-5 · Plurals.** `"1 findings"` shipped on the evidence board, the case Dock and
+  the call sheet. New `ExportedCopy.chromePlurals` (7.2) + `CopyPack.plural(_:_:_:)`;
+  `sourceFindingOne`/`Many` and `summaryBlindOne`/`Many` folded into pairs. Verified on
+  the simulator with exactly one finding on the board.
+- **P1-6 · C8.** The scrim hex is out of `CaseView`'s doc comment (`Theme.scrim` is the
+  one place a colour is written down, comment or not). `deltaText` and the summary's
+  `before → after` now render `chrome.deltaFormat` / `deltaZero` / `rangeArrow` — the
+  glyphs are copy. `PlayFocus` moved off `.shared` onto `GameModel` (`Sources/State/`).
+  **Abandon stays a sheet** (7.3).
+- **P1-7 · C9.** `RankUpView`'s `RankLadder` fork is deleted; C7's `LadderTrack` gained
+  the gutter and the flexible-frame-on-the-column fix it was forked over, so the kit
+  screenshot and the rank-up screen draw the same ladder. `deniedFired` re-arms on a
+  hub *visit* only, not on every sheet dismissal. Reset confirmation is an `.alert`
+  with a real `.cancel` button — measured: inside a sheet, iOS 26 presents
+  `confirmationDialog` as the compact centred dialog and drops the cancel-role button
+  entirely. `MetaSection.trailing` / `MetaRow.caption` did not exist; nothing removed.
+  **RankUp stays a phase** (7.3).
+- **P1-8 · C10.** The heartbeat loop is authored at the **loudest** band and scaled
+  down for HUNT: Core Haptics dynamic parameters are a 0…1 *multiplier*, so a loop
+  authored at HUNT had no headroom and HUNT → LOCKDOWN gained speed and sharpness but
+  no weight. `SensoryRelay` re-targets a ticket whose named host unmounted between fire
+  and play (the common case: a sheet firing a cue as it dismisses) to the current
+  topmost host, and drops it silently when none is mounted. `GameModel.cuesAreLive`
+  is one gate over the Settings switch and a new `isReplaying` flag, so a QA jump
+  replaying a board through the reducer no longer fires a dozen taps and a heartbeat.
+  The factory wrapping stays, documented on `HapticsHost.swift`.
+- **P1-9 · C7.** `ComponentKit` is compiled under `#if SENTRY_QA` (a catalogue whose
+  headings are type names and whose rows carry invented counts is right for QA and
+  wrong for anything shippable; S1's grep cannot tell them apart, a compilation
+  condition can). Unused `accessibilityReduceMotion` declarations removed from
+  `MeterView` / `StampView` / `RankBadge`. `ECGCanvas` honours `paused` by rendering a
+  still frame rather than handing a paused schedule to a live `TimelineView`, and takes
+  an injectable `now:`. `SegmentedTabs` wraps to two rows at `.accessibility1` instead
+  of clipping a tab label mid-word. `ComponentSnapshotTests` draws at a pinned instant
+  and writes PNGs **only** under `SENTRY_SNAPSHOTS=1` — `xcodebuild test` no longer
+  dirties the tree; the committed PNGs were regenerated once and verified byte-identical
+  across two runs.
+- **P1-10 · C5/F1.** `VIEW_RESULT` names its originating phases (`.investigating`,
+  `.complete`), which makes `NEXT_CASE`'s return a fact rather than an inference.
+  `PULL_SOURCE` fires `select`, not `commitSoft` (§2.15 spends commit-soft on four
+  named events; a source pull is not one). `ContentPack.dailyShift(on:)` copies
+  `requiresRedRun` from the template — R3 added that field for exactly this and Swift
+  never read it. `HandlerVoice` reads `content.tuning.handler` off the decoded pack;
+  it was running a second `JSONDecoder` over the whole 300 KB `content.json` for two
+  integers. `Tuning` gains `handler` and its doc says **31**, not 29.
+  `Sources/State/CoreTypeNames.swift` is deleted — `ScreenRegistry.swift` imports
+  `SentryCore`, which is what the aliases stood in for. `Theme.tone` already had its
+  `.orange` arm (C7); verified against the HUNT hue.
+
+### 7.2 Contract deviations ratified here
+
+- **`schema.ts` gains `ExportedCopy.chromePlurals: Record<string, ExportedPlural>`**
+  (`{ one, other }`). The schema was frozen in C1 hour one; this is an additive field
+  with no effect on any existing consumer, and it is the only way a screen can draw a
+  count without authoring the singular S1 forbids it from authoring. Nine flat chrome
+  keys move into it (`hubAlertCount`, `caseFindingsCount`, `dockArmed`, `callSheetMeta`,
+  `caseSourceSpoken`, plus the two `*One`/`*Many` pairs folded to `sourceFindings` and
+  `summaryBlind`); three are added (`deltaFormat`, `deltaZero`, `rangeArrow`).
+  `drift.test.ts` gains a check that every pair has two distinct non-empty arms, both
+  carrying `{n}`, and that no key is both flat and plural. `contentHash` moved; all ten
+  files re-stamped; the export is idempotent over two runs.
+- **DV-9 · `CareerState.clearedShiftIDs: Set<String>`** — iOS-only, like `dailyDoneOn`
+  (DV-6). Absent from every exported fixture (the web tracks nothing per board), so
+  `CareerState` gains a hand-written `Codable` that `decodeIfPresent`s both client-side
+  fields and omits an empty set on the way out — an old save still loads and a career
+  that cleared nothing round-trips to the bytes it decoded from. Written in exactly one
+  place, `settlement(for:career:content:now:)`, and **campaign boards only**: a daily id
+  carries its date, so recording them would put a year of dead strings in the save.
+  `awardForShift` is untouched, so the golden career/inbox parity is unaffected.
+  `SaveStore.CareerRecord` carries the field.
+- **`Tuning.handler: HandlerTuning`** — R6's two numbers now sit on the decoded `Tuning`
+  where every other tuning number lives. `TuningExpectationTests` and `GoldenInboxTests`
+  read them off `ContentPack.bundled.tuning.handler`.
+- **`Tuning.init` and `DailyCalendar.ShiftTemplate` gained a parameter/field.** Both are
+  `SentryCore` model types (C2's). No `project.yml` or `Package.swift` change: the app
+  target and both packages use whole-tree recursive paths, and the four new files
+  (`Sources/State/PlayFocus.swift`, three test files) were picked up by
+  `xcodegen generate` with no edit to the spec. **`project.yml` was not touched.**
+
+### 7.3 SPEC prose conflicts, noted and left standing
+
+- **Abandon is a sheet, not a `.confirmationDialog`.** SPEC §4.2 and §5.3 call it a
+  confirmation dialog; `DESIGN.md` §2.1's render map and §2.5's wireframe draw a sheet
+  with two buttons in the thumb arc, and `ViewID.abandon` is a view the reducer opens
+  with no board underneath it. The sheet wins, and the same iOS 26 measurement that
+  moved the reset to `.alert` (7.1, P1-7) is why: a `confirmationDialog` presented over
+  a sheet loses its cancel-role button. **SPEC §4.2/§5.3 prose is stale; DESIGN §2.1 is
+  correct.**
+- **RankUp is a phase, not a `.fullScreenCover`.** SPEC §5.10 says cover; `.milestone`
+  is a *phase* and `PhaseHost` renders phases into its `ZStack`, with only
+  `ViewID.firstRun` going through a cover. The screen is full-bleed by construction —
+  it paints its own ground edge to edge, draws no `SystemBar`, has nothing presented
+  over it and no back gesture, which is what §5.10 actually asks for. Left as a phase.
+- **§2.3's Dock rule has a fourth case.** "Resume · Clock in · Daily shift (all
+  cleared)" assumes the third arm is the end of the ladder. A player can clear every
+  board their standing has opened while boards above are still locked (a rough Shift 1
+  pays ⬢ 15; Shift 2 opens at ⬢ 40) — and the daily itself opens at ⬢ 40, so offering
+  it there would be a CTA the reducer refuses. The fourth arm offers a replay of the
+  highest unlocked board, which is what the queue rows already call `cleared · replay`.
+
+### 7.4 FOUNDER STEPS
+
+1. **Deploy the web app and verify the privacy link.** `npx wrangler whoami` confirms
+   the account (`arvind@oumm.pl`, `3acdf223fcda4fc096af1e98dedac3ba`) and the Worker
+   `link26` is deployed (versions through 2026-07-07). The account's workers.dev
+   subdomain is `arvind` — measured, not guessed: `*.arvind.workers.dev` resolves with
+   valid Cloudflare TLS while a made-up subdomain does not resolve at all. But
+   `link26.arvind.workers.dev` answers **404 · error code 1042** today: the Worker has
+   no workers.dev route enabled, and `/privacy` has not been deployed. Run
+   `npm run deploy` with workers.dev routing on, then open
+   `https://link26.arvind.workers.dev/privacy` and confirm it loads. If the founder
+   would rather serve it from `link26.oumm.pl`, that host must get a certificate first:
+   re-measured today, it still resolves to `2.57.137.2` presenting `CN=*.zenbox.pl`
+   (Certum DV TLS G2 R39, SAN `*.zenbox.pl, zenbox.pl`), so **every** URL on it opens
+   Safari's "This Connection Is Not Private" interstitial. Changing the host is one
+   line: `MetaID.privacyPolicy`.
+2. **Put the deployed URL in the App Store Connect privacy-policy field** as well as in
+   the app — 5.1.1(i) wants both.
+3. Unchanged from §5/§6: the device haptics pass (X7) is still blocking before
+   submission, and P1-8's heartbeat change is the thing to feel for — a HUNT → LOCKDOWN
+   escalation should now gain weight, not only speed and sharpness.

@@ -10,7 +10,6 @@ import SwiftUI
 ///
 /// Under Reduce Motion it is simply there, at rest, already stamped.
 struct StampView: View {
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var landed = false
 
   /// `dispositionMeta[chosen].label`, uppercased by the screen or by the tracking here.

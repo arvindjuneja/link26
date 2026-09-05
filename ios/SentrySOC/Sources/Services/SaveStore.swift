@@ -131,11 +131,15 @@ actor SaveStore {
     try? FileManager.default.removeItem(at: directory.appending(path: Self.sessionFile))
   }
 
-  /// The double-confirmed reset, and the only path that may write an initial career.
-  func resetCareer() {
-    clearSession()
-    write(CareerRecord(.initial), to: Self.careerFile, rotatingBackup: true)
-  }
+  //  There is deliberately no `resetCareer()` here (P1-2). One existed, and its only
+  //  caller built a second `SaveStore` from a view to reach it — which pointed at the
+  //  default directory whatever directory the model had been given, and wrote outside
+  //  `EffectRunner`'s serial chain. The reset is `GameModel.resetCareer()`, and it is
+  //  made of the two writes this store already has: `clearSession()` (through
+  //  `.clearSession`, which also bumps the generation so a coalesced write in flight
+  //  cannot resurrect the board) and `saveCareer(.initial)` (through `.persistCareer`,
+  //  which rotates the backup like every other career write). A store method that only
+  //  a view could want is how the two halves came apart in the first place.
 
   private func write(_ payload: some Codable & Sendable, to name: String, rotatingBackup: Bool) {
     Self.ensureDirectory(directory)
@@ -254,6 +258,10 @@ nonisolated struct CareerRecord: Codable, Sendable, Hashable {
   var redRunsDone: Int
   var gear: [String]
   var dailyDoneOn: String?
+  /// DV-9 (P1-3) — the campaign boards this career has finished. Client-side, like
+  /// `dailyDoneOn`: absent from every exported fixture, and omitted from the file
+  /// while it is empty so a fresh save is unchanged by its existence.
+  var clearedShiftIDs: Set<String>
   /// Keys written by a build that knew more than this one.
   var extras: [String: JSONValue]
 
@@ -264,17 +272,20 @@ nonisolated struct CareerRecord: Codable, Sendable, Hashable {
     redRunsDone = state.redRunsDone
     gear = state.gear
     dailyDoneOn = state.dailyDoneOn
+    clearedShiftIDs = state.clearedShiftIDs
     self.extras = extras
   }
 
   var state: CareerState {
     CareerState(
       cash: cash, standing: standing, shiftsCleaned: shiftsCleaned,
-      redRunsDone: redRunsDone, gear: gear, dailyDoneOn: dailyDoneOn)
+      redRunsDone: redRunsDone, gear: gear, dailyDoneOn: dailyDoneOn,
+      clearedShiftIDs: clearedShiftIDs)
   }
 
   private static let knownKeys: Set<String> = [
     "cash", "standing", "shiftsCleaned", "redRunsDone", "gear", "dailyDoneOn",
+    "clearedShiftIDs",
   ]
 
   init(from decoder: any Decoder) throws {
@@ -288,6 +299,8 @@ nonisolated struct CareerRecord: Codable, Sendable, Hashable {
       try container.decodeIfPresent(Int.self, forKey: "redRunsDone") ?? initial.redRunsDone
     gear = try container.decodeIfPresent([String].self, forKey: "gear") ?? initial.gear
     dailyDoneOn = try container.decodeIfPresent(String.self, forKey: "dailyDoneOn")
+    clearedShiftIDs =
+      try container.decodeIfPresent(Set<String>.self, forKey: "clearedShiftIDs") ?? []
 
     var carried: [String: JSONValue] = [:]
     for key in container.allKeys where !Self.knownKeys.contains(key.stringValue) {
@@ -304,6 +317,10 @@ nonisolated struct CareerRecord: Codable, Sendable, Hashable {
     try container.encode(redRunsDone, forKey: "redRunsDone")
     try container.encode(gear, forKey: "gear")
     try container.encodeIfPresent(dailyDoneOn, forKey: "dailyDoneOn")
+    if !clearedShiftIDs.isEmpty {
+      // Sorted, so a save file's diff is about what changed and not about hashing.
+      try container.encode(clearedShiftIDs.sorted(), forKey: "clearedShiftIDs")
+    }
     for (key, value) in extras where !Self.knownKeys.contains(key) {
       try container.encode(value, forKey: DynamicKey(key))
     }

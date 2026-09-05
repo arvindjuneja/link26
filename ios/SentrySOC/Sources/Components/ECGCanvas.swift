@@ -19,26 +19,53 @@ struct ECGCanvas: View {
   let status: TraceStatus
   /// `tuning.bpm[status]` — never a literal (D7); the caller reads the bundle.
   let bpm: Int
-  /// `true` when the phase is not `.investigating` or the scene is not active.
+  /// `true` when the phase is not `.investigating` or the scene is not active. The
+  /// trace then stops **being redrawn at all** rather than being handed a paused
+  /// schedule — see the note on `body`.
   var paused: Bool = false
+  /// A fixed instant to draw, instead of the wall clock (P1-9).
+  ///
+  /// `nil` in the app, always. It exists for `ComponentSnapshotTests`, whose PNGs
+  /// were otherwise a function of the second they were rendered in: eleven committed
+  /// images changed on every run, so the one artefact that is supposed to make a
+  /// visual regression obvious was noise. A pinned instant makes them byte-stable.
+  var now: Date?
 
   var body: some View {
     Group {
-      if reduceMotion {
-        ECGTrace(status: status, phase: ECGTrace.restingPhase, showsHead: false)
+      if reduceMotion || paused {
+        // **`paused` means still, not "a schedule that has stopped"** (P1-9). It was
+        // handed to `TimelineView(.animation(paused:))`, which stops the *updates*
+        // but leaves a live `TimelineView` in the tree whose schedule SwiftUI still
+        // owns — and the deck asks for this at 16:00 (§2.11: "the ECG flattens and
+        // fades") and every time the phase leaves `.investigating`, which is most of
+        // the app. A still frame of the same drawing is what a stopped trace is, and
+        // it is a view that can be rendered — and reviewed in a screenshot — without
+        // waiting for a schedule to not fire.
+        ECGTrace(status: status, phase: stillPhase, showsHead: false)
       } else {
-        TimelineView(.animation(minimumInterval: Motion.ecgFrameInterval, paused: paused)) {
-          context in
-          let period = Motion.ecgPeriod(bpm: bpm)
-          let phase = context.date.timeIntervalSinceReferenceDate
-            .truncatingRemainder(dividingBy: period) / period
-          ECGTrace(status: status, phase: phase)
+        TimelineView(.animation(minimumInterval: Motion.ecgFrameInterval)) { context in
+          ECGTrace(status: status, phase: phase(at: now ?? context.date))
         }
       }
     }
     // The ECG is decoration for a value VoiceOver already reads out of the
     // SystemBar's status element (§4.5). Two voices for one fact is noise.
     .accessibilityHidden(true)
+  }
+
+  /// Where a still trace is caught: the pinned instant if there is one, else
+  /// mid-beat, so a stopped trace shows the QRS spike rather than a flat line that
+  /// reads as "no signal".
+  private var stillPhase: Double {
+    now.map(phase(at:)) ?? ECGTrace.restingPhase
+  }
+
+  /// 0…1 through one cardiac cycle at `date`.
+  private func phase(at date: Date) -> Double {
+    let period = Motion.ecgPeriod(bpm: bpm)
+    return date.timeIntervalSinceReferenceDate
+      .truncatingRemainder(dividingBy: period) / period
   }
 }
 

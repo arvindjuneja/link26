@@ -1,4 +1,5 @@
 import SwiftUI
+import SentryCore
 
 /// Late binding between the shell (C6) and the screens (C8/C9) and haptics (C10),
 /// per addendum **B6**.

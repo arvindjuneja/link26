@@ -165,9 +165,7 @@ struct ShiftSummaryView: View {
   }
 
   private func blindClause(_ count: Int) -> String {
-    count == 1
-      ? copy.chromeText("summaryBlindOne")
-      : copy.render(copy.chromeText("summaryBlindMany"), ["n": String(count)])
+    copy.plural("summaryBlind", count)
   }
 
   // MARK: - The payout
@@ -232,7 +230,12 @@ struct ShiftSummaryView: View {
       .frame(height: 4)
       .gatedAnimation(Motion.payout, value: sweptStanding)
 
-      Text("\(before) → \(after)")
+      // `chrome.rangeArrow` (P1-6) — the arrow is a glyph the deck spends, so it is
+      // copy, and it comes from the bundle like every other letter and mark on screen.
+      Text(
+        copy.render(
+          copy.chromeText("rangeArrow"), ["from": String(before), "to": String(after)])
+      )
         .font(Typography.meta)
         .tabularNumbers()
         .foregroundStyle(Theme.textDisabled)

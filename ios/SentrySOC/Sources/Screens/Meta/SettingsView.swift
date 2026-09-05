@@ -58,30 +58,24 @@ struct SettingsView: View {
         }
       }
     }
-    // **The confirm hangs on the SCREEN, not on the `MetaPanel` the button sits in,
-    // and its way out carries no `.cancel` role.** Both halves were measured on this
-    // simulator, not assumed:
-    //
-    // 1. Attached to the panel, iOS 26 anchors the dialog to that panel — a small
-    //    card pinned beside a row halfway down the screen.
-    // 2. iOS 26 presents `confirmationDialog` inside a sheet as the compact centred
-    //    dialog rather than the old bottom action sheet, and that presentation
-    //    **omits a `.cancel`-role button entirely** — the system takes a tap on the
-    //    dimmed ground as the cancel. Moving the anchor recentres the card but does
-    //    not bring the button back (verified: `Reset` alone, twice).
-    //
-    // §5.11 wants a destructive confirmation, and a destructive confirmation whose
-    // only way out is an undiscoverable tap outside is not one. So the second button
-    // is a plain action: same copy, same job, and it survives the presentation.
-    .confirmationDialog(
+    // **An `.alert`, not a `.confirmationDialog`** (P1-7). Measured on this
+    // simulator, not assumed: inside a sheet, iOS 26 presents a `confirmationDialog`
+    // as the compact centred dialog and that presentation **omits a `.cancel`-role
+    // button entirely** — the system takes a tap on the dimmed ground as the cancel.
+    // A destructive confirmation whose only way out is an undiscoverable tap outside
+    // is not a confirmation. The previous fix here was a second button with no role,
+    // which survived the presentation but left the deck relying on a workaround for a
+    // system control that has a correct one: `.alert` draws both buttons in both
+    // presentations, gives the destructive role its red, and gives Cancel the bold
+    // default and the Escape/outside-tap behaviour for free.
+    .alert(
       copy.chromeText("settingsResetTitle"),
-      isPresented: $confirmingReset,
-      titleVisibility: .visible
+      isPresented: $confirmingReset
     ) {
       Button(copy.chromeText("settingsResetConfirm"), role: .destructive) {
-        MetaActions.resetCareer(model)
+        model.resetCareer()
       }
-      Button(copy.chromeText("settingsCancel")) { confirmingReset = false }
+      Button(copy.chromeText("settingsCancel"), role: .cancel) {}
     } message: {
       Text(copy.chromeText("settingsResetBody"))
     }
@@ -281,6 +275,12 @@ private struct AboutScreen: View {
         // choice as the first-run gate, which prints the same block.
         block(copy.chromeText("aboutFictionTitle"), copy.about.fiction, tone: Theme.pressure)
 
+        // **5.1.1(i) is satisfied by this screen, not by the link** (P1-4). The policy
+        // summary is exported copy and prints here whether or not the network, the
+        // host or `SFSafariViewController` cooperate — an app that collects nothing
+        // should be able to say so without asking to go online first. The link is
+        // corroboration; the address under it is printed as text so a reviewer with a
+        // dead link can still read the URL and open it themselves.
         VStack(alignment: .leading, spacing: 12) {
           block(copy.chromeText("aboutPrivacyTitle"), copy.about.privacy)
 
@@ -290,13 +290,24 @@ private struct AboutScreen: View {
           Button {
             showingPrivacy = true
           } label: {
-            HStack(spacing: 8) {
-              Text(copy.chromeText("aboutPrivacyLink"))
-                .font(Typography.meta)
-                .foregroundStyle(Theme.falsePositive)
-              Spacer(minLength: 8)
+            VStack(alignment: .leading, spacing: 4) {
+              HStack(spacing: 8) {
+                Text(copy.chromeText("aboutPrivacyLink"))
+                  .font(Typography.meta)
+                  .foregroundStyle(Theme.falsePositive)
+                Spacer(minLength: 8)
+              }
+              // An address, not copy (`MetaID`) — and legible rather than hidden
+              // behind a tap, which is the whole point of printing it.
+              Text(MetaID.privacyPolicy)
+                .font(Typography.quietLog)
+                .foregroundStyle(Theme.textDisabled)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
             }
-            .frame(minHeight: Theme.Hit.minimum)
+            .frame(maxWidth: .infinity, minHeight: Theme.Hit.minimum, alignment: .leading)
             .contentShape(Rectangle())
           }
           .buttonStyle(PressableStyle())
@@ -458,55 +469,6 @@ extension View {
         }
         ToolbarItem(placement: .topBarTrailing) { trailing() }
       }
-  }
-}
-
-// MARK: - Actions
-
-enum MetaActions {
-
-  /// **Reset career** (§5.11) — the durable half of it.
-  ///
-  /// `SaveStore.resetCareer()` is the one path allowed to write an initial career: it
-  /// clears the mid-shift snapshot and rewrites `career.json` behind a rotated backup.
-  /// `.abandon` is the matching in-session transition — hub, no board, snapshot gone —
-  /// and it is what fires the `destructive` cue §2.15 files under "Reset career
-  /// confirmed", through the reducer rather than from a view.
-  ///
-  /// **INCOMPLETE, AND ESCALATED TWICE — this is the ticket's open blocker.** Two
-  /// defects, one cause, one fix, and the fix is not in a path this ticket owns.
-  ///
-  /// 1. **The reset does not reset what the player can see.** `GameModel.career` is
-  ///    `private(set)` and there is no `SocAction`, `Effect` or model method that
-  ///    resets it — `.buy` and the 16:00 settlement are the only two writers, and both
-  ///    add. Confirmed on device: at ⬢ 40 / ¢ 500 the confirmed reset writes
-  ///    `{"cash":0,…,"standing":0}` to `career.json` while the hub keeps showing
-  ///    `⬢ 40  ¢ 500` until the next launch. The dialog promises "This clears your
-  ///    rank, standing, cash and kit on this device", so this is a visible false
-  ///    statement after a destructive action, not a cosmetic lag.
-  /// 2. **`SaveStore()` here is the wrong store.** `SaveStore.init(directory:)` and
-  ///    `GameModel.init(save:…)` both take an injection, so any build, test or preview
-  ///    pointed at a non-default directory has this line wipe the DEFAULT
-  ///    `Application Support/SentrySOC/` and leave the real save untouched — and it is
-  ///    a second actor writing `career.json`/`session.json` outside the serialisation
-  ///    the single-store design exists to provide. `GameModel.save` is private, so a
-  ///    view cannot reach the right store; it can only be reached by not being a view.
-  ///
-  /// Both close with the same four lines on `GameModel` (`Sources/State/GameModel.swift`
-  /// — C5's file; SPEC §11 rule 1 forbids this ticket from touching it):
-  ///
-  /// ```swift
-  /// func resetCareer() { career = .initial; refreshInbox(); send(.abandon)
-  ///                      Task { await save.resetCareer() } }
-  /// ```
-  ///
-  /// after which this enum is deleted and the call site becomes `model.resetCareer()`.
-  /// Until the lead lands that, the durable half below is the most an owned path can
-  /// do: the file on disk is correct from the moment Reset is confirmed.
-  static func resetCareer(_ model: GameModel) {
-    model.send(.abandon)
-    let store = SaveStore()
-    Task { await store.resetCareer() }
   }
 }
 

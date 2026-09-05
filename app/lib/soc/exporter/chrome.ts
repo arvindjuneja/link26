@@ -11,6 +11,39 @@
 // the web has no counterpart for. Routed through the B3 (age rating) and B4
 // (pay-figure) guards like everything else.
 
+/**
+ * Counted chrome, in both English forms (P1-1).
+ *
+ * A screen that draws a count cannot mend `"1 findings"` on its own — S1 forbids a
+ * Swift literal — so every counted string is authored here as a pair and Swift picks
+ * an arm with `CopyPack.plural(_:_:)`. `other` also covers zero, which is the English
+ * rule ("0 findings") and is why the arms are named `one`/`other` and not
+ * `singular`/`plural`.
+ *
+ * `{n}` is present in BOTH arms on purpose, even where the singular could hardcode
+ * the 1: the caller then interpolates one way for both arms, and a future locale that
+ * spells one differently has somewhere to put it.
+ */
+export const CHROME_PLURALS: Record<string, { one: string; other: string }> = {
+  /** Hub queue rows and the daily row. */
+  hubAlertCount: { one: "{n} alert", other: "{n} alerts" },
+  /** The EVIDENCE tab's eyebrow count and the board's own header. */
+  caseFindingsCount: { one: "{n} finding", other: "{n} findings" },
+  /** The Dock hint on the case screen, once at least one finding is revealed. */
+  dockArmed: { one: "{n} finding · {t}m", other: "{n} findings · {t}m" },
+  /** The call sheet's meta line, under MAKE THE CALL. */
+  callSheetMeta: { one: "{n} source pulled · {t}m", other: "{n} sources pulled · {t}m" },
+  /** A source row read aloud (§4.5). One shift-minute is one, not "1 shift-minutes". */
+  caseSourceSpoken: {
+    one: "{label}. Answers: {question}. Costs {n} shift-minute.",
+    other: "{label}. Answers: {question}. Costs {n} shift-minutes.",
+  },
+  /** The source sheet's banner when a pull lands. Was `sourceFindingOne`/`Many`. */
+  sourceFindings: { one: "{n} FINDING SURFACED", other: "{n} FINDINGS SURFACED" },
+  /** The summary's blind-call clause. Was `summaryBlindOne`/`Many`. */
+  summaryBlind: { one: "{n} call made blind", other: "{n} calls made blind" },
+};
+
 export const CHROME: Record<string, string> = {
   // ── global chrome ─────────────────────────────────────────────────────────
   wordmark: "SENTRY · SOC",
@@ -24,6 +57,13 @@ export const CHROME: Record<string, string> = {
   back: "‹ Desk",
   close: "Close",
   minutes: "{n}m",
+  // The three numeric formats the deck draws (P1-6). They carry glyphs — `+`, `±`,
+  // `→` — and a glyph is copy: authored here, the deck reads the same delta the same
+  // way on the debrief meters and on the summary's standing sweep, and S1 stays
+  // honest instead of being true only for words.
+  deltaFormat: "+{n}",
+  deltaZero: "±0",
+  rangeArrow: "{from} → {to}",
 
   // ── hub · "The Desk" (§2.3) ───────────────────────────────────────────────
   hubEyebrow: "The desk · your career",
@@ -34,7 +74,6 @@ export const CHROME: Record<string, string> = {
   hubKitEyebrow: "Analyst kit — spend ¢",
   hubInboxEyebrow: "Inbox",
   hubInboxEmpty: "Quiet for now.",
-  hubAlertCount: "{n} alerts",
   hubStart: "Start ▸",
   hubCleared: "cleared · replay",
   hubOpen: "open",
@@ -72,16 +111,13 @@ export const CHROME: Record<string, string> = {
   caseEvidenceTab: "EVIDENCE",
   caseSourcesEyebrow: "Pull a data source — which log answers the question?",
   caseEvidenceEyebrow: "Evidence board",
-  caseFindingsCount: "{n} findings",
   caseSourcePulled: "pulled",
-  caseSourceSpoken: "{label}. Answers: {question}. Costs {n} shift-minutes.",
   caseSourceHint: "Pulls this log",
   caseEmptyBoard: "Pull a source to surface findings.",
   caseEmptyBoardBlind: "You can't make the call blind.",
   caseEvidenceFrom: "FROM {source}",
   makeTheCall: "Make the call",
   investigateFirst: "investigate first",
-  dockArmed: "{n} findings · {t}m",
   coachEyebrow: "Shift lead · in your ear",
   coachStepCount: "{n}/{m}",
   coachSkip: "skip coaching",
@@ -92,14 +128,11 @@ export const CHROME: Record<string, string> = {
   sourceUsed: "USED  {n} / {m}",
   sourcePull: "Pull the log ▸",
   sourceQuerying: "querying {source}…",
-  sourceFindingOne: "1 FINDING SURFACED",
-  sourceFindingMany: "{n} FINDINGS SURFACED",
   sourceToBoard: "To the board ▸",
   sourcePullAnother: "Pull another",
 
   // ── call sheet (§2.9) ─────────────────────────────────────────────────────
   callSheetTitle: "MAKE THE CALL",
-  callSheetMeta: "{n} sources pulled · {t}m",
   callKeepInvestigating: "Keep investigating",
   callHoldToFile: "Hold to file · {disposition}",
   callFile: "File ▸",
@@ -124,8 +157,6 @@ export const CHROME: Record<string, string> = {
   statCalls: "Calls",
   statMissed: "Missed threats",
   statFalseEscalations: "False escalations",
-  summaryBlindOne: "1 call made blind",
-  summaryBlindMany: "{n} calls made blind",
   summaryPayout: "Payout",
   summaryCash: "+{n} ¢",
   summaryStanding: "+{n} ⬢ standing",

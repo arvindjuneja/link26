@@ -22,8 +22,8 @@ struct CaseView: View {
   enum Tab: Hashable { case sources, evidence }
 
   /// Which half is showing. Shared with the source sheet, which owns two of the
-  /// three ways it changes — see `PlayFocus`.
-  @Bindable private var focus = PlayFocus.shared
+  /// three ways it changes — see `PlayFocus`. Held by **this model** (P1-6), so two
+  /// models in one process (a preview, a snapshot suite) never share a tab.
   @State private var collapsed = false
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -61,8 +61,11 @@ struct CaseView: View {
     .accessibilityIdentifier("screen.case")
   }
 
-  /// §2.5's wireframe, verbatim: while a sheet is up the case behind it is "dimmed
-  /// to 40 % · scrim #020408/85".
+  /// §2.5's wireframe: while a sheet is up the case behind it is dimmed to 40 %
+  /// behind the scrim. The scrim's own colour is `Theme.scrim` and is spelled there
+  /// and nowhere else — quoting the hex here made this file the second place a
+  /// colour was written down, which is exactly what `verify.sh`'s "no hardcoded hex
+  /// outside `Design/`" rule exists to prevent, comment or not (P1-6).
   ///
   /// It is painted *here* rather than under the presentation because `PhaseHost`
   /// sets `.presentationBackground(.clear)` so the ground reads through the sheet,
@@ -100,9 +103,12 @@ struct CaseView: View {
                 id: Tab.evidence, title: copy.chromeText("caseEvidenceTab"),
                 badge: String(revealed.count)),
             ],
-            selection: $focus.caseTab)
+            // `Bindable(_:)` rather than `$model.…`: the model arrives as a plain
+            // `let`, and the binding wanted here is on the focus object, not on the
+            // model.
+            selection: Bindable(model.play).caseTab)
 
-          switch focus.caseTab {
+          switch model.play.caseTab {
           case .sources: sources(socCase)
           case .evidence:
             EvidenceBoard(
@@ -144,11 +150,11 @@ struct CaseView: View {
       // it is the only one that catches a *new shift*, whose first alert is index 0
       // exactly like the last one's, so `onChange` sees nothing move.
       .onAppear {
-        if revealed.isEmpty { focus.caseTab = .sources }
+        if revealed.isEmpty { model.play.caseTab = .sources }
         collapsed = false
       }
       .onChange(of: session.shift?.index) { _, _ in
-        focus.caseTab = .sources
+        model.play.caseTab = .sources
         collapsed = false
       }
     }
@@ -166,9 +172,9 @@ struct CaseView: View {
           cost: copy.render(copy.chromeText("minutes"), ["n": String(source.cost)]),
           isPulled: session.queried.contains(source.id),
           pulledLabel: copy.chromeText("caseSourcePulled"),
-          spokenLabel: copy.render(
-            copy.chromeText("caseSourceSpoken"),
-            ["label": source.label, "question": source.question, "n": String(source.cost)]),
+          spokenLabel: copy.plural(
+            "caseSourceSpoken", source.cost,
+            ["label": source.label, "question": source.question]),
           spokenHint: copy.chromeText("caseSourceHint"),
           action: { model.send(.openView(.source(source.id))) })
         .id(source.id)
@@ -212,18 +218,13 @@ struct CaseView: View {
   private var dock: some View {
     let armed = !revealed.isEmpty
     return PlayDock(fade: coachStep == nil) {
-      // BLOCKED ON C1/F1: `dockArmed` is `{n} findings · {t}m` with no singular, so
-      // the hint reads `1 findings · 10m` after the first pull. See the note in
-      // `EvidenceBoard`; a `dockArmedOne` key turns this into a two-line branch.
       Dock(
         title: copy.chromeText("makeTheCall"),
+        // `1 finding · 10m` after the first pull — the arm is data (P1-5).
         hint: armed
-          ? copy.render(
-            copy.chromeText("dockArmed"),
-            [
-              "n": String(revealed.count),
-              "t": String(session.timeSpentOnCurrentCase(model.content)),
-            ])
+          ? copy.plural(
+            "dockArmed", revealed.count,
+            ["t": String(session.timeSpentOnCurrentCase(model.content))])
           : copy.chromeText("investigateFirst"),
         isEnabled: armed,
         action: { model.send(.openView(.call)) })
@@ -246,7 +247,7 @@ struct CaseView: View {
   /// rather than fired into a `LazyVStack` that has not built it yet.
   private func jump(to sourceID: String, proxy: ScrollViewProxy) {
     withAnimation(Motion.gated(Motion.screenPush, reduceMotion: reduceMotion)) {
-      focus.caseTab = .sources
+      model.play.caseTab = .sources
     }
     Task { @MainActor in
       withAnimation(Motion.gated(Motion.screenPush, reduceMotion: reduceMotion)) {

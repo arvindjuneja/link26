@@ -35,6 +35,11 @@ import SentryCore
   private(set) var inbox: [HandlerMessage] = []
   private(set) var settings: SettingsState
 
+  /// Which half of the case screen is showing (`PlayFocus`). Presentation, not game
+  /// state — the reducer owns what the game is doing, and a tab is not that — but it
+  /// belongs to *a model* rather than to the process (P1-6).
+  let play = PlayFocus()
+
   /// The Shift-1 coach has been through once. Mirrored out of `UserDefaults` into
   /// observed state so a view redraws when the flag flips mid-session; `Flags` stays
   /// the storage.
@@ -101,7 +106,7 @@ import SentryCore
       context: EffectRunner.Context(
         snapshot: { [weak self] in self.flatMap { SessionSnapshot($0.session) } },
         career: { [weak self] in self?.career ?? .initial },
-        hapticsEnabled: { [weak self] in self?.settings.haptics ?? false },
+        hapticsEnabled: { [weak self] in self?.cuesAreLive ?? false },
         settle: { [weak self] in self?.settleShift() },
         markDailyDone: { [weak self] day in self?.career.dailyDoneOn = day },
         applyFlag: { [weak self] key, value in self?.applyFlag(key, value) }))
@@ -172,6 +177,51 @@ import SentryCore
     send(.buy(item.id))
   }
 
+  /// **Reset career** (§5.11) — all of it, in one place, through this model (P1-2).
+  ///
+  /// What shipped before did half the job from a view: it sent `.abandon` and then
+  /// built a **second** `SaveStore` to write `CareerState.initial`. Two defects, one
+  /// cause — nothing outside the model can reach the model's career or its store:
+  ///
+  /// 1. The file on disk went to zero while `GameModel.career` kept the old wallet.
+  ///    The hub still read `⬢ 40 ¢ 650` until the next cold launch, and the next
+  ///    `persistCareer` (a purchase, a settled board) wrote the *old* career straight
+  ///    back over the reset — so the reset could be silently undone by playing on.
+  /// 2. The second store pointed at the default directory whatever directory this
+  ///    model was given, so a test or a preview wiped the player's real save, and its
+  ///    writes raced the ones going through `EffectRunner`'s serial chain.
+  ///
+  /// The order below is the whole of it: adopt the fresh career **first** so the
+  /// `.persistCareer` that follows writes the reset one, drop the snapshot the hub is
+  /// offering, then let the machine do the rest — `.abandon` is already exactly "hub,
+  /// no board, snapshot deleted" and already fires the `destructive` cue §2.15 files
+  /// under "Reset career confirmed".
+  ///
+  /// **The flags.** `sentry.firstRun.v1` is deliberately left alone: the fiction
+  /// disclaimer was acknowledged by a *person*, and this device is still that person —
+  /// re-gating them behind it would be a nag, not a reset. The two that describe the
+  /// *career* are cleared: the Shift-1 coach has not run for this career
+  /// (`sentry.onboarding.v1` → false), and coaching goes back to its registered
+  /// default so a player who switched it off and then asked for a fresh desk gets the
+  /// fresh desk they asked for.
+  func resetCareer() {
+    career = .initial
+    resumable = nil
+    saveWasCorrupt = false
+    refreshInbox()
+    send(.abandon)
+    // `EffectRunner` is still the only interpreter — this is the model handing it a
+    // list, exactly as `send(_:)` does, and `.persistCareer` reads the career through
+    // the same `Context` closure and writes through the same actor and the same serial
+    // chain as every other write in the app.
+    runner.run([
+      .persistCareer,
+      .setFlag(SentryFlagKey.onboarding, false),
+      .setFlag(SettingKey.coaching.rawValue, true),
+    ])
+    Self.log.notice("career reset — save rewritten, snapshot cleared, coach re-armed")
+  }
+
   /// A SwiftUI `Toggle` binds to this, so even a switch goes through `send(_:)`.
   func settingBinding(_ key: SettingKey) -> Binding<Bool> {
     Binding(
@@ -190,9 +240,27 @@ import SentryCore
   /// "haptics off" is honoured in one place and Core Haptics is never imported by a
   /// screen.
   func feel(_ cue: SocCue) {
-    guard settings.haptics else { return }
+    guard cuesAreLive else { return }
     registry.haptics.play(cue)
   }
+
+  /// **Whether a cue may be felt right now** — the one gate, read by all three
+  /// callers: `feel(_:)` above, `EffectRunner`'s `.haptic` arm, and the heartbeat
+  /// driver.
+  ///
+  /// Two conditions. The Settings switch is the player's. `isReplaying` is the QA
+  /// jump's (P1-8): a jump reaches its screen by *playing* the board through the
+  /// reducer — start, begin, pull, call, next — and every one of those transitions
+  /// emits its cue, so a single `-SentryQAScreen summary` fired a dozen taps and a
+  /// file-stamp into the player's hand in under a second, and pushed a real HUNT
+  /// heartbeat through a phase the player never saw. A replay is a fast-forward, not
+  /// a performance.
+  var cuesAreLive: Bool { settings.haptics && !isReplaying }
+
+  /// True only while `applyQAJump` is replaying its action list. Not `#if SENTRY_QA`:
+  /// the gate above should have one shape in every build, and in a build with no QA
+  /// jumps this is a `let false` the optimiser folds away.
+  private(set) var isReplaying = false
 
   /// Whether the Shift-1 coach marks draw (C8's `CoachBubble`, S4): the switch is on
   /// and the player has not yet filed a call. The flag is written by the reducer at
@@ -273,6 +341,11 @@ import SentryCore
     /// a summary jump has a real settlement, and a screen that reads a field the
     /// machine never fills fails here rather than on a reviewer's device.
     func applyQAJump(_ destination: QAJump.Destination) {
+      // Muted for the replay (P1-8) — see `cuesAreLive`. `defer` rather than a flag
+      // reset at the bottom: `send(_:)` can trap in DEBUG on a corrupt bundle, and a
+      // jump that fails must not leave the app permanently silent.
+      isReplaying = true
+      defer { isReplaying = false }
       for action in destination.actions { send(action) }
       if session.phase != destination.phase || session.view != destination.view {
         // Not an assertion failure: `milestone` legitimately lands on the hub when

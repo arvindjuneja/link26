@@ -375,6 +375,32 @@ describe("drift guard · copy invariants (S11)", () => {
       expect(v.length, `chrome.${k} is empty`).toBeGreaterThan(0);
     }
   });
+
+  // P1-1. `"1 findings"` shipped on the evidence board, the dock and the call sheet
+  // because a counted string had one form. A screen cannot mend that on its own (S1
+  // forbids a Swift literal), so the pair is data — and the pair has to be a real
+  // pair: two non-empty arms, both carrying `{n}`, and actually different from each
+  // other, or the plural is decorative.
+  it("gives every counted chrome string two distinct arms, both carrying {n}", () => {
+    const plurals = files["copy.json"].chromePlurals as Record<
+      string,
+      { one: string; other: string }
+    >;
+    expect(Object.keys(plurals).length).toBeGreaterThan(0);
+    for (const [k, v] of Object.entries(plurals)) {
+      expect(v.one.length, `chromePlurals.${k}.one is empty`).toBeGreaterThan(0);
+      expect(v.other.length, `chromePlurals.${k}.other is empty`).toBeGreaterThan(0);
+      expect(v.one, `chromePlurals.${k}.one has no {n}`).toContain("{n}");
+      expect(v.other, `chromePlurals.${k}.other has no {n}`).toContain("{n}");
+      expect(v.one, `chromePlurals.${k} has two identical arms`).not.toBe(v.other);
+      // A plural key that is also a flat chrome key is a screen reading the wrong
+      // one and never finding out.
+      expect(
+        Object.hasOwn(files["copy.json"].chrome, k),
+        `${k} is both a chrome key and a plural key`,
+      ).toBe(false);
+    }
+  });
 });
 
 describe("drift guard · tuning (D7, S8, R6)", () => {

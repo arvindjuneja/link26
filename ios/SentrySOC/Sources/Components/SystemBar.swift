@@ -23,12 +23,18 @@ struct SystemBar: View {
     let bpm: Int
     /// `true` off `.investigating`, or when the scene is not active.
     var paused: Bool = false
+    /// A pinned instant for a deterministic render — the snapshot suite's only
+    /// use (P1-9). `nil` everywhere in the app.
+    var now: Date?
 
-    init(status: TraceStatus, label: String, bpm: Int, paused: Bool = false) {
+    init(
+      status: TraceStatus, label: String, bpm: Int, paused: Bool = false, now: Date? = nil
+    ) {
       self.status = status
       self.label = label
       self.bpm = bpm
       self.paused = paused
+      self.now = now
     }
   }
 
@@ -70,7 +76,7 @@ struct SystemBar: View {
         // zero before the pill loses a character, and above `.xxLarge` it is not
         // drawn at all — at that size the words need every point of the strip.
         if showsTrace {
-          ECGCanvas(status: trace.status, bpm: trace.bpm, paused: trace.paused)
+          ECGCanvas(status: trace.status, bpm: trace.bpm, paused: trace.paused, now: trace.now)
             .frame(minWidth: 0, maxWidth: .infinity, maxHeight: 22)
             .layoutPriority(-1)
         } else {

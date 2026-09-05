@@ -68,6 +68,18 @@ struct SentryHapticsHost: ViewModifier {
 ///
 /// `nil` in, `nil` out — the fall-through play → meta → placeholder that `PhaseHost`
 /// depends on (R10) must survive the wrapping untouched.
+///
+/// **The wrapping stays, on purpose** (P1-8). The obvious tidy is one
+/// `.sentryHaptics(model)` on `RootView` instead of a decorator around two factories,
+/// and it is the wrong trade: `RootView` hosts the phase, and a **sheet** presented
+/// over it is a separate presentation with its own view tree, so a single host on the
+/// root would leave every sheet — the source pull, the call, the kit — unhosted, and
+/// their cues would fall through to `SensoryRelay`'s generator net rather than to the
+/// thing under the player's thumb. Decorating both factories is what puts a host on
+/// each presentation, and `SensoryRelay` addresses a ticket to exactly one of them, so
+/// two live hosts still play one tap. The cost is a `AnyView` per screen build, which
+/// is what `AnyView` costs; the benefit is that the cue comes from the surface the
+/// player is touching.
 struct HapticsPlayScreens: PlayScreenFactory {
   let base: any PlayScreenFactory
   let engine: HapticsEngine

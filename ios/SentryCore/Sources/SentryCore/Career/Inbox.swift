@@ -1,5 +1,5 @@
 import Foundation
-import SentryContent
+
 
 /// `career/handler.ts`, ported message-for-message.
 ///
@@ -13,10 +13,13 @@ import SentryContent
 public struct HandlerVoice: Sendable {
   private let copy: CopyPack
   private let rules: CareerRules
+  /// The two numbers `handler.ts` owns, off the **already-decoded** pack (P1-10).
+  private let tuning: Tuning.HandlerTuning
 
   public init(content: ContentPack) {
     self.copy = content.copy
     self.rules = CareerRules(content: content)
+    self.tuning = content.tuning.handler
   }
 
   /// The inbox to show on the hub, given state and the latest event.
@@ -90,7 +93,7 @@ public struct HandlerVoice: Sendable {
     // the red chair. On the blue seat `c.redRunsDone` was raised above, so this rule
     // simply never fires — no filter, no hole, and the cap is free to admit whatever
     // was standing behind it.
-    if c.standing >= Self.redRunNudgeStanding && c.redRunsDone < 1 {
+    if c.standing >= redRunNudgeStanding && c.redRunsDone < 1 {
       emit(ID.redRunTip, Key.redRunTip)
     }
 
@@ -109,7 +112,7 @@ public struct HandlerVoice: Sendable {
     assert(
       features.redSeat || !out.contains(where: { $0.id == ID.redRunTip }),
       "the blue seat selected the cross-seat nudge — R1's redRunsDone substitution is broken")
-    return Array(out.prefix(Self.capacity))
+    return Array(out.prefix(capacity))
   }
 
   // ── assembly ───────────────────────────────────────────────────────────────
@@ -139,42 +142,18 @@ public struct HandlerVoice: Sendable {
 
   // ── the numbers and addresses of `handler.ts` ───────────────────────────────
 
-  /// `content.tuning.handler` (R6) — the two numbers `handler.ts` owns: the wall
-  /// (`out.slice(0, 4)`) and the standing at which the red seat starts pulling at you
-  /// (`c.standing >= 90`). They are not economy values, which is why they sat as
-  /// literals here until R6; they are content all the same, and a designer retune is
-  /// now a re-export.
-  struct HandlerTuning: Decodable, Sendable, Hashable {
-    let inboxCapacity: Int
-    let redRunNudgeStanding: Int
-  }
-
-  /// **Request to the lead (F1).** R6 says "`Inbox.swift` reads both from the
-  /// bundle", and it does — but out of `content.json` directly, because `Tuning`
-  /// (C2's `Model/Tuning.swift`) does not mirror the `handler` block yet and F1 owns
-  /// neither that file nor `Content/ContentPack.swift`. Once `Tuning` gains
-  /// `handler: HandlerTuning`, delete this type and this property and read
-  /// `content.tuning.handler` off the pack: the two call sites below do not change.
-  static let tuning: HandlerTuning = {
-    struct Envelope: Decodable {
-      struct TuningBlock: Decodable { let handler: HandlerTuning }
-      let tuning: TuningBlock
-    }
-    guard let url = SentryContent.bundle.url(forResource: "content", withExtension: "json") else {
-      fatalError("SentryContent is missing content.json — run `npm run soc:export`")
-    }
-    do {
-      return try JSONDecoder().decode(Envelope.self, from: try Data(contentsOf: url)).tuning.handler
-    } catch {
-      fatalError("content.json carries no tuning.handler: \(error)")
-    }
-  }()
+  //  R6's two numbers now arrive the way every other tuning number does: off
+  //  `content.tuning`, decoded once with the rest of the bundle (P1-10). Until this
+  //  pass they were a `static let` that opened `content.json` and ran a *second*
+  //  `JSONDecoder` over the whole 300 KB file for two integers — a second parse of a
+  //  file the caller was already holding, with its own `fatalError` path, on a type
+  //  whose whole contract is "pure: state + event → messages".
 
   /// The wall. `handler.ts`'s `slice(0, 4)`.
-  static var capacity: Int { tuning.inboxCapacity }
+  private var capacity: Int { tuning.inboxCapacity }
 
   /// The standing at which the red seat starts pulling at you.
-  static var redRunNudgeStanding: Int { tuning.redRunNudgeStanding }
+  private var redRunNudgeStanding: Int { tuning.redRunNudgeStanding }
 
   /// Message ids. The fixture's ids and the hub's identity — not copy.
   enum ID {

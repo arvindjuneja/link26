@@ -77,8 +77,13 @@ public struct ContentPack: Sendable {
   ///
   /// The id and the label carry the **requested** date, so a player two years past
   /// the horizon still gets one board per calendar day and the once-a-day standing
-  /// award still keys correctly; only the case list wraps (D6). `requiresRedRun` is
-  /// `false` like every exported shift — this build is blue-only (B1).
+  /// award still keys correctly; only the case list wraps (D6).
+  ///
+  /// **Every field is a copy** (P1-10). `requiresRedRun` used to be a literal `false`
+  /// here, which is the one thing R3 added the template field to prevent: the daily
+  /// board would have kept saying "blue-only" after an exporter change said otherwise,
+  /// and B1's `ContentTests` assertion covers `content.shifts` — a board built in
+  /// Swift is not in that array and nothing would have caught it.
   public func dailyShift(on date: Date, calendar: Calendar = .current) -> ShiftDef {
     let template = daily.shiftTemplate
     let iso = DailyCalendar.isoDay(date, calendar: calendar)
@@ -87,7 +92,7 @@ public struct ContentPack: Sendable {
       label: copy.render(template.label, ["date": Self.playerFacingDate(date, calendar: calendar)]),
       caseIds: daily.day(on: date, calendar: calendar)?.caseIds ?? [],
       unlockStanding: template.unlockStanding,
-      requiresRedRun: false,
+      requiresRedRun: template.requiresRedRun,
       note: template.note,
       kind: template.kind)
   }

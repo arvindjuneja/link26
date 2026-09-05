@@ -119,11 +119,26 @@ struct TuningExpectationTests {
 
   /// R6 — the two handler numbers are not decoration: `Inbox.swift` reads them, so
   /// the wall and the nudge gate move with a re-export.
+  ///
+  /// Read off `content.tuning.handler` since P1-10, which is the point: `HandlerVoice`
+  /// used to open `content.json` and run a second decoder over it for these two, and
+  /// this test could only see the value it produced, never where it came from.
   @Test("the handler numbers are the ones the inbox actually uses")
   func theInboxReadsTheHandlerBlock() throws {
     let leaves = try Self.exportedLeaves()
-    #expect(Double(HandlerVoice.capacity) == leaves["handler.inboxCapacity"])
-    #expect(Double(HandlerVoice.redRunNudgeStanding) == leaves["handler.redRunNudgeStanding"])
+    let handler = ContentPack.bundled.tuning.handler
+    #expect(Double(handler.inboxCapacity) == leaves["handler.inboxCapacity"])
+    #expect(Double(handler.redRunNudgeStanding) == leaves["handler.redRunNudgeStanding"])
+
+    // The inbox honours them, not just mirrors them: a career at exactly the nudge
+    // threshold with no red run emits the nudge on the web seat, and a career one
+    // below it does not.
+    let voice = HandlerVoice(content: .bundled)
+    let atGate = CareerState(standing: handler.redRunNudgeStanding, redRunsDone: 0)
+    var under = atGate
+    under.standing -= 1
+    #expect(voice.inboxFor(atGate, features: .all).contains { $0.id == "tip-redrun" })
+    #expect(!voice.inboxFor(under, features: .all).contains { $0.id == "tip-redrun" })
   }
 
   /// The one non-integer, called out on its own because it is the only tuning

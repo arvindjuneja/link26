@@ -30,23 +30,39 @@ import SentryCore
   private let trace: HapticTrace
 
   private var player: CHHapticAdvancedPatternPlayer?
-  /// The band the **current player's pattern was authored at**.
+  /// The band the current player's pattern was authored at — **always the loudest
+  /// one** (P1-8).
   ///
-  /// The band lives in the pattern's own event intensities and not in a dynamic
-  /// parameter, because the lub carries a `CHHapticParameterCurve` on
-  /// `.hapticIntensityControl` (the 0 → 1.0 @18 ms → 0 @90 ms swell) and Core Haptics
-  /// gives a running parameter curve precedence over a dynamic parameter of the same
-  /// ID for the span it covers — which is the whole 90 ms lub. Authoring at the plan's
-  /// own band means every armed run is exactly the §4.4 row it should be (HUNT
-  /// 0.75/0.30, LOCKDOWN 1.00/0.55) with no dynamic parameter needed at all, instead
-  /// of every run playing at the reference band's weight.
+  /// This used to author at the plan's own band, which made every armed run exactly
+  /// the §4.4 row it should be and made *escalation* impossible to feel. Core Haptics
+  /// dynamic parameters are a **scale**, not a level: `.hapticIntensityControl` is a
+  /// 0…1 multiplier on what the pattern already carries. A loop authored at HUNT
+  /// (0.75) therefore had no headroom — LOCKDOWN's 1.00 clamps to a multiplier of 1.0,
+  /// which is the loop it was already playing — so the one transition the whole
+  /// heartbeat exists for, HUNT → LOCKDOWN, gained speed and sharpness and **no
+  /// weight** until the run happened to re-arm.
   ///
-  /// A band change *while the loop is live* still modulates rather than rebuilds
-  /// (§10 C10 #2), and there the intensity half may be swallowed by that same
-  /// precedence rule: period and sharpness move for certain, weight only if the OS
-  /// composes the two. See `modulate(to:)` and the request to the lead in C10's
-  /// report — an escalation lands on the correct weight the moment the run re-arms.
+  /// Authoring the base at the maximum band and scaling **down** for HUNT inverts
+  /// that: quiet is a fraction of loud, and escalation is a multiplier going back up
+  /// to 1.0. Every band still plays the §4.4 row it should — 0.75 of LOCKDOWN's 1.00
+  /// is HUNT's 0.75, exactly — and the gain is now expressible.
+  ///
+  /// **The caveat, unchanged and still a device-pass question (X7).** The lub carries
+  /// a `CHHapticParameterCurve` on `.hapticIntensityControl` (the 0 → 1.0 @18 ms → 0
+  /// @90 ms swell), and Core Haptics gives a running curve precedence over a dynamic
+  /// parameter of the same ID for the span it covers. Where the OS does not compose
+  /// the two, the *lub's* weight may not move — but the transient dub carries no
+  /// curve, so it scales for certain, and so do period and sharpness. This is the
+  /// arrangement that can gain weight; whether the lub does is what the founder's
+  /// device pass answers.
   private var authoredBand: TraceStatus?
+
+  /// The loudest band that beats at all — the band every loop is authored at.
+  ///
+  /// Derived rather than named: `HeartbeatFeel.lub(for:)` is what decides which bands
+  /// beat (nil at CALM and ALERT), so a fifth band or a retune moves this with it.
+  private static let referenceBand: TraceStatus? =
+    TraceStatus.allCases.filter { HeartbeatFeel.lub(for: $0) != nil }.max()
   /// The band that *should* be beating. Kept across a suspend, because a suspend is
   /// the loop going quiet, not the plan going away — `rearm()` needs it back.
   private var plan: HeartbeatPlan?
@@ -134,12 +150,11 @@ import SentryCore
 
   // MARK: - The player
 
-  /// Build the loop **at the plan's own band** and hand it to the OS once.
+  /// Build the loop **at the loudest band** and scale it down to the plan (P1-8).
   ///
-  /// No `sendParameters` here: the pattern already carries the band's intensity and
-  /// sharpness, so the dynamic parameters would be neutral (×1.0 and +0.0) and
-  /// sending them would only invite the curve-precedence collision described on
-  /// `authoredBand`.
+  /// One pattern shape for the life of the app, and the band is a pair of dynamic
+  /// parameters from the first beat — which is what leaves the loop somewhere to go
+  /// when the shift gets worse. See `authoredBand`.
   private func start(_ plan: HeartbeatPlan) {
     guard let engine = startedEngine() else {
       // The Simulator's path, and every device without a Taptic Engine. Traced rather
@@ -148,8 +163,10 @@ import SentryCore
       trace.heartbeat(plan, note: "start skipped — no haptics engine")
       return
     }
-    guard let base = CHPatternSpec.heartbeat(plan.status, tuning) else {
-      Self.log.error("CHPatternSpec has no heartbeat for \(plan.status.rawValue, privacy: .public)")
+    guard let reference = Self.referenceBand,
+          let base = CHPatternSpec.heartbeat(reference, tuning)
+    else {
+      Self.log.error("CHPatternSpec has no heartbeat to author the loop from")
       return
     }
     do {
@@ -158,7 +175,13 @@ import SentryCore
       player.loopEnd = periodSeconds(plan)
       self.player = player
       try player.start(atTime: CHHapticTimeImmediate)
-      authoredBand = plan.status
+      authoredBand = reference
+      // Neutral (×1.0, +0.0) at the reference band itself, so LOCKDOWN pays nothing
+      // for the arrangement and HUNT is one send.
+      let scale = band(plan, authoredAt: reference)
+      if !scale.isEmpty {
+        try player.sendParameters(scale, atTime: CHHapticTimeImmediate)
+      }
       isSuspended = false
       trace.heartbeat(plan, note: "start")
     } catch {
@@ -172,13 +195,14 @@ import SentryCore
   /// dynamic parameters relative to the band the pattern was authored at, and the
   /// pattern itself is never touched (§10 C10 #2).
   ///
-  /// **Device-pass note (X7, §7 step 5).** The sharpness offset and the new period
-  /// take effect for certain. The intensity multiplier is the one that shares a
-  /// parameter ID with the lub's envelope curve, so on a *live* escalation the weight
-  /// may not move until the run re-arms and `start(_:)` re-authors at the new band —
-  /// which a status change does within one pull. If the founder's device pass finds
-  /// a HUNT → LOCKDOWN escalation that never gains weight, that is why, and the fix
-  /// is in `CHPatternSpec` (C5), not here.
+  /// **Device-pass note (X7, §7 step 5).** The period, the sharpness offset and the
+  /// transient dub's weight take effect for certain. The lub's weight shares a
+  /// parameter ID with its own envelope curve, so whether *it* moves live depends on
+  /// the OS composing the two — but since P1-8 the loop is authored at the loudest
+  /// band, so an escalation is a multiplier rising toward 1.0 rather than one asking
+  /// for more than the pattern has. If the founder's device pass still finds a
+  /// HUNT → LOCKDOWN escalation that gains no weight at all, the fix is to move the
+  /// swell off `.hapticIntensityControl` in `CHPatternSpec` (C5), not here.
   private func modulate(to plan: HeartbeatPlan) {
     guard let player, let authored = authoredBand else { return start(plan) }
     do {
@@ -246,10 +270,13 @@ import SentryCore
     TimeInterval(plan.periodMs) / 1000
   }
 
-  /// The target band as a scale off the band the running pattern was authored at.
+  /// The target band as a scale off the band the running pattern was authored at —
+  /// which since P1-8 is always the loudest one, so every scale is a reduction and
+  /// every escalation is a scale rising back toward 1.0.
+  ///
   /// Both values are clamped to the ranges Core Haptics documents: intensity control
   /// is a 0…1 multiplier, sharpness control a -1…1 offset. Identical bands give a
-  /// neutral pair.
+  /// neutral pair, which is why LOCKDOWN costs nothing.
   private func band(
     _ plan: HeartbeatPlan, authoredAt authored: TraceStatus
   ) -> [CHHapticDynamicParameter] {
@@ -374,7 +401,7 @@ import SentryCore
     let signal = withObservationTracking {
       Signal(
         status: model.session.status, phase: model.session.phase,
-        pulls: model.session.queried.count, hapticsEnabled: model.settings.haptics)
+        pulls: model.session.queried.count, hapticsEnabled: model.cuesAreLive)
     } onChange: {
       Task { @MainActor [weak self] in
         guard let self, self.generation == token else { return }
@@ -397,7 +424,7 @@ import SentryCore
         self.apply(
           Signal(
             status: model.session.status, phase: model.session.phase,
-            pulls: model.session.queried.count, hapticsEnabled: model.settings.haptics),
+            pulls: model.session.queried.count, hapticsEnabled: model.cuesAreLive),
           force: true)
       }
     }

@@ -1,19 +1,6 @@
 import SwiftUI
 import SentryCore
 
-/// Which half of the case the player is looking at.
-///
-/// It lives outside `CaseView` because two surfaces decide it: the case's own
-/// segmented control, and the source sheet's two exits — "To the board" lands on
-/// EVIDENCE (§2.7), "Pull another" goes back to SOURCES. A sheet cannot reach into
-/// the phase underneath it, and neither one may edit the other's file, so the
-/// decision is one small observed value rather than a callback chain.
-@Observable @MainActor final class PlayFocus {
-  static let shared = PlayFocus()
-  var caseTab: CaseView.Tab = .sources
-  init() {}
-}
-
 /// The source sheet — the commit (`DESIGN.md` §2.7, `SPEC.md` §5.5).
 ///
 /// One sheet, two states: the cost you are about to spend, and what the log said.
@@ -185,10 +172,7 @@ struct SourceSheet: View {
   }
 
   private var surfacedLabel: String {
-    let count = findings.count
-    return count == 1
-      ? copy.chromeText("sourceFindingOne")
-      : copy.render(copy.chromeText("sourceFindingMany"), ["n": String(count)])
+    copy.plural("sourceFindings", findings.count)
   }
 
   // MARK: - The footer
@@ -200,12 +184,12 @@ struct SourceSheet: View {
           title: Play.cta(copy.chromeText("sourceToBoard")),
           tone: Theme.falsePositive,
           action: {
-            PlayFocus.shared.caseTab = .evidence
+            model.play.caseTab = .evidence
             dismiss()
           })
 
         Button {
-          PlayFocus.shared.caseTab = .sources
+          model.play.caseTab = .sources
           dismiss()
         } label: {
           Text(copy.chromeText("sourcePullAnother"))
@@ -237,7 +221,7 @@ struct SourceSheet: View {
   private func pull() {
     guard !isPulled else { return }
     model.send(.pullSource(sourceID))
-    PlayFocus.shared.caseTab = .evidence
+    model.play.caseTab = .evidence
     // The room arrives with the findings, not after them.
     withAnimation(Motion.gated(Motion.sheet, reduceMotion: reduceMotion)) {
       detent = .large

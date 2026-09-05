@@ -215,11 +215,27 @@ export interface ExportedHandlerTemplate {
   tone: string;
 }
 
+/**
+ * A counted chrome string in both its forms (P1-1).
+ *
+ * English has two: `one` for a count of exactly 1, `other` for everything else
+ * (including 0 — "0 findings"). Both carry the same `{n}` run, so the caller
+ * interpolates once and never has to know which arm it got. `"1 findings"` was
+ * shipping on the evidence board, the dock and the call sheet, and a screen cannot
+ * fix it without authoring a literal — which S1 forbids — so the pair lives here.
+ */
+export interface ExportedPlural {
+  one: string;
+  other: string;
+}
+
 export interface ExportedCopy {
   schemaVersion: number;
   contentHash: string;
   /** Screen chrome — labels, CTAs, eyebrows. Every letter the app draws lives here (S1). */
   chrome: Record<string, string>;
+  /** Counted chrome, singular and plural (P1-1). Swift picks an arm with `CopyPack.plural(_:_:)`. */
+  chromePlurals: Record<string, ExportedPlural>;
   verdictLabels: Record<string, string>;
   dispositionMeta: Record<string, { label: string; sub: string; tone: Tone }>;
   outcomes: Record<OutcomeKey, string>; // 11 (D12)

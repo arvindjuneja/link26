@@ -52,25 +52,33 @@ enum MetaID {
 
   // MARK: - The app's one outbound link
 
-  /// **FOUNDER STEP / submission blocker.** `SPEC.md` §8: guideline 5.1.1(i) needs a
-  /// privacy-policy link inside the app even at zero collection, and the static
-  /// `/privacy` route is a web task D1 keeps iOS out of — "until it exists the link
-  /// points at **the site root** and `docs/APPSTORE.md` flags it as a submission
-  /// blocker". So the site root is what this is: a `/privacy` deep link to a route
-  /// nobody has deployed is a 404 dressed as a policy.
+  /// Settings → About → **Privacy policy** (§5.11). Guideline 5.1.1(i) needs this link
+  /// inside the app even at zero collection, and the page it opens is now real:
+  /// `app/privacy/page.tsx` — a static route in this repo's own Next app, written for
+  /// this game (P1-4).
   ///
-  /// **Still not shippable, and escalated.** No deployed hostname is pinned anywhere
-  /// in this repo — `wrangler.jsonc` carries the placeholder
-  /// `link26.<your-subdomain>.workers.dev` — so this is the founder's own domain, the
-  /// one the bundle id asserts (`pl.oumm.sentry.soc`). Measured on the wire today:
-  /// `link26.oumm.pl` and `oumm.pl` both resolve to `2.57.137.2`, which presents a
-  /// `CN=*.zenbox.pl` certificate (Certum DV TLS G2 R39) with SAN `*.zenbox.pl,
-  /// zenbox.pl` — a shared-hosting parking address, **not** the Cloudflare deploy. Any
-  /// URL on that host, root included, opens Safari's "This Connection Is Not Private"
-  /// interstitial. The app's ONE outbound link must not read as a phishing warning, so
-  /// **the founder has to confirm the deployed hostname (and ship `/privacy` on it)
-  /// before submission**; changing it is this one line.
-  static let privacyPolicy = "https://link26.oumm.pl"
+  /// **Why this host.** The previous value was the founder's own domain, and it was
+  /// measured broken: `link26.oumm.pl` and `oumm.pl` both resolve to `2.57.137.2`,
+  /// which presents a `CN=*.zenbox.pl` certificate (Certum DV TLS G2 R39, SAN
+  /// `*.zenbox.pl, zenbox.pl`) — shared-hosting parking, not the Cloudflare deploy —
+  /// so **any** URL on it opens Safari's "This Connection Is Not Private"
+  /// interstitial. Re-measured today: unchanged. The app's ONE outbound link must not
+  /// read as a phishing warning.
+  ///
+  /// The Worker `link26` is deployed on this account (`wrangler deployments list`
+  /// shows versions through 2026-07-07) and the account's workers.dev subdomain is
+  /// `arvind` — verified on the wire, not guessed: `*.arvind.workers.dev` resolves
+  /// with valid Cloudflare TLS, while a made-up subdomain does not resolve at all.
+  ///
+  /// **FOUNDER STEP, and the last one on this link.** `link26.arvind.workers.dev`
+  /// currently answers `404 · error code 1042` — the Worker has no workers.dev route
+  /// enabled, and `/privacy` has not been deployed yet either. One deploy of the web
+  /// app with workers.dev routing on fixes both. Until then the link resolves to a
+  /// page that is not there — which is why the About screen prints the privacy
+  /// **summary inline** and the address in full beneath it (`AboutScreen`), so 5.1.1
+  /// is satisfied by the app itself and the link is corroboration rather than the
+  /// whole claim. Changing the host is this one line.
+  static let privacyPolicy = "https://link26.arvind.workers.dev/privacy"
 
   // MARK: - QA
 
