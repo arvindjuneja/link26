@@ -126,6 +126,16 @@ enum Theme {
     }
   }
 
+  /// `severityMeta.High.tone` is `"orange"` (**R2**) — the HUNT hue, so the tool's
+  /// loudest routine label sits one band below the rose it would otherwise borrow
+  /// from a real breach.
+  ///
+  /// `SentryCore.Tone` is lenient and ships no `orange` static (`Model/RichText.swift`
+  /// is C2's file and R2 explicitly declines the model change), so the raw value is
+  /// named here — beside the hue it resolves to, which is the only place in the app
+  /// a tone name belongs.
+  private static let toneOrange = Tone(rawValue: "orange")
+
   /// A `RichSegment` / `DispositionMeta` / `severityMeta` / `handlerToneMeta` run.
   /// `Tone` is lenient (D10), so a tone authored after this build renders as body
   /// text rather than blanking the paragraph.
@@ -136,10 +146,23 @@ enum Theme {
     case .rose: Rose.c300
     case .amber: Amber.c300
     case .fuchsia: Fuchsia.c300
+    case Self.toneOrange: Orange.c300
     case .strong: textPrimary
     case .em: textSecondary
     case .muted: textQuiet
     default: textSecondary
+    }
+  }
+
+  /// How a tone run is *weighted*, not just coloured. `strong` and `em` are the two
+  /// runs the exporter authors for emphasis rather than for meaning, so they carry
+  /// the emphasis a reader expects instead of a colour shift alone — which at
+  /// `textPrimary` on `textSecondary` is nearly invisible.
+  static func toneEmphasis(_ tone: Tone) -> (bold: Bool, italic: Bool) {
+    switch tone {
+    case .strong: (true, false)
+    case .em: (false, true)
+    default: (false, false)
     }
   }
 
@@ -190,6 +213,25 @@ enum Theme {
     static let sheet: CGFloat = 16
     static let chip: CGFloat = 6
   }
+
+  /// The pressed state every interactive primitive shares (§10 C7 #5).
+  ///
+  /// The web's feedback is `hover:`-only (risk R11), and Tailwind v4 wraps `hover:`
+  /// in `@media (hover: hover)`, so a phone never sees it — a tap on the web deck
+  /// looks identical to no tap at all. One `ButtonStyle` reading these three tokens
+  /// makes that structurally impossible here.
+  enum Press {
+    /// Rows and cards settle rather than shrink; the CTA is the only thing that
+    /// travels far enough to notice a scale.
+    static let scale: CGFloat = 0.98
+    static let opacity: Double = 0.70
+    /// The wash a pressed row takes, over whatever it already draws.
+    static let fill = Zinc.z100.opacity(0.06)
+  }
+
+  /// The 3 pt verdict / state rule that runs down the leading edge of a taxonomy
+  /// row, a disposition row and an open queue row (§2.4, §2.9, §2.3).
+  static let ruleWidth: CGFloat = 3
 
   /// §2.2 thumb-zone rules: nothing interactive is smaller than this.
   enum Hit {

@@ -97,7 +97,7 @@ struct EffectScheduleTests {
       flags: flags, registry: ScreenRegistry())
 
     let before = model.debugPerformedEffects.count
-    model.send(.pickDisposition(.escalateTier2))
+    model.send(.openView(.settings))
     let after = model.debugPerformedEffects
 
     #expect(after.count == before + 1)
@@ -185,6 +185,38 @@ struct EffectScheduleTests {
     #expect(store.hydrate().session == nil)
   }
 
+  /// R9's generation token. The dangerous case is not the write that is still
+  /// sleeping — that one is cancelled — but the write whose timer has **already
+  /// fired** and which is queued behind a suspension point when the shift settles.
+  @Test("a write already past its timer cannot land after the clear")
+  func clearBeatsAWriteAlreadyInFlight() async throws {
+    let directory = Self.temporaryDirectory()
+    let store = SaveStore(directory: directory)
+    let (flags, defaults, suite) = Self.scratchFlags()
+    defer { defaults.removePersistentDomain(forName: suite) }
+
+    var context = EffectRunner.Context.noop
+    context.snapshot = {
+      SessionSnapshot(phase: .investigating, shift: Self.shift, queried: [], status: .calm)
+    }
+
+    let runner = EffectRunner(
+      save: store, flags: flags, registry: ScreenRegistry(), context: context,
+      coalesceWindow: .milliseconds(1))
+
+    runner.run([.persistSession])
+    try await Task.sleep(for: .milliseconds(20))         // the timer has fired
+    runner.run([.clearSession])
+    try await Task.sleep(for: .milliseconds(200))
+
+    #expect(store.hydrate().session == nil, "the settled board was resurrected by a stale write")
+
+    // And a write scheduled *after* the clear is a new generation, so it lands.
+    runner.run([.persistSession])
+    try await Task.sleep(for: .milliseconds(200))
+    #expect(store.hydrate().session != nil)
+  }
+
   @Test("backgrounding flushes the pending write immediately")
   func backgroundingFlushes() async throws {
     let directory = Self.temporaryDirectory()
@@ -254,13 +286,24 @@ struct EffectScheduleTests {
     _ model: GameModel, disposition: Disposition = .escalateIRIsolate
   ) -> GameModel {
     guard let shift = model.content.shifts.first else { return model }
-    model.send(.startShift(shift.id))
+    playBoard(model, shift.id, disposition: disposition)
+    return model
+  }
+
+  /// Play a named board — campaign or today's daily — to the summary. A pull on each
+  /// case, so the coalesced session write is genuinely in flight when the board
+  /// settles.
+  private static func playBoard(
+    _ model: GameModel, _ shiftID: String, disposition: Disposition? = nil
+  ) {
+    model.send(.startShift(shiftID))
     model.send(.begin)
-    for _ in shift.caseIds {
-      model.send(.makeCall(disposition))
+    model.send(.closeView)
+    while let current = model.session.currentCase(model.content) {
+      if let sourceID = current.sourceIds.first { model.send(.pullSource(sourceID)) }
+      model.send(.makeCall(disposition ?? current.correctDisposition))
       model.send(.nextCase)
     }
-    return model
   }
 
   @Test("the settle chain runs in order and the career it writes is the settled one")
@@ -425,12 +468,148 @@ struct EffectScheduleTests {
 
     // `Flags.set(rawKey:)` asserts in Debug on an unknown key, so drive the guard
     // through the public roster instead: every key the reducer can emit is known.
-    let emitted = SettingKey.allCases.map(\.rawValue) + [SentryFlagKey.firstRun]
+    let emitted = SettingKey.allCases.map(\.rawValue) + [SentryFlagKey.firstRun, SentryFlagKey.onboarding]
     for key in emitted {
       #expect(Flags.Key(rawValue: key) != nil, "\(key) is emitted but not a Flags.Key")
     }
+    // The three switches ARE `SettingKey`; the two gates are the rest. Five, exactly.
+    #expect(Set(Flags.Key.allCases) == Set(SettingKey.allCases.map(Flags.Key.init) + Flags.Key.gates))
     #expect(Flags.Key.allCases.count == 5)
     _ = flags
+  }
+
+  // MARK: - Buying (R9)
+
+  @Test("a refused purchase costs a denied cue and writes nothing")
+  func refusedPurchaseWritesNothing() async throws {
+    let directory = Self.temporaryDirectory()
+    let (flags, defaults, suite) = Self.scratchFlags()
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let haptics = RecordingHaptics()
+    let registry = ScreenRegistry()
+    registry.haptics = haptics
+
+    let model = GameModel(
+      save: SaveStore(directory: directory), flags: flags, registry: registry)
+    let item = try #require(model.content.kit.first)
+    #expect(model.career.cash < item.cost, "a fresh career cannot afford the kit")
+
+    model.buy(item)
+    try await Task.sleep(for: .milliseconds(200))
+
+    #expect(model.career.gear.isEmpty, "an unaffordable item was handed over")
+    #expect(model.career.cash == 0)
+    #expect(haptics.cues.last == .denied)
+    #expect(!model.debugPerformedEffects.contains(.persistCareer), "a refusal wrote the save")
+    #expect(SaveStore(directory: directory).hydrate().career.gear.isEmpty)
+  }
+
+  @Test("an affordable purchase debits once, commits, and persists the debited career")
+  func purchaseDebitsAndPersists() async throws {
+    let directory = Self.temporaryDirectory()
+    let (flags, defaults, suite) = Self.scratchFlags()
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let haptics = RecordingHaptics()
+    let registry = ScreenRegistry()
+    registry.haptics = haptics
+
+    // A career that can afford it, on disk before launch.
+    let seed = SaveStore(directory: directory)
+    let item = try #require(ContentPack.bundled.kit.first)
+    await seed.saveCareer(CareerState(cash: item.cost + 25, standing: 0))
+
+    let model = GameModel(
+      save: SaveStore(directory: directory), flags: flags, registry: registry)
+    model.buy(item)
+    try await Task.sleep(for: .milliseconds(200))
+
+    #expect(model.career.gear == [item.id])
+    #expect(model.career.cash == 25)
+    #expect(haptics.cues.last == .commitSoft)
+    // The write must carry the debit, not the balance from before it.
+    let onDisk = SaveStore(directory: directory).hydrate().career
+    #expect(onDisk.cash == 25)
+    #expect(onDisk.gear == [item.id])
+
+    // Buying it again is refused: owned is refused, exactly like unaffordable.
+    model.buy(item)
+    #expect(model.career.cash == 25)
+    #expect(haptics.cues.last == .denied)
+  }
+
+  // MARK: - The settlement the reducer computed
+
+  @Test("settling adopts the reducer's settlement rather than recomputing it")
+  func settlementIsAdoptedNotRecomputed() throws {
+    let (flags, defaults, suite) = Self.scratchFlags()
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let model = GameModel(
+      save: SaveStore(directory: Self.temporaryDirectory()), flags: flags,
+      registry: ScreenRegistry())
+
+    Self.playFirstShift(model)
+
+    let settlement = try #require(model.session.settlement)
+    #expect(model.career == settlement.reward.state, "the app awarded something of its own")
+    #expect(settlement.careerBefore == .initial)
+    #expect(settlement.score == model.engine.scoreShift(try #require(model.session.shift)))
+  }
+
+  // MARK: - The daily ledger (Appendix A G7)
+
+  @Test("the daily board pays standing once a day and cash every run")
+  func dailyLedger() async throws {
+    let directory = Self.temporaryDirectory()
+    let (flags, defaults, suite) = Self.scratchFlags()
+    defer { defaults.removePersistentDomain(forName: suite) }
+
+    let daily = ContentPack.bundled.dailyShift(on: Date())
+    let seed = SaveStore(directory: directory)
+    await seed.saveCareer(CareerState(cash: 0, standing: daily.unlockStanding, shiftsCleaned: 1))
+
+    let model = GameModel(
+      save: SaveStore(directory: directory), flags: flags, registry: ScreenRegistry())
+    Self.playBoard(model, daily.id)
+
+    let today = DailyCalendar.isoDay(Date())
+    #expect(model.session.settlement?.isDaily == true)
+    #expect(model.debugPerformedEffects.contains(.markDailyDone(today)))
+    #expect(model.career.dailyDoneOn == today, "the reducer's stamp never reached the career")
+    let afterFirst = model.career
+
+    // Same day, same board, again. Leaving the summary is `complete → milestone | hub`
+    // and `milestone` takes ACK_MILESTONE (§2.1) — and START_SHIFT is refused
+    // anywhere but the desk, so the walk back has to be finished before the second
+    // run can open.
+    model.send(.nextCase)
+    if model.session.phase == .milestone { model.send(.ackMilestone) }
+    #expect(model.session.phase == .hub, "never got back to the desk for the second run")
+    Self.playBoard(model, daily.id)
+
+    #expect(model.session.settlement?.standingSuppressed == true)
+    #expect(model.career.standing == afterFirst.standing, "standing paid twice in one day")
+    #expect(model.career.cash > afterFirst.cash, "cash stopped paying — the grind is dead")
+  }
+
+  // MARK: - The clear/write race (R9)
+
+  @Test("a write scheduled before a settle cannot resurrect the cleared snapshot")
+  func clearedSnapshotStaysCleared() async throws {
+    let directory = Self.temporaryDirectory()
+    let (flags, defaults, suite) = Self.scratchFlags()
+    defer { defaults.removePersistentDomain(forName: suite) }
+
+    let model = GameModel(
+      save: SaveStore(directory: directory), flags: flags, registry: ScreenRegistry())
+    // Pull, then finish the board inside the 250 ms coalescing window: the pull's
+    // write is still in the air when the settlement deletes the snapshot.
+    Self.playFirstShift(model)
+    try await Task.sleep(for: .milliseconds(400))
+
+    #expect(model.session.phase == .complete)
+    #expect(
+      SaveStore(directory: directory).hydrate().session == nil,
+      "the settled board came back as a Resume card")
   }
 }
 

@@ -6,9 +6,10 @@ import SentryCore
 /// The state container (§4.1). One per app, held by `SentrySOCApp`.
 ///
 /// **`send(_:)` is the single entry point.** A view expresses an intent; the pure
-/// reducer decides what the session becomes and what has to happen; `EffectRunner`
-/// makes it happen. Views never construct a `CallGrade` (D8 makes it a compile
-/// error), never touch a meter, never touch storage and never touch Core Haptics.
+/// reducer in `SentryCore` decides what the session becomes and what has to happen;
+/// `EffectRunner` makes it happen. Views never construct a `CallGrade` (D8 makes it
+/// a compile error), never touch a meter, never touch storage and never touch Core
+/// Haptics.
 ///
 /// **Hydration is synchronous, here, before the first frame** (§4.3). The save is a
 /// ~4 KB read, so there is nothing to gain by deferring it — and deferring it is
@@ -51,7 +52,11 @@ import SentryCore
 
   private let save: SaveStore
   private let flags: Flags
-  private let registry: ScreenRegistry
+  /// Where the screens and the haptics sink are bound (B6). Exposed because
+  /// `PhaseHost` resolves screens through *this model's* registry rather than
+  /// reaching for the singleton — which is what lets a test or a preview install its
+  /// own factories without touching global state.
+  let registry: ScreenRegistry
   /// Implicitly unwrapped for two-phase init and nothing else: the runner's `Context`
   /// closures capture `self` weakly, so it cannot be built until every stored
   /// property above it is. It is assigned before `init` returns and is never `nil`
@@ -83,6 +88,10 @@ import SentryCore
     self.settings = flags.settings
     self.hasSeenOnboarding = flags.hasSeenOnboarding
 
+    // The one piece of session the reducer cannot decide, because it cannot read
+    // `UserDefaults`: whether the disclaimer gate is still closed (§2.1's HYDRATE
+    // row). It is *constructed* here, not mutated — `send(_:)` owns every move after
+    // this line.
     var start = SessionState()
     if !flags.hasSeenFirstRun { start.view = .firstRun }
     self.session = start
@@ -104,10 +113,35 @@ import SentryCore
   // MARK: - The single entry point
 
   /// A view's intent, in. The session out, animated once, and the effects run once.
+  ///
+  /// The order is load-bearing: reduce (pure) → adopt the session → apply the one
+  /// career mutation the reducer is not allowed to make → run the effects. A
+  /// `.persistCareer` therefore writes the career *after* the purchase it is paying
+  /// for, and never the one before it.
   func send(_ action: SocAction) {
     let (next, effects) = reduce(session, action, content: content, career: career)
     withAnimation(Motion.gated(Motion.screenPush)) { session = next }
+    applyCareerMutation(for: action)
     runner.run(effects)
+  }
+
+  /// The wallet moves in exactly one place outside the settlement, and this is it.
+  ///
+  /// `CareerRules.buyKit` is the debit **and** the affordability guard: it returns
+  /// the career untouched when the item is owned or unaffordable, so comparing
+  /// before with after is the whole decision (R9). The reducer made the same
+  /// comparison on the same career one line earlier, which is how the cue and the
+  /// write agree without either side being told.
+  private func applyCareerMutation(for action: SocAction) {
+    guard case .buy(let itemID) = action,
+          let item = content.kit.first(where: { $0.id == itemID })
+    else { return }
+    let purchased = rules.buyKit(career, item)
+    guard purchased != career else {
+      Self.log.notice("refused kit \(itemID, privacy: .public) — owned or unaffordable")
+      return
+    }
+    career = purchased
   }
 
   // MARK: - Intent
@@ -131,14 +165,10 @@ import SentryCore
     send(.abandon)
   }
 
-  /// Buy a kit item (C9's Kit sheet). The debit is `CareerRules.buyKit` — a pure
-  /// function of the current career — and cannot live in the reducer, which only
-  /// ever *reads* the career. `.buy` then schedules the write and the cue.
-  ///
-  /// `buyKit` is itself the affordability guard: it returns the career unchanged
-  /// when the item is owned or unaffordable.
+  /// Buy a kit item (C9's Kit sheet). One intent, one action: the reducer decides
+  /// whether it takes, `applyCareerMutation(for:)` performs the debit, and a refusal
+  /// costs a `denied` cue and writes nothing at all.
   func buy(_ item: KitItem) {
-    career = rules.buyKit(career, item)
     send(.buy(item.id))
   }
 
@@ -151,9 +181,23 @@ import SentryCore
 
   func acknowledgeSaveNotice() { saveWasCorrupt = false }
 
+  /// The cues a **screen** owns, because only the screen knows when its animation
+  /// reaches them: the debrief's verdict on mount, `breachThud` as the meter sweeps,
+  /// each finding as it lands, the payout's `commitSoft` at the end of the count-up
+  /// (§4.4, §5.5, §5.8, §5.9).
+  ///
+  /// It is still not the view firing a haptic: the gate and the sink are here, so
+  /// "haptics off" is honoured in one place and Core Haptics is never imported by a
+  /// screen.
+  func feel(_ cue: SocCue) {
+    guard settings.haptics else { return }
+    registry.haptics.play(cue)
+  }
+
   /// Whether the Shift-1 coach marks draw (C8's `CoachBubble`, S4): the switch is on
   /// and the player has not yet filed a call. The flag is written by the reducer at
-  /// the first `MAKE_CALL` — never by a view (G19).
+  /// the first `MAKE_CALL` — never by a view (G19). *Which* step is showing is
+  /// `session.currentCoachStep(content)`.
   var coachIsActive: Bool { settings.coaching && !hasSeenOnboarding }
 
   /// `scenePhase` moved. Backgrounding flushes the coalesced session write, because
@@ -166,75 +210,41 @@ import SentryCore
 
   // MARK: - Settlement
 
-  /// The 16:00 chain, lifted from `SocConsole.tsx:251-270`: `scoreShift →
-  /// awardForShift → unlock diff → HandlerEvent → persistCareer → clearSession`,
-  /// plus the Appendix A G7 daily stamp.
+  /// The 16:00 chain — **applied**, not computed.
   ///
-  /// Every computation is a `SentryCore` call. What this method owns is the *order*
-  /// and the one policy the engine cannot know: whether today's daily board has
-  /// already paid its standing.
+  /// `scoreShift → awardForShift → unlock diff` all happened inside the reducer, on
+  /// the career it was handed, and arrived as `session.settlement` (`ShiftSettlement`).
+  /// What is left here is the part that is not arithmetic: adopting the settled
+  /// career and telling the handler what happened. A second award is therefore not a
+  /// bug this method can have — there is nothing here to award twice.
   ///
   /// `persistCareer` and `clearSession` are the reducer's next two effects, and the
-  /// runner performs them in order — so the career this writes is the settled one.
+  /// runner performs them in order — so the career this adopts is the one written.
   private func settleShift() {
-    // The reducer emits `.settleShift` on the transition into `.complete` and
-    // nowhere else, so a shift settles exactly once. If that ever stops being true,
-    // this is where the double award would appear.
-    guard session.phase == .complete, let shift = session.shift else {
-      Self.log.error("settleShift with no completed board — nothing was awarded")
+    guard session.phase == .complete, let settlement = session.settlement else {
+      Self.log.error("settleShift with no settled board — nothing was awarded")
       return
     }
 
-    let score = engine.scoreShift(shift)
-    let today = DailyCalendar.isoDay(Date())
-    let isDaily = definition(of: shift.shiftId)?.kind == .daily
-    // G7: the daily board pays cash every run and standing once a calendar day.
-    let standingAlreadyPaid = isDaily && career.dailyDoneOn == today
-
-    let reward = rules.awardForShift(career, score)
-    var settled = reward.state
-    var rankUp = reward.rankUp
-    if standingAlreadyPaid {
-      settled.standing = career.standing
-      rankUp = nil
-    }
-
-    // The diff is taken across the award, so a shift that opened on this payout is
-    // announced exactly once.
-    let unlocked = content.shifts
-      .filter { !rules.isUnlocked(career, $0) && rules.isUnlocked(settled, $0) }
-      .map { UnlockedShift(id: $0.id, label: $0.label) }
-
-    let type: HandlerEventType =
-      switch score.grade {
-      case .clean: .shiftClean
-      case .rough: .shiftRough
-      case .breached: .shiftBreached
-      }
-
-    career = settled
-    if isDaily { career.dailyDoneOn = today }
-    refreshInbox(HandlerEvent(type: type, rankUp: rankUp, unlocked: unlocked))
+    career = settlement.reward.state
+    refreshInbox(settlement.event)
 
     Self.log.notice(
-      "settled \(shift.shiftId, privacy: .public): grade \(score.grade.rawValue, privacy: .public)")
+      """
+      settled \(settlement.shiftId, privacy: .public): \
+      grade \(settlement.score.grade.rawValue, privacy: .public), \
+      +\(settlement.reward.cashGain, privacy: .public)¢ \
+      +\(settlement.reward.standingGain, privacy: .public)⬢
+      """)
   }
 
   /// The hub's inbox (§2.3). Rebuilt rather than appended to: it is a pure function
   /// of the career and the last thing that happened, so there is no list to keep.
   ///
-  /// `.iOS` drops the cross-seat nudge **after** the four-message cap (B1/S3), which
-  /// is why a blue-only inbox is sometimes shorter than four.
+  /// `.iOS` is the blue-only selection (R1): the cross-seat nudge is never emitted
+  /// and the two cross-seat beats are re-voiced as Vale, before the four-message cap.
   private func refreshInbox(_ event: HandlerEvent = HandlerEvent()) {
     inbox = voice.inboxFor(career, event, features: .iOS)
-  }
-
-  /// A campaign board comes from `shiftsByID`; the daily board is built on demand
-  /// and is not in it (S9).
-  private func definition(of shiftID: String) -> ShiftDef? {
-    if let campaign = content.shift(shiftID) { return campaign }
-    let today = content.dailyShift(on: Date())
-    return today.id == shiftID ? today : nil
   }
 
   private func applyFlag(_ key: String, _ value: Bool) {
@@ -245,7 +255,7 @@ import SentryCore
   // MARK: - QA and DEBUG entry points
 
   #if DEBUG
-    /// Acceptance #8 — the entry that makes the loop reachable before C9's hub
+    /// C6 acceptance #8 — the entry that makes the loop reachable before C9's hub
     /// exists. Shift 1 unlocks at standing 0, so it always starts.
     func debugStartFirstShift() {
       guard let first = content.shifts.first else { return }
@@ -256,11 +266,24 @@ import SentryCore
   #endif
 
   #if SENTRY_QA
-    /// `-SentryQAScreen <name>` (D19). Applied once, after hydration.
+    /// `-SentryQAScreen <name>` (D19), **played rather than posed**.
+    ///
+    /// Every jump is a list of the seventeen actions, so a QA screenshot is of a
+    /// session the reducer actually produced: a debrief jump has a real graded call,
+    /// a summary jump has a real settlement, and a screen that reads a field the
+    /// machine never fills fails here rather than on a reviewer's device.
     func applyQAJump(_ destination: QAJump.Destination) {
-      if let shiftID = destination.shiftID { send(.startShift(shiftID)) }
-      session.phase = destination.phase
-      session.view = destination.view
+      for action in destination.actions { send(action) }
+      if session.phase != destination.phase || session.view != destination.view {
+        // Not an assertion failure: `milestone` legitimately lands on the hub when
+        // the played board earned no rank-up, and that is worth a log line, not a trap.
+        Self.log.notice(
+          """
+          QA jump \(destination.name, privacy: .public) asked for \
+          \(destination.phase.name, privacy: .public) and reached \
+          \(self.session.phase.name, privacy: .public)
+          """)
+      }
     }
   #endif
 }

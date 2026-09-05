@@ -47,6 +47,24 @@ enum Motion {
   static let payout = Animation.smooth(duration: 0.80, extraBounce: 0)
   /// The rank badge: 900 ms `stroke-dashoffset` draw, then a 10 % fill.
   static let rankBadgeDraw = Animation.easeInOut(duration: 0.90)
+  /// The same 900 ms, as a number — the fill has to start when the draw ends.
+  static let rankBadgeDrawDuration: Double = 0.90
+  /// The 10 % fill that arrives behind the finished stroke.
+  static let rankBadgeFill = Animation.easeOut(duration: 0.30)
+
+  /// **Hold to file** (§2.9, §5.7). 550 ms is the stamp: long enough that it is a
+  /// decision and not a slip, short enough that it never feels like a punishment.
+  static let holdToFileDuration: TimeInterval = 0.55
+  /// The three ticks under the thumb, in seconds from press. They are a *rhythm*,
+  /// not a progress read-out — the ring is the read-out.
+  static let holdToFileTicks: [TimeInterval] = [0, 0.18, 0.36]
+  /// A drag this far off the button abandons the hold. Slop, not precision: the
+  /// thumb rolls while it presses, and a roll is not a change of mind.
+  static let holdToFileCancelSlop: CGFloat = 44
+
+  /// The ECG's frame budget — 30 fps is plenty for a 40 pt-tall trace and it halves
+  /// the wake-ups of `.animation`'s default.
+  static let ecgFrameInterval: Double = 1.0 / 30.0
 
   /// The ECG's scroll period, in seconds, for a status's BPM. Read from
   /// `content.tuning.bpm` — never a literal (D7).
@@ -56,6 +74,22 @@ enum Motion {
   static func glowPulse(periodSeconds: Double) -> Animation {
     .easeInOut(duration: periodSeconds / 2).repeatForever(autoreverses: true)
   }
+
+  /// **The one documented exception to the gate.** The pressed-state crossfade of
+  /// `PressableStyle`, 80 ms.
+  ///
+  /// A pressed state is *direct manipulation*: the finger is on the glass and the
+  /// pixel under it has to move now, or the tap that landed and the tap that missed
+  /// look identical (risk R11). Reduce Motion is a vestibular setting about
+  /// **travel** — a 2 % scale over 80 ms under the thumb is below the threshold it
+  /// exists to protect, and removing it removes the only feedback a control has.
+  ///
+  /// It lives here, named, so `verify.sh`'s "every animation goes through
+  /// `Motion.gated`" grep has exactly one allowance with its reason attached
+  /// instead of an unexplained duration literal in `Components/`. Nothing else in
+  /// the deck may use it: `PressableStyle` is the only call site, and it is the only
+  /// place a press is drawn.
+  static let pressUngated = Animation.easeOut(duration: 0.08)
 
   // ── the gate ───────────────────────────────────────────────────────────────
 

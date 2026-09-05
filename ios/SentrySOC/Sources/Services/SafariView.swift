@@ -4,10 +4,10 @@ import SwiftUI
 /// An in-app browser for the two links the deck offers: `learn.pointer` on a debrief
 /// and the privacy line in Settings → About.
 ///
-/// **Unused inside C6, on purpose.** Its consumers are C8's debrief (`learn.pointer`)
-/// and C9's About/Licences, and neither may add a file to `Sources/Services/` — the
-/// §10 ownership is disjoint. It ships here so those tickets have the seam on day
-/// one, the same way `SessionStubs.swift` names C5.
+/// **Unused until C9, on purpose.** Its consumers are C8's debrief
+/// (`learn.pointer`) and **C9's About / Licences**, and neither may add a file to
+/// `Sources/Services/` — the §10 ownership is disjoint. It ships here so those
+/// tickets have the seam on day one.
 ///
 /// `SFSafariViewController` rather than `openURL`: leaving the app mid-shift to a
 /// full browser loses the board, and the sheet keeps the reading inside the session.

@@ -1,17 +1,19 @@
 import SwiftUI
+import SentryCore
 
 /// The navigation of the whole app (§4.2, D16): a `ZStack` that switches on
 /// `session.phase`, with overlays as sheets and covers. No stack, no back gesture.
 ///
-/// Screens are resolved through `ScreenRegistry` (B6): the play factory first, then
-/// the meta factory, then a labelled `PlaceholderScreen`. With no other ticket
-/// present every phase and every sheet renders a placeholder — which is the state
-/// this ticket ships in, and the state its screenshot shows.
+/// Screens are resolved through **the model's** `ScreenRegistry` (B6): the play
+/// factory first, then the meta factory, then a labelled `PlaceholderScreen`. It is
+/// the model's registry and not the singleton (R9) so that a preview or a test can
+/// hand this view a model with its own factories installed and get its own screens
+/// back, instead of whatever the process happens to have registered.
 struct PhaseHost: View {
   @Environment(GameModel.self) private var model
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-  private var registry: ScreenRegistry { .shared }
+  private var registry: ScreenRegistry { model.registry }
 
   var body: some View {
     ZStack {

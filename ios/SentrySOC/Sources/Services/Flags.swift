@@ -1,4 +1,5 @@
 import Foundation
+import SentryCore
 
 /// `UserDefaults` holds **exactly five** launch-critical flags (§4.3) and nothing
 /// else. Everything with any weight — the career, the mid-shift snapshot — is a
@@ -19,6 +20,21 @@ nonisolated struct Flags {
     case haptics = "sentry.haptics"
     case holdToFile = "sentry.holdToFile"
     case coaching = "sentry.coaching"
+
+    /// The three switches are `SentryCore.SettingKey`, exactly — the reducer emits
+    /// those raw values and this is where they land. Going through this initialiser
+    /// rather than repeating the mapping is what keeps the two rosters from drifting
+    /// apart in a way only a player would notice.
+    init(_ setting: SettingKey) {
+      switch setting {
+      case .haptics: self = .haptics
+      case .holdToFile: self = .holdToFile
+      case .coaching: self = .coaching
+      }
+    }
+
+    /// The two one-shot gates, which have no `SettingKey` — nobody toggles them.
+    static let gates: [Key] = [.firstRun, .onboarding]
   }
 
   private let defaults: UserDefaults
@@ -51,7 +67,8 @@ nonisolated struct Flags {
 
   var settings: SettingsState {
     SettingsState(
-      haptics: bool(.haptics), holdToFile: bool(.holdToFile), coaching: bool(.coaching))
+      haptics: bool(Key(.haptics)), holdToFile: bool(Key(.holdToFile)),
+      coaching: bool(Key(.coaching)))
   }
 
   /// The disclaimer has been acknowledged.

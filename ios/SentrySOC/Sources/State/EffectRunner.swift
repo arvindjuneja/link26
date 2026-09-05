@@ -21,7 +21,8 @@ import SentryCore
     var career: () -> CareerState
     /// The Settings toggle. Reduce Motion is deliberately NOT consulted (D18).
     var hapticsEnabled: () -> Bool
-    /// The 16:00 settlement chain — C3 scores, C4 awards. Owned by the model.
+    /// Adopt `session.settlement` — the career it computed, and the inbox event it
+    /// carries. The arithmetic already happened, in the reducer.
     var settle: () -> Void
     /// Stamp `career.dailyDoneOn` (Appendix A G7).
     var markDailyDone: (String) -> Void
@@ -41,6 +42,20 @@ import SentryCore
   /// have to sleep a quarter of a second to see a file.
   private let coalesceWindow: Duration
   private var pendingSessionWrite: Task<Void, Never>?
+
+  /// Monotonic, bumped by every `.clearSession` (R9).
+  ///
+  /// The hole it closes: a session write is two hops — the coalescing sleep, then
+  /// the actor call — and a shift can settle in between. Without a generation, the
+  /// write that was already in the air lands *after* the delete and resurrects a
+  /// board the player has finished, which the hub then offers to resume. A write
+  /// carries the generation it was scheduled under and abandons itself if the world
+  /// moved on.
+  private var generation = 0
+  /// Every store operation, in the order it was asked for. Writes and deletes must
+  /// not race each other across their suspension points, and `SaveStore` is not this
+  /// ticket's file to serialise, so they are serialised here.
+  private var storeChain: Task<Void, Never>?
 
   private static let log = Logger(subsystem: "pl.oumm.sentry.soc", category: "EffectRunner")
 
@@ -73,7 +88,9 @@ import SentryCore
   private func perform(_ effect: Effect) {
     #if DEBUG
       performed.append(effect)
-      if performed.count > Self.performedCap { performed.removeFirst(performed.count - Self.performedCap) }
+      if performed.count > Self.performedCap {
+        performed.removeFirst(performed.count - Self.performedCap)
+      }
     #endif
 
     switch effect {
@@ -87,14 +104,15 @@ import SentryCore
     case .clearSession:
       pendingSessionWrite?.cancel()
       pendingSessionWrite = nil
-      Task { await save.clearSession() }
+      generation += 1
+      enqueueStoreWork { store in await store.clearSession() }
 
     case .settleShift:
       context.settle()
 
     case .persistCareer:
       let career = context.career()
-      Task { await save.saveCareer(career) }
+      enqueueStoreWork { store in await store.saveCareer(career) }
 
     case .setFlag(let key, let value):
       flags.set(rawKey: key, value)
@@ -114,7 +132,7 @@ import SentryCore
       try? await Task.sleep(for: window)
       guard !Task.isCancelled, let self else { return }
       self.pendingSessionWrite = nil
-      await self.writeSessionNow()
+      self.writeSessionNow()
     }
   }
 
@@ -123,19 +141,31 @@ import SentryCore
   func flushPendingWrites() {
     pendingSessionWrite?.cancel()
     pendingSessionWrite = nil
-    Task { await writeSessionNow() }
+    writeSessionNow()
   }
 
   /// **Deleting the save is `.clearSession`'s job and nothing else's.** A write that
   /// finds no snapshot does nothing: the state that produces no snapshot is "sitting
   /// on the hub", and the hub is exactly where a player looks at the Resume card and
   /// then backgrounds the app. Clearing here would eat that save.
-  private func writeSessionNow() async {
-    guard let snapshot = context.snapshot() else { return }
-    await save.saveSession(snapshot)
+  private func writeSessionNow() {
+    let scheduled = generation
+    enqueueStoreWork { [weak self] store in
+      guard let self, scheduled == self.generation, let snapshot = self.context.snapshot()
+      else { return }
+      await store.saveSession(snapshot)
+    }
   }
 
-  #if DEBUG
-    func resetPerformedLog() { performed.removeAll() }
-  #endif
+  /// Append to the store's serial chain. The work runs on the main actor after
+  /// everything asked for before it has finished, so a generation check inside it is
+  /// a decision about a settled world rather than a guess about a racing one.
+  private func enqueueStoreWork(_ work: @escaping @MainActor (SaveStore) async -> Void) {
+    let previous = storeChain
+    let store = save
+    storeChain = Task { @MainActor in
+      await previous?.value
+      await work(store)
+    }
+  }
 }

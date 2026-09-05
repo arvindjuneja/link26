@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// The type system — `DESIGN.md` §2.16, `SPEC.md` §4.5.
 ///
@@ -45,8 +46,10 @@ nonisolated enum Typography {
   ///
   /// `FontRegistrationTests` asserts this set equals `UIAppFonts`, so a face added
   /// to `project.yml` and to `Resources/` without a case above fails the suite. The
-  /// other half of the bargain — one step of the scale per case — is held by the
-  /// cases themselves: there are six, and the seven-step scale below calls all six.
+  /// other half of the bargain — at least one step of the scale per case — is held
+  /// by the cases themselves: there are six faces, and the ten-step scale below
+  /// calls every one of them (`Resources/FONTS.md` carries the face → step table;
+  /// C6/C11 refresh it in the pass that closes R11).
   static let registeredFaceNames: [String] =
     [Mono.regular, .medium, .semibold].map(\.rawValue)
     + [Grotesk.regular, .medium, .bold].map(\.rawValue)
@@ -82,6 +85,34 @@ nonisolated enum Typography {
   /// 13 pt, heavier — a chip that has to hold its own against a rule name.
   static let metaStrong = mono(13, .medium, relativeTo: .footnote)
 
+  /// **R11's quiet log / meta step.** The machine voice turned all the way down:
+  /// the meter fear captions (§2.5), the coverage line, a pulled source's spent
+  /// cost — text that must be legible without ever competing with the alert.
+  ///
+  /// **Divergence, reported to the lead.** R11 binds this step to **IBM Plex Mono
+  /// Light**, which is *not* in the bundle: C6 shipped Regular / Medium / SemiBold
+  /// (see `Resources/FONTS.md`, `project.yml` `UIAppFonts`), and both files are
+  /// outside C7's ownership — `Resources/` is C6's and `project.yml` is frozen
+  /// (§11 rule 6). Declaring a `Mono.light` case here without the TTF would resolve
+  /// through `Font.custom` to a **silent** system-ui fallback, which is exactly the
+  /// failure mode `FontRegistrationTests` exists to catch (R8/X10). So the step is
+  /// real and named, and it earns its quiet from size and colour (`quietLog()`
+  /// below) rather than from weight, until the Light face is added.
+  static let quietLog = mono(11, .regular, relativeTo: .caption2)
+
+  /// 13 pt in the **human** voice — the missing half of the meta step. Two
+  /// wireframes need it and neither can use `meta`: a source's question (§2.6,
+  /// "13 pt Grotesk italic") and a disposition's subtitle (§2.9, "13 pt zinc-500").
+  /// A question set in the machine voice reads as another log label, which is
+  /// exactly the confusion the source rows exist to remove.
+  static let metaProse = grotesk(13, .regular, relativeTo: .footnote)
+
+  /// **R11's grade numeral.** The heaviest machine cut at the hero step: the four
+  /// `StatTile` figures and the payout at 16:00 (§2.11 — "28 pt mono tabular").
+  /// Pairs with `stamp`, so Plex SemiBold carries two steps rather than one and no
+  /// registered face is dead weight.
+  static let gradeNumeral = mono(28, .semibold, relativeTo: .title2)
+
   /// The verdict stamp (§2.16 puts the stamp in the machine voice, C7 draws it).
   /// The heaviest mono cut, because it lands once per call and has to read as
   /// pressed into the page rather than typed onto it.
@@ -91,8 +122,45 @@ nonisolated enum Typography {
   static let body = grotesk(15, .regular, relativeTo: .body)
   /// 15 pt — the same step in the machine voice, for evidence detail and raw log.
   static let bodyMono = mono(15, .regular, relativeTo: .body)
+
   /// The 1.55 line height of the body step, as the extra leading SwiftUI wants.
-  static let bodyLineSpacing: CGFloat = 15 * 0.55
+  ///
+  /// **Corrected against the rendered screenshots (C7).** `.lineSpacing(_:)` is
+  /// *additive* — it is the gap **between** line boxes, not the line height — so
+  /// `15 × 0.55 = 8.25` stacked on top of the face's own leading and shipped a
+  /// ~1.8 line height, not the 1.55 §2.16 asks for. Visible in every prose block:
+  /// a three-line coach bubble read as six lines of air.
+  ///
+  /// 1.55 × 15 = 23.25 pt total, against a rendered Grotesk line box of ≈19.1 pt,
+  /// leaves ≈4.1 pt of added leading. The arithmetic is the same at any step:
+  /// `lineSpacing(forSize:ratio:)`.
+  static let bodyLineSpacing: CGFloat = lineSpacing(forSize: 15, ratio: 1.55)
+
+  /// Extra leading that lands a **total** line height of `ratio × size` for the
+  /// Grotesk cuts. Never negative: a ratio tighter than the face's own line box
+  /// cannot be expressed through `lineSpacing`, and clamping is better than a
+  /// silent overlap.
+  static func lineSpacing(forSize size: CGFloat, ratio: CGFloat) -> CGFloat {
+    max(0, size * ratio - groteskLineHeight(atSize: size))
+  }
+
+  /// The Grotesk body face's **rendered** line box at `size`, asked of the font
+  /// itself rather than transcribed from its `hhea` table.
+  ///
+  /// A hand-typed em constant is the one thing this file is not allowed to be: the
+  /// value that shipped before (1.257, read off `984/−273` per 1000 upem) is 1.5 %
+  /// under what CoreText actually lays out (`UIFont(name:size:).lineHeight` is
+  /// 19.14 pt at 15 pt → 1.276 em), which quietly put the body at 1.569 × instead of
+  /// §2.16's 1.55 ×. `groteskFallbackRatio` is only reached if the face is not
+  /// registered in the process — in which case the deck has a much louder problem,
+  /// which `FontRegistrationTests` fails on.
+  private static func groteskLineHeight(atSize size: CGFloat) -> CGFloat {
+    UIFont(name: Grotesk.regular.rawValue, size: size)?.lineHeight
+      ?? size * groteskFallbackRatio
+  }
+
+  /// The measured ratio, used only when the face has not registered.
+  private static let groteskFallbackRatio: CGFloat = 1.276
 
   /// 17 pt — a list-row title.
   static let rowTitle = grotesk(17, .medium, relativeTo: .headline)
@@ -115,13 +183,18 @@ extension View {
 
   /// The tracked uppercase eyebrow: 11 pt mono, `.18em`, allowed to shrink one notch
   /// rather than truncate. Never applied to a sentence — only to a label.
-  func trackedLabel(_ color: Color = Theme.textQuiet) -> some View {
+  ///
+  /// `scale` is the shrink floor. The default 0.9 is the right answer in a column
+  /// that can reflow; a label pinned inside a fixed-height strip that cannot grow —
+  /// the `SystemBar` — passes a deeper floor, because there the alternative to
+  /// shrinking is `QUE…` rather than a taller row.
+  func trackedLabel(_ color: Color = Theme.textQuiet, scale: CGFloat = 0.9) -> some View {
     self
       .font(Typography.label)
       .tracking(Typography.labelTracking)
       .textCase(.uppercase)
       .foregroundStyle(color)
-      .minimumScaleFactor(0.9)
+      .minimumScaleFactor(scale)
       .lineLimit(1)
   }
 
@@ -132,6 +205,16 @@ extension View {
     self
       .font(Typography.body)
       .lineSpacing(Typography.bodyLineSpacing)
+      .foregroundStyle(color)
+      .fixedSize(horizontal: false, vertical: true)
+  }
+
+  /// The quiet log line (R11): the machine voice at the 11 pt floor, in the colour
+  /// that says "read this only if you want to". Wraps rather than truncates — the
+  /// fear captions and the coverage line are sentences, not labels.
+  func quietLog(_ color: Color = Theme.textDisabled) -> some View {
+    self
+      .font(Typography.quietLog)
       .foregroundStyle(color)
       .fixedSize(horizontal: false, vertical: true)
   }

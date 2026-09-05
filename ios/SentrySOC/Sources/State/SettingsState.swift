@@ -1,11 +1,12 @@
 import Foundation
+import SentryCore
 
 /// The three player-controlled switches (§4.1). Not part of the save file: these
 /// are launch-critical — the first frame has to know whether the coach draws — so
 /// they live in `UserDefaults` alongside the two one-shot gates (§4.3).
 ///
-/// The key type is `SettingKey`, which C5 publishes from `SentryCore` so the
-/// reducer can carry a setting change without knowing what storage is.
+/// The key type is `SettingKey`, published by `SentryCore` (C5) so the reducer can
+/// carry a setting change without knowing what storage is.
 nonisolated struct SettingsState: Codable, Sendable, Hashable {
 
   /// The haptics off-switch. **Reduce Motion does not touch this** (D18) — the
