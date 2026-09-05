@@ -151,7 +151,7 @@ const STEPS: Step[] = [
     anchor: null,
     title: "That's the whole game",
     body:
-      "Take a job → hide your tracks → get in → grab the goods → get out before the heat catches up. You panicked back there, and you recovered. That's the job. The rest of your tools and tougher contracts are on screen now — they unlock as you work. Go earn, operator.",
+      "Take a job → hide your tracks → get in → grab the goods → get out before the heat catches up. You panicked back there, and you recovered. That's the job. I've pulled you off the line so your trace cools — never sit connected with nothing to do. The rest of your tools and tougher contracts are on screen now; they unlock as you work. Go earn, operator.",
     button: "Start playing ▸",
   },
 ];
@@ -275,6 +275,15 @@ export default function GuidedOnboarding({
 
   const advanceManual = () => {
     if (step.kind === "outro") {
+      // The tutorial's last action was a `submit` while still jacked in — which
+      // never drops the session. Leaving the player connected means the dwell
+      // clock keeps pushing NETWORK up while they read the newly-revealed panels,
+      // and they can drift into LOCKDOWN through no fault of their own. Pull them
+      // off the line as they exit the coach so free play starts from a clean, calm
+      // slate. Runs through the real engine so the terminal shows the disconnect.
+      if (useGameStore.getState().gameState.session.connectedHost) {
+        runCommand("disconnect");
+      }
       try {
         localStorage.setItem(DONE_KEY, "1");
       } catch {

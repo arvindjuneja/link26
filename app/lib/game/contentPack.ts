@@ -878,6 +878,18 @@ export const MERCER_LINES: MercerLine[] = [
     "text": "Attribution's climbing. Keep this up and someone draws a straight line from the work to a face. Mix your methods, kill the tells."
   },
   {
+    "situation": "connected_idle",
+    "text": "You're still jacked in with nothing to do. That's the worst place to sit — the trace only climbs while you're on the line. Type 'disconnect' and let it cool."
+  },
+  {
+    "situation": "connected_idle",
+    "text": "Session's open and you're idle. Every second parked in there is signature you're handing them for free. Drop the connection, then pick your next job."
+  },
+  {
+    "situation": "connected_idle",
+    "text": "Get off the line. No contract's running and that host is still logging you — 'disconnect' now, breathe, then work the board."
+  },
+  {
     "situation": "idle_nudge",
     "text": "You still on the line? Open sessions rot. Either work it or close it — sitting parked is just free evidence for them."
   },

@@ -648,7 +648,10 @@ export function reduceCommand(
         ctx,
         host
       );
-      result.lines = [line(`Copied ${entry.name} into inventory.`, "success")];
+      // Echo the path the player actually typed, not the file's internal `name`
+      // metadata — otherwise `cp /secrets.txt @local` confusingly reports
+      // "Copied asset_register.txt …" and reads like a bug on the first exfil.
+      result.lines = [line(`Copied ${entry.path} into inventory.`, "success")];
       result.soundCue = "fileOp";
       result.vfx = { type: "success" };
       break;

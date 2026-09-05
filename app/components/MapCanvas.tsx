@@ -1,6 +1,6 @@
 "use client";
 
-import { MouseEvent, PointerEvent, useEffect, useMemo, useRef, useState } from "react";
+import { CSSProperties, MouseEvent, PointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { RouteState, World, TraceInfo } from "@/types/game";
 import { continents } from "@/app/lib/map/continents";
 import { useGameStore } from "@/app/lib/persistence/store";
@@ -96,7 +96,10 @@ export default function MapCanvas({ world, route, trace, focusHost, session, onP
       return;
     }
     const startTime = scanAnimation.startTime;
-    const duration = scanAnimation.phase === "routing" ? 600 : scanAnimation.phase === "scanning" ? 800 : 400;
+    // Slightly longer sweeps so the beam is legible as a *movement* across the
+    // map rather than a flash — this is the moment the player should feel they
+    // reached out and touched a machine.
+    const duration = scanAnimation.phase === "routing" ? 900 : scanAnimation.phase === "scanning" ? 1100 : 550;
     let frame: number;
     const animateWave = () => {
       const elapsed = Date.now() - startTime;
@@ -261,40 +264,73 @@ export default function MapCanvas({ world, route, trace, focusHost, session, onP
           acc += segLengths[i];
         }
 
-        ctx.strokeStyle = "rgba(56,189,248,0.7)";
-        ctx.lineWidth = 2;
-        ctx.shadowColor = "rgba(56,189,248,0.9)";
-        ctx.shadowBlur = 10;
-        ctx.setLineDash([7, 5]);
-        ctx.beginPath();
-        ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
-        let drawn = 0;
-        for (let i = 0; i < segLengths.length && drawn < waveDistance; i++) {
-          if (segLengths[i] <= waveDistance - drawn) {
-            ctx.lineTo(pathPoints[i + 1].x, pathPoints[i + 1].y);
-            drawn += segLengths[i];
-          } else {
-            ctx.lineTo(waveX, waveY);
-            break;
+        // Trace the drawn portion of the path (player → hops → wave head) so we
+        // can stroke it several times for a layered, luminous beam.
+        const traceBeam = () => {
+          ctx.beginPath();
+          ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
+          let drawn = 0;
+          for (let i = 0; i < segLengths.length && drawn < waveDistance; i++) {
+            if (segLengths[i] <= waveDistance - drawn) {
+              ctx.lineTo(pathPoints[i + 1].x, pathPoints[i + 1].y);
+              drawn += segLengths[i];
+            } else {
+              ctx.lineTo(waveX, waveY);
+              break;
+            }
           }
-        }
+        };
+
+        // 1) Soft wide underlay — the "glow" the eye reads as energy in the wire.
+        ctx.setLineDash([]);
+        ctx.shadowColor = "rgba(56,189,248,0.9)";
+        ctx.shadowBlur = 20;
+        ctx.strokeStyle = "rgba(56,189,248,0.16)";
+        ctx.lineWidth = 7;
+        traceBeam();
+        ctx.stroke();
+
+        // 2) Bright core with marching dashes flowing toward the target.
+        ctx.shadowBlur = 12;
+        ctx.strokeStyle = "rgba(125,211,252,0.9)";
+        ctx.lineWidth = 2.8;
+        ctx.setLineDash([9, 7]);
+        ctx.lineDashOffset = -phase * 9;
+        traceBeam();
         ctx.stroke();
         ctx.setLineDash([]);
+        ctx.lineDashOffset = 0;
 
-        const pulse = 5 + Math.sin(phase * 4) * 2;
+        // 3) Leading pulse — an outer halo plus a hot white core at the wave head.
+        const pulse = 6 + Math.sin(phase * 4) * 2.5;
+        ctx.shadowBlur = 16;
+        ctx.beginPath();
+        ctx.fillStyle = "rgba(56,189,248,0.35)";
+        ctx.arc(waveX, waveY, pulse + 4, 0, Math.PI * 2);
+        ctx.fill();
         ctx.beginPath();
         ctx.fillStyle = "rgba(125,211,252,0.95)";
         ctx.arc(waveX, waveY, pulse, 0, Math.PI * 2);
         ctx.fill();
+        ctx.beginPath();
+        ctx.fillStyle = "rgba(235,250,255,0.95)";
+        ctx.arc(waveX, waveY, pulse * 0.45, 0, Math.PI * 2);
+        ctx.fill();
         ctx.shadowBlur = 0;
 
-        if (scanWaveProgress >= 0.95) {
-          const rr = 14 + (scanWaveProgress - 0.95) * 180;
-          ctx.beginPath();
-          ctx.strokeStyle = `rgba(56,189,248,${Math.max(0, 1 - (scanWaveProgress - 0.95) * 10) * 0.6})`;
-          ctx.lineWidth = 2;
-          ctx.arc(targetPoint.x, targetPoint.y, rr, 0, Math.PI * 2);
-          ctx.stroke();
+        // 4) Arrival shockwave — two concentric rings that expand and fade once
+        // the beam lands, so "you're in" reads as an impact, not a stop.
+        if (scanWaveProgress >= 0.9) {
+          const t = scanWaveProgress - 0.9; // 0 → 0.1
+          const fade = Math.max(0, 1 - t * 10);
+          for (let i = 0; i < 2; i++) {
+            const rr = 12 + t * (220 - i * 70);
+            ctx.beginPath();
+            ctx.strokeStyle = `rgba(125,211,252,${fade * (0.6 - i * 0.25)})`;
+            ctx.lineWidth = 2.5 - i;
+            ctx.arc(targetPoint.x, targetPoint.y, rr, 0, Math.PI * 2);
+            ctx.stroke();
+          }
         }
       }
     }
@@ -476,6 +512,22 @@ export default function MapCanvas({ world, route, trace, focusHost, session, onP
   const canvasWidth = isFullscreen ? 1920 : large ? 1400 : 500;
   const canvasHeight = isFullscreen ? 960 : large ? 700 : 250;
 
+  // Cinematic camera: while a scan/connect wave is playing, push the map in and
+  // frame the target host, then ease back out when it clears. It's a plain CSS
+  // transform on the canvas element — GPU-smooth, and the HUD (labels, trace,
+  // legend) stays pinned on top while the world moves underneath. Origin is
+  // clamped so the target never slams into an edge.
+  let cameraStyle: CSSProperties = { transformOrigin: "50% 50%", transform: "scale(1)" };
+  if (scanAnimation?.toNode) {
+    const focus = world.hosts[scanAnimation.toNode];
+    if (focus) {
+      const p = toCanvasPoint(focus.geo.lat, focus.geo.lon, canvasWidth, canvasHeight);
+      const ox = Math.max(15, Math.min(85, (p.x / canvasWidth) * 100));
+      const oy = Math.max(18, Math.min(82, (p.y / canvasHeight) * 100));
+      cameraStyle = { transformOrigin: `${ox}% ${oy}%`, transform: `scale(${large ? 2.15 : 1.7})` };
+    }
+  }
+
   const traceColor = trace?.status === "LOCKDOWN" ? "bg-rose-500" : trace?.status === "HUNT" ? "bg-orange-500" : trace?.status === "ALERT" ? "bg-amber-500" : "bg-cyan-500";
   const traceTextColor = trace?.status === "LOCKDOWN" ? "text-rose-400" : trace?.status === "HUNT" ? "text-orange-400" : trace?.status === "ALERT" ? "text-amber-400" : "text-cyan-300";
 
@@ -485,14 +537,16 @@ export default function MapCanvas({ world, route, trace, focusHost, session, onP
 
   return (
     <div ref={containerRef} className={`relative ${containerClass}`}>
-      <div className="pointer-events-none absolute left-3 top-3 z-10 rounded bg-black/60 px-2.5 py-1 text-[0.62rem] uppercase tracking-[0.25em] text-cyan-400/70">
+      {/* Decorative label — hidden on narrow screens where it would collide with
+          the centered trace read-out and the right-hand legend/Full cluster. */}
+      <div className="pointer-events-none absolute left-3 top-3 z-10 hidden rounded bg-black/60 px-2.5 py-1 text-[0.62rem] uppercase tracking-[0.25em] text-cyan-400/70 sm:block">
         Network Map
       </div>
 
       {large && trace && (
-        <div className="absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-center gap-3 rounded bg-black/60 px-3 py-1.5">
-          <span className="text-[0.6rem] uppercase tracking-[0.15em] text-zinc-500">Trace</span>
-          <div className="h-1.5 w-28 overflow-hidden rounded-full bg-zinc-800">
+        <div className="absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-center gap-2 rounded bg-black/60 px-2.5 py-1.5 sm:gap-3 sm:px-3">
+          <span className="hidden text-[0.6rem] uppercase tracking-[0.15em] text-zinc-500 sm:inline">Trace</span>
+          <div className="h-1.5 w-20 overflow-hidden rounded-full bg-zinc-800 sm:w-28">
             <div className={`h-full ${traceColor} transition-all duration-300`} style={{ width: `${Math.min(trace.level, 100)}%` }} />
           </div>
           <span className={`text-[0.7rem] font-semibold tabular-nums ${traceTextColor}`}>{trace.level.toFixed(1)}%</span>
@@ -501,7 +555,9 @@ export default function MapCanvas({ world, route, trace, focusHost, session, onP
       )}
 
       <div className="absolute right-3 top-3 z-10 flex items-center gap-3">
-        <div className="flex gap-3 text-[0.58rem] text-zinc-500">
+        {/* Legend hides below sm so the header never overlaps the centered trace
+            bar on phones; the Full toggle stays reachable. */}
+        <div className="hidden gap-3 text-[0.58rem] text-zinc-500 sm:flex">
           <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-cyan-400" /> Proxy</span>
           <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rotate-45 bg-orange-400" /> Target</span>
         </div>
@@ -518,8 +574,8 @@ export default function MapCanvas({ world, route, trace, focusHost, session, onP
         ref={canvasRef}
         width={canvasWidth}
         height={canvasHeight}
-        className={isFullscreen ? "max-h-full max-w-full cursor-crosshair" : "block h-full w-full cursor-crosshair"}
-        style={{ aspectRatio: "2 / 1" }}
+        className={`${isFullscreen ? "max-h-full max-w-full" : "block h-full w-full"} cursor-crosshair ${scanAnimation ? "pointer-events-none" : ""}`}
+        style={{ aspectRatio: "2 / 1", transition: "transform 900ms cubic-bezier(0.22, 1, 0.36, 1)", willChange: "transform", ...cameraStyle }}
         onPointerMove={handlePointer}
         onPointerLeave={() => {
           setHovered(null);

@@ -17,6 +17,11 @@ function deriveSituation(args: {
   if (args.attributionStatus === "HUNT" || args.attributionStatus === "LOCKDOWN") return "high_attribution";
   if (args.overallStatus === "LOCKDOWN") return "burned";
   if (args.connected && args.hops === 0) return "no_route_warning";
+  // Parked on a live session with nothing to do: the trace is climbing and the
+  // right move is to get OFF the line, not to "keep working". The plain idle
+  // nudge below assumes you're disconnected, so it would give exactly the wrong
+  // advice here — catch the connected case first.
+  if (args.connected && args.acceptedCount === 0) return "connected_idle";
   if (args.acceptedCount === 0) return "idle_nudge";
   return "intro";
 }
