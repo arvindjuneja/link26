@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // OpenNext build output (gitignored) — not source.
+    ".open-next/**",
   ]),
 ]);
 
