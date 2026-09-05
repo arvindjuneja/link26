@@ -53,8 +53,8 @@ const DISPOSITION_META: Record<
   Disposition,
   { label: string; sub: string; tone: "cyan" | "emerald" | "amber" | "rose" }
 > = {
-  "close-false-positive": { label: "Close · False Positive", sub: "a false alarm — no real threat", tone: "cyan" },
-  "close-benign": { label: "Close · Benign (authorized)", sub: "correct detection, sanctioned activity", tone: "emerald" },
+  "close-false-positive": { label: "Close · False Positive", sub: "didn't happen — the rule misread it", tone: "cyan" },
+  "close-benign": { label: "Close · Benign (authorized)", sub: "it happened — and it was sanctioned", tone: "emerald" },
   "escalate-tier2": { label: "Escalate → Tier 2", sub: "suspicious / confirmed — hand up", tone: "amber" },
   "escalate-ir-isolate": { label: "Escalate → IR + isolate host", sub: "active threat — contain now", tone: "rose" },
 };
@@ -565,15 +565,16 @@ function Briefing({
       )}
       <div className="mt-3 space-y-2.5 text-[0.8rem] leading-relaxed text-zinc-400">
         <p>
-          You&apos;re the Tier-1 analyst. Every alert on that queue resolves to exactly one call:
-          a <span className="text-rose-300">True Positive</span> (a real threat),
-          a <span className="text-cyan-300">False Positive</span> (the detection misfired),
-          or a <span className="text-emerald-300">Benign True Positive</span> (the detection was right, but the activity was authorized).
+          You&apos;re the Tier-1 analyst. One question decides every alert on that queue:{" "}
+          <span className="font-semibold text-zinc-200">did the attack behaviour the rule hunts for actually happen?</span>{" "}
+          If it didn&apos;t, and ordinary activity only looked like it, that&apos;s a <span className="text-cyan-300">False Positive</span>;
+          if it did but a pentest, change ticket or known tool sanctioned it, that&apos;s a <span className="text-emerald-300">Benign True Positive</span>;
+          if it did and nothing sanctioned it, that&apos;s a <span className="text-rose-300">True Positive</span>.
         </p>
         <p>
           The tool&apos;s severity label is a <em>guess</em> — most of what it screams about is noise. Your job is to
           pull the right logs, read what actually happened, and make the call. Escalate a real threat; don&apos;t bury
-          Tier-2 in false alarms; and never isolate a sanctioned operation.
+          Tier-2 in noise; and never isolate a sanctioned operation.
         </p>
         <p className="text-[0.7rem] text-zinc-600">
           Miss a real one and it dwells — watch the BREACH RISK meter. Cry wolf and the NOISE meter climbs. Triage the board.

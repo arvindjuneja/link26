@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 // A light first-shift coach — the blue-seat cousin of GuidedOnboarding, but tuned for
 // an EXPLORATORY loop rather than a strict "type this command" tutorial. It GUIDES
@@ -39,7 +39,10 @@ const STEPS: Step[] = [
   {
     anchor: "call",
     title: "Now make the call",
-    body: "True Positive, False Positive, or Benign (authorized)? Pick one — you'll get a full debrief either way. (You can still pull more logs first.)",
+    body:
+      "True Positive, False Positive, or Benign (authorized)? Pick one — full debrief either way.\n" +
+      "Didn't happen → False Positive. Happened + sanctioned → Benign-TP. Happened + unsanctioned → True Positive.\n" +
+      "FP means the rule's logic is wrong — change what it fires on. Benign-TP means the rule is right — scope an exception and leave the logic alone.",
     // terminal: SocConsole persists completion on the first real call; or dismiss here.
   },
 ];
@@ -56,6 +59,9 @@ export default function SocOnboarding({
   const [stepIndex, setStepIndex] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [vp, setVp] = useState({ w: 1440, h: 900 });
+  // The bubble grows/shrinks with each step's body — measure it, never assume it.
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const [bubbleH, setBubbleH] = useState(200);
 
   useEffect(() => {
     setMounted(true);
@@ -74,6 +80,15 @@ export default function SocOnboarding({
     }
   }, [active, step, sourcesPulled, hasEvidence]);
 
+  // Bring the step's anchor into view once per step — on narrow viewports it can sit
+  // below the fold, which would strand both the ring and the bubble off screen.
+  useEffect(() => {
+    if (!active) return;
+    document
+      .querySelector(`[data-soc="${step.anchor}"]`)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [active, step.anchor, stepIndex]);
+
   // Measure the highlighted element; keep aligned as panels resize.
   useLayoutEffect(() => {
     if (!active) return;
@@ -81,6 +96,11 @@ export default function SocOnboarding({
       setVp({ w: window.innerWidth, h: window.innerHeight });
       const el = document.querySelector(`[data-soc="${step.anchor}"]`);
       setRect(el ? el.getBoundingClientRect() : null);
+      const card = cardRef.current;
+      if (card) {
+        const h = card.getBoundingClientRect().height;
+        if (h > 0) setBubbleH((prev) => (Math.abs(prev - h) > 0.5 ? h : prev));
+      }
     };
     measure();
     const id = window.setInterval(measure, 250);
@@ -105,13 +125,18 @@ export default function SocOnboarding({
     setDismissed(true);
   };
 
-  const BUBBLE_W = 360;
   const pad = 16;
+  const gap = 14;
+  const BUBBLE_W = Math.min(360, Math.max(240, vp.w - pad * 2));
   let bubble: React.CSSProperties;
   if (rect) {
-    const spaceBelow = vp.h - rect.bottom;
-    const top = spaceBelow > 230 ? rect.bottom + 14 : Math.max(pad, rect.top - 224);
-    const left = Math.min(Math.max(pad, rect.left), vp.w - BUBBLE_W - pad);
+    // Place below if the measured card fits there, else above — then keep it on screen
+    // (the anchor can sit below the fold on narrow viewports).
+    const below = rect.bottom + gap;
+    const above = rect.top - gap - bubbleH;
+    const raw = below + bubbleH <= vp.h - pad ? below : above;
+    const top = Math.max(pad, Math.min(raw, vp.h - bubbleH - pad));
+    const left = Math.min(Math.max(pad, rect.left), Math.max(pad, vp.w - BUBBLE_W - pad));
     bubble = { position: "fixed", top, left, width: BUBBLE_W };
   } else {
     bubble = { position: "fixed", bottom: 24, left: "50%", width: BUBBLE_W, transform: "translateX(-50%)" };
@@ -136,14 +161,14 @@ export default function SocOnboarding({
       )}
 
       <div style={bubble} className="z-[70] font-mono">
-        <div className="pointer-events-auto rounded-lg border border-emerald-400/40 bg-[#05080c] p-4 shadow-[0_0_36px_-8px] shadow-emerald-500/40">
+        <div ref={cardRef} className="pointer-events-auto rounded-lg border border-emerald-400/40 bg-[#05080c] p-4 shadow-[0_0_36px_-8px] shadow-emerald-500/40">
           <div className="mb-1.5 flex items-center gap-2">
             <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
             <span className="text-[0.58rem] uppercase tracking-[0.2em] text-emerald-300">Shift lead · in your ear</span>
             <span className="ml-auto text-[0.55rem] text-zinc-600">{stepIndex + 1}/{STEPS.length}</span>
           </div>
           <h3 className="text-sm font-semibold text-zinc-100">{step.title}</h3>
-          <p className="mt-1 text-[0.72rem] leading-relaxed text-zinc-400">{step.body}</p>
+          <p className="mt-1 whitespace-pre-line text-[0.72rem] leading-relaxed text-zinc-400">{step.body}</p>
           <div className="mt-2.5 flex items-center gap-3">
             {step.button && (
               <button

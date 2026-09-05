@@ -33,13 +33,13 @@ export type SocArchetype =
 
 // The three-way classification every Tier-1 alert resolves to (verified against
 // Microsoft Defender/Sentinel taxonomy). Benign-TP is the subtle one: the
-// detection fired CORRECTLY, but the activity was authorized.
+// behaviour the rule hunts for really happened, and it was sanctioned.
 export type SocVerdict = "true-positive" | "false-positive" | "benign-true-positive";
 
 // The player's call merges classification + disposition into one decision, so the
 // three-way verdict AND the escalate/contain choice are made in a single move.
-//   close-false-positive  → verdict FP            (the detection itself was wrong)
-//   close-benign          → verdict Benign-TP     (correct detection, authorized activity)
+//   close-false-positive  → verdict FP            (the hunted behaviour never happened)
+//   close-benign          → verdict Benign-TP     (it happened; a sanction covers it)
 //   escalate-tier2        → verdict TP, hand up   (suspicious/confirmed, no isolation)
 //   escalate-ir-isolate   → verdict TP, contain   (high-confidence active threat)
 // The last is org-dependent authority (some SOCs reserve isolation for T2/IR) —

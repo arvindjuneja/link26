@@ -121,7 +121,7 @@ const S: Record<string, DataSource> = {
   namedLocations: {
     id: "named-locations",
     label: "Named locations / VPN register",
-    question: "is this IP a sanctioned VPN or known duty location?",
+    question: "is this IP a corporate VPN or known duty location?",
     cost: 5,
   },
   mfaLogs: {
@@ -302,15 +302,15 @@ const HAND_AUTHORED_CASES: SocCase[] = [
       {
         id: "b2-ticket",
         sourceId: "change-tickets",
-        label: "No relevant change",
-        detail: "Org-wide weekend password reset was scheduled (CHG-2270), which explains the lockouts.",
+        label: "Reset — not a grant",
+        detail: "Org-wide weekend password reset was scheduled (CHG-2270) — it explains the failures; it authorizes nothing.",
         weight: "supporting",
       },
     ],
     truth: "false-positive",
     correctDisposition: "close-false-positive",
     why:
-      "Same shape as a credential-stuffing hit — failures then a success — but the SOURCE and CONTEXT flip the verdict. The failures are fat-fingered attempts from the user's OWN keyboard right after a scheduled weekend reset, with a helpdesk ticket to match, then a normal interactive logon. The rule fired on a real pattern, but there's no threat. Close it as a false positive.",
+      "Same shape as a password-guessing hit — failures then a success — but the SOURCE and CONTEXT flip the verdict. The failures are fat-fingered attempts from the user's OWN keyboard right after a scheduled weekend reset, with a helpdesk ticket to match, then a normal interactive logon. The rule matched the shape, but nobody was guessing — what it hunts for never happened. Close FP.",
     learn: {
       concept:
         "The 4625-burst → 4624 pattern is only a threat when the source/time/account don't fit the user. Always check WHERE it came from before escalating — same detection, opposite verdict.",
@@ -380,7 +380,7 @@ const HAND_AUTHORED_CASES: SocCase[] = [
       "The detection was RIGHT — that really is encoded PowerShell — but the parent is the patch-management agent and a standing change ticket authorizes it. That's a Benign True Positive, not a False Positive: the rule didn't misfire, the activity was simply sanctioned. Closing it as 'FP' would be wrong reasoning (and would tempt someone to suppress the rule that correctly catches the malicious version in A1).",
     learn: {
       concept:
-        "Benign True Positive = correct detection of AUTHORIZED activity. Separate it from a False Positive (where the detection itself was wrong) by hunting for the change ticket / known tool. Don't suppress a rule just because today's hit was sanctioned.",
+        "Benign True Positive = correct detection of AUTHORIZED activity. Separate it from a False Positive — there, the flagged behaviour never happened at all, so no ticket could sanction it. Don't suppress a rule just because today's hit was sanctioned.",
       mitre: { id: "T1059.001", name: "Command and Scripting Interpreter: PowerShell" },
       pointer: "Microsoft Defender alert classification · TP vs FP vs Benign-TP",
     },
@@ -768,7 +768,7 @@ const HAND_AUTHORED_CASES: SocCase[] = [
       "Same shape as a compromise, but the 'impossible' location is the corporate VPN egress: a registered, compliant device, normal app and user-agent — only the IP differs — and the account is still in its learning window. Confirm the sign-in safe and add the VPN range to Named locations so it stops firing. The detection misfired; close FP.",
     learn: {
       concept:
-        "Atypical/impossible travel over-fires on VPNs and during the 14-day/10-login learning period. Validate the sign-in fields — registered device, app, location, IP, user-agent — before you call it; a sanctioned VPN → confirm safe + add to Named locations.",
+        "Atypical/impossible travel over-fires on VPNs and during the 14-day/10-login learning period. Validate the sign-in fields — registered device, app, location, IP, user-agent — before you call it; a corporate VPN egress → confirm safe + add to Named locations.",
       mitre: { id: "T1078.004", name: "Valid Accounts: Cloud Accounts" },
       pointer: "Entra ID Protection investigate-risk · Named locations",
     },
@@ -949,9 +949,9 @@ const HAND_AUTHORED_CASES: SocCase[] = [
       "Same DLP/egress trigger as exfil, opposite verdict: it's the sanctioned nightly backup — the approved backup agent under the backup service account, to the CORPORATE tenant, covered by a standing change ticket. Correct detection of authorized activity = Benign-TP. Note it and close benign; escalating would page IR for a backup. Tells vs real exfil: signed backup product (not ad-hoc script), corporate destination (not personal), and a change ticket.",
     learn: {
       concept:
-        "A scheduled backup or sanctioned cloud-sync to the CORPORATE tenant is a Benign-TP, not exfil. Discriminate on process (backup product vs ad-hoc script), destination (corporate vs personal cloud), and a change ticket — then tune the DLP policy to exclude the approved path.",
+        "A scheduled backup or sanctioned cloud-sync to the CORPORATE tenant is a Benign-TP, not exfil. Discriminate on process (backup product vs ad-hoc script), destination (corporate vs personal cloud), and a change ticket — then add a DLP exclusion for the approved path.",
       mitre: { id: "T1567.002", name: "Exfiltration to Cloud Storage" },
-      pointer: "DLP policy tuning · authorized-backup exclusion",
+      pointer: "DLP exclusions · authorized-backup path",
     },
   },
 
@@ -1186,7 +1186,7 @@ const HAND_AUTHORED_CASES: SocCase[] = [
         id: "al2-ticket",
         sourceId: "change-tickets",
         label: "Weekend reset explains the timing",
-        detail: "The org-wide weekend password reset (CHG-4102) lines up exactly with when the lockouts started.",
+        detail: "The org-wide weekend password reset (CHG-4102) lines up with when the lockouts started — timing, not authorization.",
         weight: "supporting",
       },
       {
@@ -1217,7 +1217,7 @@ const HAND_AUTHORED_CASES: SocCase[] = [
       "The #1 real cause of lockouts, and it looks alarming until you read it right. Event 4740's Caller Computer Name is blank, so you correlate 4771/4776 — and the bad passwords all come from achen's OWN phone and a mapped drive, still submitting the pre-reset password after the weekend change. No attack; a stale cached credential. Close FP, and have the user update the stored password everywhere it's cached.",
     learn: {
       concept:
-        "Most account lockouts are benign — a device caching an OLD password after a change. Event 4740's Caller Computer Name is often blank; correlate Kerberos 4771 / NTLM 4776 to find the true source. Escalate only when that source is anomalous/external.",
+        "Most account lockouts aren't an attack — a device caching an OLD password after a change. Event 4740's Caller Computer Name is often blank; correlate Kerberos 4771 / NTLM 4776 to find the true source. Escalate only when that source is anomalous/external.",
       mitre: { id: "T1110", name: "Brute Force" },
       pointer: "Microsoft event-4740 · 4771/4776 correlation to find the lockout source",
     },
@@ -1282,10 +1282,10 @@ const HAND_AUTHORED_CASES: SocCase[] = [
     correctDisposition: "escalate-ir-isolate",
     acceptableDispositions: ["escalate-tier2"],
     why:
-      "Not a stale-cred misconfig: the 4771/4776 failures span 10+ accounts from a single external IP flagged on a credential-attack feed, foreign, with no authorized-testing ticket — noisy enough to lock each account. That's an active credential attack, and the lockouts are collateral. Escalate to IR and block the source. The tell vs the benign case: MANY accounts from ONE external source, not one user's own device.",
+      "Not a stale-cred misconfig: the 4771/4776 failures span 10+ accounts from a single external IP flagged on a credential-attack feed, foreign, with no authorized-testing ticket — noisy enough to lock each account. That's an active credential attack, and the lockouts are collateral. Escalate to IR and block the source. The tell vs the stale-cred case: MANY accounts from ONE external source, not one user's own device.",
     learn: {
       concept:
-        "A credential attack noisy enough to lock accounts hits MANY accounts from ONE source — vs the benign single-user stale-cred case. Correlate 4771/4776 to the source: external + many accounts + no RoE = active attack, not a misconfigured device.",
+        "A credential attack noisy enough to lock accounts hits MANY accounts from ONE source — vs the single-user stale-cred case. Correlate 4771/4776 to the source: external + many accounts + no RoE = active attack, not a misconfigured device.",
       mitre: { id: "T1110", name: "Brute Force" },
       pointer: "MITRE ATT&CK T1110 · lockout as spray collateral",
     },
@@ -1552,7 +1552,7 @@ const HAND_AUTHORED_CASES: SocCase[] = [
       "Unlike the role-baseline FP, this IS a real, above-baseline bulk export — the detection is correct — but it's the sanctioned migration: an approved change ticket, tokafor is the assigned engineer, and the destination is the CORPORATE tenant, not a personal account. Correct detection of authorized activity = Benign-TP: confirm the ticket, note it, close benign. The discriminators vs the departing-employee theft: authorization + corporate destination + in-role, and the user isn't leaving.",
     learn: {
       concept:
-        "A sanctioned bulk export / migration is a Benign-TP: the detection correctly fires on a real large transfer, but a change ticket authorizes it and the destination is corporate, not personal. Distinguish the three: role-baseline (FP, detection misfired) vs authorized migration (Benign-TP, right but sanctioned) vs departing-employee theft (TP — unauthorized, personal destination, leaving).",
+        "A sanctioned bulk export / migration is a Benign-TP: the detection correctly fires on a real large transfer, but a change ticket authorizes it and the destination is corporate, not personal. Distinguish the three: role-baseline (FP — the anomaly never happened) vs authorized migration (Benign-TP — it happened, and a ticket sanctioned it) vs departing-employee theft (TP — unauthorized, personal destination, leaving).",
       mitre: { id: "T1567", name: "Exfiltration Over Web Service" },
       pointer: "Purview IRM · authorized-export / migration exclusion",
     },

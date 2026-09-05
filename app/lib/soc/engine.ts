@@ -78,19 +78,19 @@ export function gradeCall(c: SocCase, chosen: Disposition): CallGrade {
       // reasoning but not operationally harmful — still counts (verdict differs).
       outcome = verdictCorrect
         ? "Correct — recognized the noise and closed it without burning Tier-2 cycles."
-        : "Closed it (good), but as 'authorized' rather than 'false positive' — the detection itself was wrong.";
+        : "Closed it (good), but as 'authorized' rather than 'false positive' — nothing the rule hunts for happened.";
     } else {
       noiseDelta = chosen === "escalate-ir-isolate" ? 20 : 12;
       outcome = "False escalation — you sent noise up the chain. Do this often and Tier-2 stops trusting your tickets.";
     }
   } else {
-    // benign-true-positive: detection was correct, activity authorized.
+    // benign-true-positive: the behaviour really happened, and it was sanctioned.
     if (chosen === "close-benign") {
       outcome = "Correct — found the authorization and closed it as a benign true positive.";
     } else if (chosen === "close-false-positive") {
-      // Closed it (no breach), but mislabeled WHY — the detection was actually right.
+      // Closed it (no breach), but mislabeled WHY — the behaviour really happened.
       noiseDelta = 4;
-      outcome = "Closed it (fine), but it wasn't a false positive — the detection was correct; the activity was just sanctioned.";
+      outcome = "Closed it (fine), but it wasn't a false positive — the behaviour really happened; it was just sanctioned.";
     } else if (chosen === "escalate-ir-isolate") {
       noiseDelta = 24;
       outcome = "You isolated a sanctioned operation — ops impact, and an angry change-owner. Always check for authorization first.";

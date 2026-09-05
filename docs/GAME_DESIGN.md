@@ -95,9 +95,11 @@ A **shift** presents a **queue of alerts** (the first shift deliberately leans t
 3. **assembles evidence** (cards weighted decisive / supporting / neutral / **noise** — the FP-dominant red herring) toward a verdict;
 4. makes **ONE call** — `close-false-positive` / `close-benign` / `escalate-tier2` / `escalate-ir-isolate` — folding the **three-way classification AND the escalate/contain disposition into a single move**.
 
+**Canonical verdict definition (decided 2026-09-05):** one question decides every alert — did the attack behaviour the rule hunts for actually happen? Didn't happen → **False Positive** (fix the rule). Happened + sanctioned by an artifact (RoE, change ticket, known tool, approved drill) → **Benign True Positive** (scope an exception, leave the logic). Happened + unsanctioned → **True Positive**. Full memo: [`DECISION-soc-taxonomy.md`](DECISION-soc-taxonomy.md).
+
 Two pressure meters reuse `trace.ts`: **breach-risk** (a missed or under-escalated TP is now dwelling) and **noise** (crying wolf — escalating FPs or *isolating authorized activity* erodes trust and buries the next analyst). The headline **heartbeat is driven by the worse of the two** (mirroring Red's max-status-vector), with breach-risk the dread that's *new* to the blue chair. Grading is deliberately **asymmetric**: missing a live threat is the cardinal sin; crying wolf is the chronic one.
 
-**First content — three verified archetypes**, each shipping as a malicious AND an authorized/false-positive variant (same detection, opposite verdict — the thesis):
+**First content — three verified archetypes**, each shipping as a malicious AND an authorized (Benign-TP) or false-positive variant (same detection, opposite verdict — the thesis):
 
 | Archetype | MITRE | The read |
 |---|---|---|
@@ -105,7 +107,7 @@ Two pressure meters reuse `trace.ts`: **breach-risk** (a missed or under-escalat
 | Auth brute-force | **T1110** (4624/4625/4672) | burst→success is only a threat when source/time/account don't fit the user |
 | DNS C2 / beaconing | **T1071.004** | fixed-interval + high-entropy + NXDOMAIN — but confirm it's a temp-path binary, not a browser/CDN |
 
-**Round 2 (2026-06-28, [`soc-tier1-cases-round2.md`](research/soc-tier1-cases-round2.md)) added a second shift** over four more archetypes — again each malicious **and** authorized/FP: **Phishing** (SPF/DKIM/DMARC + sanctioned-simulation B-TP; `T1566`), **Impossible-travel / MFA-fatigue** (Entra ID Protection risk detections; **`T1621`**, **`T1078.004`** — verified), **EDR malware** (Defender for Endpoint *True positive / Informational-expected / False positive*; `T1204`), **Data exfil to cloud storage** (personal-cloud TP vs sanctioned-backup B-TP; **`T1567.002`** — verified). The three-way verdict is now anchored in **Microsoft's own taxonomy**: Defender for Cloud Apps ships a literal *True positive / **Benign true positive** / False positive* scheme whose B-TP example is "an authorized penetration test" — exactly the game's bridge. The console (`/soc`) rotates through the shifts on "New shift". **Round 3 (2026-07-04,
+**Round 2 (2026-06-28, [`soc-tier1-cases-round2.md`](research/soc-tier1-cases-round2.md)) added a second shift** over four more archetypes — again each malicious **and** authorized (Benign-TP) or false-positive: **Phishing** (SPF/DKIM/DMARC + sanctioned-simulation B-TP; `T1566`), **Impossible-travel / MFA-fatigue** (Entra ID Protection risk detections; **`T1621`**, **`T1078.004`** — verified), **EDR malware** (Defender for Endpoint *True positive / Informational-expected / False positive*; `T1204`), **Data exfil to cloud storage** (personal-cloud TP vs sanctioned-backup B-TP; **`T1567.002`** — verified). The three-way verdict is now anchored in **Microsoft's own taxonomy**: Defender for Cloud Apps ships a literal *True positive / **Benign true positive** / False positive* scheme whose B-TP example is "an authorized penetration test" — exactly the game's bridge. The console (`/soc`) rotates through the shifts on "New shift". **Round 3 (2026-07-04,
 [`soc-tier1-cases-round3.md`](research/soc-tier1-cases-round3.md))** verified the last
 open MITRE ids (`T1566`/`T1204`/`T1547.001` — so phishing + EDR are cleared) and added an
 **account-lockout** shift (the archetype where *most* alerts are benign: the #1 real cause

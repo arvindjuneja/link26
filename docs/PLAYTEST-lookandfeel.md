@@ -111,9 +111,21 @@ threat").
   right but authorized" vs "rule misfired on benign noise" are clearly separated.
   Left for your decision.
 
+**RESOLVED 2026-09-05 — option (b).** DEF-A is canonical ("did the attack behaviour
+the rule hunts for actually happen?"); rkhan stays FP; intro, buttons, engine strings
+and case copy tightened. See docs/DECISION-soc-taxonomy.md.
+
 ### P2 — coaching tooltip overlap
 The first coaching bubble (step 1/3) overlapped the alert-detail header. Minor;
-readable. Not fixed.
+readable.
+
+**PARTLY FIXED 2026-09-05.** The bubble no longer assumes its own height: it measures
+the card and places itself above or below the anchor from that measurement, clamped
+into the viewport, and scrolls the anchor into view once per step. Verified headless
+(Chrome/CDP, `next dev`) at 1280x900 and 390x844: at all three steps the bubble stays
+on screen and never covers its own anchor ring — step 3/3 clears the disposition
+buttons by 8px at both widths. The residual step-1 overlap is with a *non-anchor*
+panel and is unchanged.
 
 ---
 
@@ -126,5 +138,5 @@ readable. Not fixed.
 | 4 | P1 | Mobile map-header collision | `MapCanvas.tsx` |
 | 5 | P2 | Cinematic connect beam | `MapCanvas.tsx` |
 
-FLAGged (no code change): SOC FP/Benign taxonomy; free-play scroll depth; SOC
+FLAGged (no code change): SOC FP/Benign taxonomy (resolved 2026-09-05); free-play scroll depth; SOC
 coaching overlap.

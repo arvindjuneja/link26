@@ -33,12 +33,15 @@ no pay/salary figures are ever presented as fact.
 ## The blue seat — Tier-1 SOC analyst (`/soc`)
 
 A **shift** is a queue of alerts. Every alert resolves to exactly ONE call — the real
-Tier-1 decision (and, verified, Microsoft's own alert taxonomy):
+Tier-1 decision (and, verified, Microsoft's own alert taxonomy). One question decides it:
+**did the attack behaviour the rule hunts for actually happen?**
 
-- **True Positive** — a real threat → escalate (Tier 2, or IR + isolate).
-- **False Positive** — the detection misfired → close.
-- **Benign True Positive** — the detection was *right*, but the activity was
-  **authorized** (a sanctioned pentest, a scheduled backup, a known tool) → close benign.
+- **False Positive** — the behaviour the rule hunts for never happened; ordinary
+  activity only looked like it → close (fix the rule).
+- **Benign True Positive** — it happened, and a sanction (a pentest, a change
+  ticket, a known tool) covers it → close benign.
+- **True Positive** — it happened and nothing sanctioned it → escalate (Tier 2,
+  or IR + isolate).
 
 Per alert you **pull the right data sources** — each carries the *question it answers*
 ("which log answers which question": auth → 4624/4625/4672, C2 → DNS, lineage → EDR
@@ -48,7 +51,7 @@ un-gameable shape as the red seat's `evaluateMission`).
 
 - **Two pressure meters** reuse the red seat's engine: **BREACH RISK** (the trace
   heartbeat *inverted* — a real threat you close and miss is now *dwelling*, so the dread
-  is the adversary's clock) and **NOISE** (crying wolf — escalating false alarms or
+  is the adversary's clock) and **NOISE** (crying wolf — escalating noise or
   isolating authorized work buries Tier-2).
 - **Investigation matters.** Pulling the logs that actually answer the case is the skill
   — a right verdict reached *blind* (no key logs pulled) is luck, not a read, and can't
@@ -56,7 +59,7 @@ un-gameable shape as the red seat's `evaluateMission`).
 - **Content** — 5 shifts, **21 hand-authored + 3 generated cases across 10 archetypes**
   (encoded PowerShell, auth brute-force, DNS C2, phishing, impossible-travel, MFA-fatigue,
   EDR malware, data exfil, account lockout, insider threat), each shipping a malicious *and* an
-  authorized/false-positive variant ("same detection, opposite verdict"). The insider desk adds
+  authorized (Benign-TP) or false-positive variant ("same detection, opposite verdict"). The insider desk adds
   the twist that the *same* action is malicious or benign by **intent/authorization/role**, and
   its true positive **escalates — hands up to insider-risk/HR/legal — rather than isolating**.
   Grounded in adversarially-verified research: [r1](docs/research/soc-tier1-research.md) ·

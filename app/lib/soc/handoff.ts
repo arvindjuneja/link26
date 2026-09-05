@@ -160,6 +160,14 @@ export function caseFromRedRun(run: RedRun, sources: Record<string, DataSource>)
     weight: s.weight,
   }));
 
+  // Scope hygiene: clearing the audit log (1102) is a louder, more destructive act than
+  // the rest of the tradecraft, so an authorized run's RoE card says explicitly that the
+  // engagement record absorbs it. Without this the card reads as blanket authorization,
+  // which teaches "the RoE covers whatever the operator did" instead of "verify scope".
+  const roeCleanupNote = run.tradecraft.includes("log-wipe")
+    ? " Noisy cleanup (audit-log clear) is noted in the engagement record as an accepted side-effect."
+    : "";
+
   // The pivotal finding: is there an engagement behind it?
   evidence.push(
     run.authorized
@@ -167,7 +175,7 @@ export function caseFromRedRun(run: RedRun, sources: Record<string, DataSource>)
           id: `${run.id}-roe`,
           sourceId: sources.changeTickets.id,
           label: `Approved engagement ${run.roeRef ?? ""}`.trim(),
-          detail: `An authorized engagement / RoE (${run.roeRef ?? "on file"}) covers this operator, target and window. The activity is real attack behaviour — but sanctioned.`,
+          detail: `An authorized engagement / RoE (${run.roeRef ?? "on file"}) covers this operator, target and window. The activity is real attack behaviour — but sanctioned.${roeCleanupNote}`,
           weight: "decisive",
         }
       : {
