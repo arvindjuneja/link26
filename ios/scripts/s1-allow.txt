@@ -1,0 +1,35 @@
+# S1 allowlist — `ios/scripts/verify.sh`, SPEC-ADDENDUM §2 S1.
+#
+# S1: "no string literal containing a letter in `Sources/Screens/**` or
+# `Sources/Components/**` outside `#Preview` blocks and the
+# `accessibilityIdentifier` / `Image(systemName:)` / `Font.custom` arguments."
+# Its purpose is one thing: a *word a player reads* must come from the exporter
+# (`app/lib/soc/exporter/chrome.ts`), never from a Swift literal. Everything below is
+# an address, a diagnostic or a bundle filename — none of it is ever drawn.
+#
+# Three entry kinds, each with its reason on the same line after `  # `:
+#   call:<name>   the enclosing call's argument is an address, not copy
+#   text:<exact>  one literal, matched exactly
+#   path:<suffix> one file, skipped whole (use sparingly; say why)
+#
+# `#Preview` blocks, `#if SENTRY_QA` regions, dictionary keys (`["gap": …]` — the
+# placeholder names of an exported template) and literals with no letter after
+# unescaping are structural and need no entry. Adding a line here is a decision:
+# if the string is a word a player reads, the answer is a chrome key, not an entry.
+
+# ── copy-pack addresses: the key is the address, the copy is in copy.json ──────
+call:chromeText   # copy.chromeText("hubEyebrow") — the key indexes ExportedCopy.chrome (S1)
+call:plural       # copy.plural("hubAlertCount", n) — indexes ExportedCopy.chromePlurals (7.2)
+call:dockTitle    # copy.dockTitle("rankUpContinue") — the same table, read through the Dock
+
+# ── diagnostics: assertions and DEBUG logs, never rendered ────────────────────
+call:assert                # assert(_:_:) message — fires in Debug, absent from Release
+call:assertionFailure      # names the bundle/content mistake that produced it
+call:precondition          # same, with the message kept in Release
+call:preconditionFailure   # same
+call:fatalError            # same
+call:print                 # the B6/C8/C9 "[Composition] installX ← <file>" DEBUG log line
+
+# ── bundle addresses that have nowhere else to live ──────────────────────────
+path:Screens/Meta/MetaIdentifiers.swift   # C9's documented address file: two OFL filenames, two Info.plist keys, the privacy URL. Its own doc comment requests this skip; granted — it holds no copy and MetaID.* is the only way a screen reaches a bundle resource.
+text:case.header                          # CaseView's ScrollViewReader anchor id — a scroll target, never drawn

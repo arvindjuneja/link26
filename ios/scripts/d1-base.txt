@@ -1,0 +1,36 @@
+# D1 baseline for the protected-web-tree diff — `ios/scripts/verify.sh`, SPEC-ADDENDUM S7.
+#
+# S7 moved drift-guard check #9 out of vitest into this guard and specified
+# `git merge-base origin/main HEAD` as the baseline. That baseline is right for the
+# **pipeline** paths (`next.config.ts`, `open-next.config.ts`, `wrangler.jsonc`,
+# `app/api/**`, §11 rule 9) and the guard uses it there, unconditionally.
+#
+# For the **web engine** paths (`app/lib/soc`, `app/lib/career`, `app/lib/game`,
+# `app/components/soc`) the merge base is the wrong ruler on this branch: three
+# commits that pre-date the iOS work sit between it and the first iOS commit —
+#   0a84e31  Playtest look&feel fixes + progression/economy audit (carried from main)
+#   fb7be0a  Add Vite 8, Capacitor 8 …            (superseded by 328de55)
+#   47c9b10  SOC taxonomy: DEF-A canonical        (docs/DECISION-soc-taxonomy.md's edit)
+# — and they legitimately edit `app/lib/soc` and `app/components/soc`. D1 says *no iOS
+# ticket edits the web tree*; it does not say the branch may carry no web work at all.
+# Measuring from the merge base would score that pre-iOS work as an iOS violation and
+# blunt the guard into an ignored red light.
+#
+# So the web-engine half measures from the **iOS branch point** below, and the guard
+# additionally asserts (a) the baseline is a descendant of the merge base and (b) the
+# merge-base → baseline range touches no pipeline path, so nothing can be smuggled in
+# by moving this line. Override for a one-off with `SENTRY_D1_BASE=<ref>`.
+#
+# THE PIN IS SELF-RETIRING. Assertion (a) only holds while origin/main is behind this
+# branch. The moment the branch lands, main contains 328de55, the merge base moves past
+# it, and the three pre-iOS web commits above sit *behind* the merge base — where they
+# stop being excusable noise. So the guard takes whichever of the two is newer: once the
+# pin is an ancestor of the merge base it prints `pin retired` and measures from the
+# merge base, which is both correct and stricter. Asserting (a) unconditionally turned
+# the guard red on the first push after C11 — as a malfunction, not a D1 violation,
+# which is exactly the ignored red light this file exists to prevent (C11 review).
+# Nothing here needs editing when that happens; the line stays as the historical record.
+#
+# 328de55 — "Drop Capacitor/Vite/Fontsource deps (iOS goes native SwiftUI)": the commit
+# where this branch becomes the native iOS branch, and the parent of every C1–C11 stage.
+328de55

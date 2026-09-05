@@ -1,0 +1,171 @@
+# SENTRY — SOC · CI (C11, `docs/ios/SPEC.md` §7).
+#
+# Four jobs. `contract`, `engine` and `guards` are the required ones and none of
+# them needs Xcode — that is the whole point of designing the parity gate to run
+# under plain `swift test` (X16). `app` is allowed to fail: whether a GitHub-hosted
+# macOS image carries Xcode 26.x is outside our control, and when it does not, the
+# founder's Mac is the app gate.
+#
+# Signing: every xcodebuild invocation passes CODE_SIGNING_ALLOWED=NO
+# CODE_SIGNING_REQUIRED=NO on the command line (SPEC-ADDENDUM §6). `project.yml`
+# keeps automatic signing so the founder's device run works; do not move the flags.
+
+name: ios
+
+on:
+  push:
+    branches: [main, 'feat/**', 'fix/**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The D1 diff and the drift guard both read history, so every checkout is deep.
+  FETCH_DEPTH: 0
+
+jobs:
+  # ── REQUIRED · the content contract ────────────────────────────────────────
+  contract:
+    name: contract · export · npm test · tsc · next build · D1
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'      # ≥ 22; the founder's Mac runs 25.1.0 (docs/IOS-BUILD.md)
+          cache: npm
+      - run: npm ci
+
+      # The export is idempotent by contract (X3): running it must change nothing.
+      - name: soc:export is idempotent
+        run: |
+          npm run soc:export
+          git diff --exit-code -- \
+            ios/SentryCore/Sources/SentryContent/Resources \
+            ios/SentryCore/Sources/SentryFixtures/Resources
+
+      - name: npm test (engine · cases · handoff · state · taxonomy · daily · drift)
+        run: npm test
+
+      - name: tsc --noEmit
+        run: npx tsc --noEmit -p tsconfig.json
+
+      - name: next build
+        run: npm run build
+
+      - name: D1 · the protected web tree
+        run: |
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          bash ios/scripts/verify.sh d1
+
+  # ── REQUIRED · engine parity, no Xcode and no simulator ───────────────────
+  engine:
+    name: engine · swift test
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: swift --version
+        run: swift --version
+      - name: swift test --package-path ios/SentryCore
+        run: swift test --package-path ios/SentryCore
+
+  # ── the app target · tolerated failure if the image lacks Xcode 26.x (X16) ─
+  app:
+    name: app · xcodegen · xcodebuild build + test
+    runs-on: macos-latest
+    continue-on-error: true
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: select Xcode 26.x
+        run: |
+          set -eu
+          XC=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1 || true)
+          if [ -z "$XC" ]; then
+            echo "::warning::no Xcode 26.x on this image — the app job cannot gate (SPEC X16)"
+            exit 1
+          fi
+          sudo xcode-select -s "$XC"
+          xcodebuild -version
+
+      - name: install xcodegen
+        run: brew install xcodegen
+
+      - name: xcodegen generate
+        run: xcodegen generate --spec ios/project.yml
+
+      - name: pick a simulator
+        id: sim
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          best = ""
+          for runtime, entries in devices.items():
+              if "iOS" not in runtime: continue
+              for d in entries:
+                  if not d.get("isAvailable", True): continue
+                  if d["name"] == "iPhone 17 Pro Max": print(d["udid"]); raise SystemExit
+                  if not best and d["name"].startswith("iPhone"): best = d["udid"]
+          print(best)')
+          echo "udid=${UDID:-C2136147-45C8-42DD-8E3A-EDE974B97154}" >> "$GITHUB_OUTPUT"
+
+      - name: xcodebuild build (Debug, unsigned)
+        run: |
+          xcodebuild build -project ios/SentrySOC.xcodeproj -scheme SentrySOC \
+            -configuration Debug -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            -derivedDataPath ios/.build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+
+      - name: xcodebuild test (SentrySOCTests)
+        run: |
+          xcodebuild test -project ios/SentrySOC.xcodeproj -scheme SentrySOC \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            -derivedDataPath ios/.build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+
+      # Check 3 of the release guard is the one guard that needs both binaries, so it
+      # runs here rather than in `guards` (which has no Xcode).
+      - name: release guard · SentryQAScreen absent from Release
+        run: bash ios/scripts/verify.sh qa
+
+      - name: upload the screenshot gate
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-screenshots
+          path: docs/screenshots/ios/**
+          if-no-files-found: ignore
+
+  # ── REQUIRED · every guard that needs no Xcode ────────────────────────────
+  guards:
+    name: guards · verify.sh
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+
+      # `qa` is the only check that needs a built binary; the `app` job runs it.
+      - name: release guard
+        run: |
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          bash ios/scripts/verify.sh export hash fonts colours s1 profanity pay d1

@@ -1,0 +1,14 @@
+# Profanity / violence allowlist — `ios/scripts/verify.sh`, SPEC-ADDENDUM B3.
+#
+# The guard is
+#   grep -inE '\b(damn|shit|fuck|hostage|weapon)\b|\bkill(s|ed|ing)?\b'
+# over the exported `copy.json` + `content.json` and `ios/SentrySOC/Sources/**/*.swift`.
+# It is the evidence behind the App Store age-rating questionnaire's 4+ answers
+# (SPEC §8), so it fails on any hit that is not listed here and prints it.
+#
+# One literal line per accepted hit — the substring is matched inside the offending
+# line, and the reason follows after `  # `. A new entry is an age-rating decision:
+# if the string would read as violence or profanity to a reviewer, the answer is a
+# rewrite in `app/lib/soc/cases.ts`, not a line here.
+
+don't kill the rule that catches the real thing   # content.json + cases.ts, case `learn.concept` for the red-team-tool case: "kill the rule" is SOC idiom for disabling a detection rule. No violence, no person, no weapon — the sentence argues for suppressing a rule for a window instead of deleting it. Named as the example entry by SPEC-ADDENDUM B3 itself.
