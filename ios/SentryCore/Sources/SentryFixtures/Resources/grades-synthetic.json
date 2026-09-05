@@ -1,0 +1,298 @@
+{
+  "cases": [
+    {
+      "acceptableDispositions": [],
+      "alertTitle": "Unsigned binary beaconing from a build agent",
+      "archetype": "edr-malware",
+      "asset": "BLD-AGENT-03 · service account svc-build",
+      "correctDisposition": "escalate-ir-isolate",
+      "detectionRule": "EDR · unsigned image with fixed-interval outbound",
+      "evidence": [
+        {
+          "detail": "The binary's parent is the build-agent service itself, with no pipeline job in the lineage — nothing scheduled it.",
+          "id": "syn1-tree",
+          "label": "Spawned by the agent service, not a job",
+          "sourceId": "edr-process-tree",
+          "weight": "decisive"
+        },
+        {
+          "detail": "Outbound every 47 seconds to a domain registered four days ago, with no other host in the estate talking to it.",
+          "id": "syn1-net",
+          "label": "Fixed-interval outbound to a young domain",
+          "sourceId": "network-proxy",
+          "weight": "decisive"
+        },
+        {
+          "detail": "No change ticket, maintenance window or engagement covers BLD-AGENT-03 this week.",
+          "id": "syn1-cab",
+          "label": "No change record",
+          "sourceId": "change-tickets",
+          "weight": "supporting"
+        }
+      ],
+      "handoff": null,
+      "id": "syn-tp-isolate-only",
+      "keySourceIds": [
+        "edr-process-tree",
+        "network-proxy"
+      ],
+      "learn": {
+        "concept": "Containment urgency is a property of the ASSET as much as the alert: a host that signs or distributes artefacts is contained first and triaged second.",
+        "mitreId": "T1071",
+        "mitreName": "Application Layer Protocol",
+        "pointer": "Fixture-only case — it exists to reach the under-contained branch."
+      },
+      "sourceIds": [
+        "edr-process-tree",
+        "network-proxy",
+        "change-tickets"
+      ],
+      "toolSeverity": "High",
+      "trigger": "An unsigned binary on BLD-AGENT-03 has been reaching the same external host on a fixed interval since 03:40.",
+      "truth": "true-positive",
+      "why": "Live, unauthorized code with a live channel out of a build host is contain-now: the build agent signs artefacts the whole estate trusts. Handing it to Tier-2 without containment leaves the channel open while the ticket queues, which is the under-contained call this fixture exists to grade."
+    },
+    {
+      "acceptableDispositions": [
+        "escalate-ir-isolate"
+      ],
+      "alertTitle": "Bulk export by an account already under review",
+      "archetype": "insider-threat",
+      "asset": "user mokoro (Corporate Development)",
+      "correctDisposition": "escalate-tier2",
+      "detectionRule": "DLP · volume anomaly on a flagged account",
+      "evidence": [
+        {
+          "detail": "4.2 GB against a 90-day median of 60 MB, all from one folder, in one sitting.",
+          "id": "syn2-dlp",
+          "label": "Volume far above the user's own baseline",
+          "sourceId": "dlp-hits",
+          "weight": "decisive"
+        },
+        {
+          "detail": "HR opened a conduct review on 4 June. No leaving date is recorded.",
+          "id": "syn2-hr",
+          "label": "Open review, no departure date",
+          "sourceId": "hr-directory",
+          "weight": "decisive"
+        },
+        {
+          "detail": "The egress lands in a consumer storage account, not the corporate tenant.",
+          "id": "syn2-cloud",
+          "label": "Destination is a personal account",
+          "sourceId": "cloud-activity",
+          "weight": "supporting"
+        }
+      ],
+      "handoff": null,
+      "id": "syn-tp-t2-with-isolate",
+      "keySourceIds": [
+        "dlp-hits",
+        "hr-directory"
+      ],
+      "learn": {
+        "concept": "Insider cases are escalated, not contained unilaterally: the evidence chain and the employment process both break if the subject learns they are being watched.",
+        "mitreId": "T1567",
+        "mitreName": "Exfiltration Over Web Service",
+        "pointer": "Fixture-only case — it exists to grade an acceptable-but-not-exact escalation."
+      },
+      "sourceIds": [
+        "dlp-hits",
+        "hr-directory",
+        "cloud-activity"
+      ],
+      "toolSeverity": "Medium",
+      "trigger": "mokoro exported 4.2 GB from the deal room at 22:10, a week after HR opened a review.",
+      "truth": "true-positive",
+      "why": "This is real, unauthorized movement of company data, so it escalates — but an insider under an open HR review belongs with Tier-2, HR and legal before a single analyst isolates the person's device. Isolation is defensible here, which is exactly why this case carries it as an acceptable call."
+    },
+    {
+      "acceptableDispositions": [],
+      "alertTitle": "Encoded PowerShell during a patch window",
+      "archetype": "encoded-powershell",
+      "asset": "PATCH-RELAY-02 · service account svc-patch",
+      "correctDisposition": "close-benign",
+      "detectionRule": "EDR · powershell.exe launched with -EncodedCommand",
+      "evidence": [
+        {
+          "detail": "The lineage is the patch-management agent, running as its own service account — the estate's normal deployment path.",
+          "id": "syn3-tree",
+          "label": "Parent is the management agent",
+          "sourceId": "edr-process-tree",
+          "weight": "supporting"
+        },
+        {
+          "detail": "The decoded block reads local package versions and writes them to the management server. Nothing leaves the estate.",
+          "id": "syn3-decode",
+          "label": "Decodes to an inventory query",
+          "sourceId": "decoded-command",
+          "weight": "decisive"
+        },
+        {
+          "detail": "CHG-5104 names PATCH-RELAY-02, the agent and the 02:00–04:00 window, approved by the platform team.",
+          "id": "syn3-cab",
+          "label": "CHG-5104 covers the window",
+          "sourceId": "change-tickets",
+          "weight": "decisive"
+        }
+      ],
+      "handoff": null,
+      "id": "syn-btp-strict",
+      "keySourceIds": [
+        "change-tickets",
+        "decoded-command"
+      ],
+      "learn": {
+        "concept": "Encoding is not the threat; the sanction artifact is the discriminator. A named change ticket turns a correct detection into a benign true positive without touching the rule's logic.",
+        "mitreId": "T1059.001",
+        "mitreName": "Command and Scripting Interpreter: PowerShell",
+        "pointer": "Fixture-only case — it exists to grade a Benign-TP with no acceptable alternatives."
+      },
+      "sourceIds": [
+        "edr-process-tree",
+        "decoded-command",
+        "change-tickets"
+      ],
+      "toolSeverity": "High",
+      "trigger": "An encoded PowerShell command ran on PATCH-RELAY-02 at 02:05, inside the monthly maintenance window.",
+      "truth": "benign-true-positive",
+      "why": "The behaviour the rule hunts for really happened — encoded PowerShell ran — and a named change ticket sanctions it. That is a Benign True Positive: the detection is right and the activity is authorized. Closing it as a false positive would tell the next analyst the rule misfired, and it did not."
+    }
+  ],
+  "contentHash": "sha256:6fdddac6430e0cf485f08e3c353aaebabec4db743612dc4cca6d3aa87893ffc4",
+  "rows": [
+    {
+      "breachDelta": 30,
+      "caseId": "syn-tp-isolate-only",
+      "disposition": "close-false-positive",
+      "dispositionCorrect": false,
+      "exact": false,
+      "noiseDelta": 0,
+      "outcome": "MISSED DETECTION — a live threat was closed and is now dwelling undetected.",
+      "outcomeKey": "tp.missed",
+      "verdictCorrect": false
+    },
+    {
+      "breachDelta": 30,
+      "caseId": "syn-tp-isolate-only",
+      "disposition": "close-benign",
+      "dispositionCorrect": false,
+      "exact": false,
+      "noiseDelta": 0,
+      "outcome": "MISSED DETECTION — a live threat was closed and is now dwelling undetected.",
+      "outcomeKey": "tp.missed",
+      "verdictCorrect": false
+    },
+    {
+      "breachDelta": 10,
+      "caseId": "syn-tp-isolate-only",
+      "disposition": "escalate-tier2",
+      "dispositionCorrect": false,
+      "exact": false,
+      "noiseDelta": 0,
+      "outcome": "Right verdict, but under-contained — the threat had room to move before IR caught up.",
+      "outcomeKey": "tp.under-contained",
+      "verdictCorrect": true
+    },
+    {
+      "breachDelta": 0,
+      "caseId": "syn-tp-isolate-only",
+      "disposition": "escalate-ir-isolate",
+      "dispositionCorrect": true,
+      "exact": true,
+      "noiseDelta": 0,
+      "outcome": "Good call — escalated a genuine threat with the right urgency.",
+      "outcomeKey": "tp.escalated-correct",
+      "verdictCorrect": true
+    },
+    {
+      "breachDelta": 30,
+      "caseId": "syn-tp-t2-with-isolate",
+      "disposition": "close-false-positive",
+      "dispositionCorrect": false,
+      "exact": false,
+      "noiseDelta": 0,
+      "outcome": "MISSED DETECTION — a live threat was closed and is now dwelling undetected.",
+      "outcomeKey": "tp.missed",
+      "verdictCorrect": false
+    },
+    {
+      "breachDelta": 30,
+      "caseId": "syn-tp-t2-with-isolate",
+      "disposition": "close-benign",
+      "dispositionCorrect": false,
+      "exact": false,
+      "noiseDelta": 0,
+      "outcome": "MISSED DETECTION — a live threat was closed and is now dwelling undetected.",
+      "outcomeKey": "tp.missed",
+      "verdictCorrect": false
+    },
+    {
+      "breachDelta": 0,
+      "caseId": "syn-tp-t2-with-isolate",
+      "disposition": "escalate-tier2",
+      "dispositionCorrect": true,
+      "exact": true,
+      "noiseDelta": 0,
+      "outcome": "Good call — escalated a genuine threat with the right urgency.",
+      "outcomeKey": "tp.escalated-correct",
+      "verdictCorrect": true
+    },
+    {
+      "breachDelta": 0,
+      "caseId": "syn-tp-t2-with-isolate",
+      "disposition": "escalate-ir-isolate",
+      "dispositionCorrect": true,
+      "exact": false,
+      "noiseDelta": 0,
+      "outcome": "Good call — escalated a genuine threat with the right urgency.",
+      "outcomeKey": "tp.escalated-correct",
+      "verdictCorrect": true
+    },
+    {
+      "breachDelta": 0,
+      "caseId": "syn-btp-strict",
+      "disposition": "close-false-positive",
+      "dispositionCorrect": false,
+      "exact": false,
+      "noiseDelta": 4,
+      "outcome": "Closed it (fine), but it wasn't a false positive — the behaviour really happened; it was just sanctioned.",
+      "outcomeKey": "btp.closed-as-fp",
+      "verdictCorrect": false
+    },
+    {
+      "breachDelta": 0,
+      "caseId": "syn-btp-strict",
+      "disposition": "close-benign",
+      "dispositionCorrect": true,
+      "exact": true,
+      "noiseDelta": 0,
+      "outcome": "Correct — found the authorization and closed it as a benign true positive.",
+      "outcomeKey": "btp.closed-benign",
+      "verdictCorrect": true
+    },
+    {
+      "breachDelta": 0,
+      "caseId": "syn-btp-strict",
+      "disposition": "escalate-tier2",
+      "dispositionCorrect": false,
+      "exact": false,
+      "noiseDelta": 14,
+      "outcome": "Escalated authorized activity — Tier-2 will bounce it back. The change ticket was right there.",
+      "outcomeKey": "btp.escalated-t2",
+      "verdictCorrect": false
+    },
+    {
+      "breachDelta": 0,
+      "caseId": "syn-btp-strict",
+      "disposition": "escalate-ir-isolate",
+      "dispositionCorrect": false,
+      "exact": false,
+      "noiseDelta": 24,
+      "outcome": "You isolated a sanctioned operation — ops impact, and an angry change-owner. Always check for authorization first.",
+      "outcomeKey": "btp.isolated",
+      "verdictCorrect": false
+    }
+  ],
+  "schemaVersion": 1
+}

@@ -1,0 +1,2096 @@
+{
+  "cases": [
+    {
+      "acceptableDispositions": [
+        "escalate-tier2"
+      ],
+      "alertTitle": "Encoded PowerShell on a finance workstation",
+      "archetype": "encoded-powershell",
+      "asset": "FIN-WS-04 · user jdoe (Finance)",
+      "correctDisposition": "escalate-ir-isolate",
+      "detectionRule": "EDR · powershell.exe launched with -EncodedCommand",
+      "evidence": [
+        {
+          "detail": "Lineage: WINWORD.EXE → cmd.exe → powershell.exe. A document spawned a shell — not how IT runs scripts.",
+          "id": "a1-tree",
+          "label": "Parent is WINWORD.EXE",
+          "sourceId": "edr-process-tree",
+          "weight": "decisive"
+        },
+        {
+          "detail": "Decoded blob is an in-memory downloader: pull a follow-on script from a remote host and run it without writing to disk.",
+          "id": "a1-decode",
+          "label": "Decodes to a download-cradle",
+          "sourceId": "decoded-command",
+          "weight": "decisive"
+        },
+        {
+          "detail": "Within 2s of execution: outbound HTTPS to a domain in no proxy category, first-seen org-wide.",
+          "id": "a1-net",
+          "label": "Immediate outbound to a fresh domain",
+          "sourceId": "network-proxy",
+          "weight": "supporting"
+        },
+        {
+          "detail": "No maintenance window, no change record for FIN-WS-04. jdoe is Finance, not IT — no reason to run admin scripts.",
+          "id": "a1-ticket",
+          "label": "No change ticket",
+          "sourceId": "change-tickets",
+          "weight": "decisive"
+        },
+        {
+          "detail": "The callout domain was registered 72h ago; one feed already tags it suspicious.",
+          "id": "a1-intel",
+          "label": "Domain registered 3 days ago",
+          "sourceId": "threat-intel",
+          "weight": "supporting"
+        },
+        {
+          "detail": "jdoe received an 'overdue invoice' attachment 9 minutes before execution. Plausible initial-access vector.",
+          "id": "a1-help",
+          "label": "Phishy invoice email just before",
+          "sourceId": "it-helpdesk",
+          "weight": "supporting"
+        }
+      ],
+      "handoff": null,
+      "id": "soc-ps-cradle",
+      "keySourceIds": [
+        "edr-process-tree",
+        "decoded-command",
+        "change-tickets"
+      ],
+      "learn": {
+        "concept": "Encoded ≠ malicious. Decode it, then read the parent process and what it did. Office → PowerShell → outbound is a classic initial-access chain; a sanctioned tool with a change ticket is not.",
+        "mitreId": "T1059.001",
+        "mitreName": "Command and Scripting Interpreter: PowerShell",
+        "pointer": "MITRE ATT&CK T1059.001 · LetsDefend 'Detecting Malicious PowerShell'"
+      },
+      "sourceIds": [
+        "edr-process-tree",
+        "decoded-command",
+        "network-proxy",
+        "change-tickets",
+        "threat-intel",
+        "it-helpdesk"
+      ],
+      "toolSeverity": "High",
+      "trigger": "powershell.exe spawned with -EncodedCommand on FIN-WS-04 at 02:14 local — off-hours.",
+      "truth": "true-positive",
+      "why": "Encoding was never the threat — the LINEAGE and BEHAVIOUR are. A Word document spawned PowerShell, the decoded payload is an in-memory download-cradle, there's a live outbound to a 3-day-old domain, and no change ticket on a finance host off-hours. That's an active initial-access chain: isolate the host and escalate to IR."
+    },
+    {
+      "acceptableDispositions": [],
+      "alertTitle": "Failed-logon burst then success — user rkhan",
+      "archetype": "auth-bruteforce",
+      "asset": "account rkhan · workstation MKT-WS-03",
+      "correctDisposition": "close-false-positive",
+      "detectionRule": "SIEM · ≥10× 4625 then a 4624 from the same source within 5m",
+      "evidence": [
+        {
+          "detail": "Every 4625 originates from MKT-WS-03 (corporate subnet), clustered in 90s, logon type 2 (interactive at the keyboard). Then a clean 4624.",
+          "id": "b2-auth",
+          "label": "All from rkhan's own workstation",
+          "sourceId": "auth-logs",
+          "weight": "decisive"
+        },
+        {
+          "detail": "Ticket from rkhan at 09:03: 'forgot my password after the weekend forced reset.' Two minutes before the success.",
+          "id": "b2-help",
+          "label": "Helpdesk ticket: forgot password",
+          "sourceId": "it-helpdesk",
+          "weight": "decisive"
+        },
+        {
+          "detail": "Source is the office LAN; rkhan's normal location. No VPN, no foreign IP, no impossible travel.",
+          "id": "b2-geo",
+          "label": "No remote access",
+          "sourceId": "geo-vpn",
+          "weight": "supporting"
+        },
+        {
+          "detail": "No 4672. rkhan is a standard user; nothing elevated.",
+          "id": "b2-priv",
+          "label": "No privilege events",
+          "sourceId": "privilege-events",
+          "weight": "neutral"
+        },
+        {
+          "detail": "Source is an RFC1918 corporate address; no external reputation to look up.",
+          "id": "b2-intel",
+          "label": "Internal IP — nothing to enrich",
+          "sourceId": "threat-intel",
+          "weight": "neutral"
+        },
+        {
+          "detail": "A months-old phishing report mentions a domain resembling the company's. It pattern-matches if you squint, but it has nothing to do with this logon — a red herring.",
+          "id": "b2-noise",
+          "label": "Old lookalike-domain report",
+          "sourceId": "threat-intel",
+          "weight": "noise"
+        },
+        {
+          "detail": "Org-wide weekend password reset was scheduled (CHG-2270) — it explains the failures; it authorizes nothing.",
+          "id": "b2-ticket",
+          "label": "Reset — not a grant",
+          "sourceId": "change-tickets",
+          "weight": "supporting"
+        }
+      ],
+      "handoff": null,
+      "id": "soc-auth-reset",
+      "keySourceIds": [
+        "auth-logs",
+        "it-helpdesk"
+      ],
+      "learn": {
+        "concept": "The 4625-burst → 4624 pattern is only a threat when the source/time/account don't fit the user. Always check WHERE it came from before escalating — same detection, opposite verdict.",
+        "mitreId": "T1110",
+        "mitreName": "Brute Force",
+        "pointer": "Windows Security event-log analysis · tune the rule to exclude same-host interactive failures"
+      },
+      "sourceIds": [
+        "auth-logs",
+        "geo-vpn",
+        "it-helpdesk",
+        "privilege-events",
+        "threat-intel",
+        "change-tickets"
+      ],
+      "toolSeverity": "Medium",
+      "trigger": "12× failed logons (4625) then a success (4624) for rkhan at 09:05, Monday morning.",
+      "truth": "false-positive",
+      "why": "Same shape as a password-guessing hit — failures then a success — but the SOURCE and CONTEXT flip the verdict. The failures are fat-fingered attempts from the user's OWN keyboard right after a scheduled weekend reset, with a helpdesk ticket to match, then a normal interactive logon. The rule matched the shape, but nobody was guessing — what it hunts for never happened. Close FP."
+    },
+    {
+      "acceptableDispositions": [],
+      "alertTitle": "Encoded PowerShell on a patch server",
+      "archetype": "encoded-powershell",
+      "asset": "SRV-PATCH-02 · service account svc-sccm",
+      "correctDisposition": "close-benign",
+      "detectionRule": "EDR · powershell.exe launched with -EncodedCommand",
+      "evidence": [
+        {
+          "detail": "Lineage: ccmexec.exe (SCCM/patch-management agent) → powershell.exe, under service account svc-sccm. A known IT automation tool, not a document.",
+          "id": "a2-tree",
+          "label": "Parent is the SCCM agent",
+          "sourceId": "edr-process-tree",
+          "weight": "decisive"
+        },
+        {
+          "detail": "Decoded blob enumerates installed updates and reports compliance — a routine patch/inventory task.",
+          "id": "a2-decode",
+          "label": "Decodes to an inventory script",
+          "sourceId": "decoded-command",
+          "weight": "supporting"
+        },
+        {
+          "detail": "Standing change CHG-2291 authorizes automated nightly patching on SRV-PATCH-02 in this exact window.",
+          "id": "a2-ticket",
+          "label": "Approved change CHG-2291",
+          "sourceId": "change-tickets",
+          "weight": "decisive"
+        },
+        {
+          "detail": "Connections go to the internal update server (known-good); no external callouts.",
+          "id": "a2-net",
+          "label": "Outbound to internal WSUS only",
+          "sourceId": "network-proxy",
+          "weight": "supporting"
+        },
+        {
+          "detail": "No external indicators; all destinations internal and reputable.",
+          "id": "a2-intel",
+          "label": "Nothing flagged",
+          "sourceId": "threat-intel",
+          "weight": "neutral"
+        },
+        {
+          "detail": "svc-sccm is a non-interactive service account scoped to patch management.",
+          "id": "a2-hr",
+          "label": "Service account, not a person",
+          "sourceId": "hr-directory",
+          "weight": "neutral"
+        }
+      ],
+      "handoff": null,
+      "id": "soc-ps-patch",
+      "keySourceIds": [
+        "edr-process-tree",
+        "change-tickets"
+      ],
+      "learn": {
+        "concept": "Benign True Positive = correct detection of AUTHORIZED activity. Separate it from a False Positive — there, the flagged behaviour never happened at all, so no ticket could sanction it. Don't suppress a rule just because today's hit was sanctioned.",
+        "mitreId": "T1059.001",
+        "mitreName": "Command and Scripting Interpreter: PowerShell",
+        "pointer": "Microsoft Defender alert classification · TP vs FP vs Benign-TP"
+      },
+      "sourceIds": [
+        "edr-process-tree",
+        "decoded-command",
+        "change-tickets",
+        "network-proxy",
+        "threat-intel",
+        "hr-directory"
+      ],
+      "toolSeverity": "High",
+      "trigger": "powershell.exe -EncodedCommand on SRV-PATCH-02 at 03:00 — inside the nightly maintenance window.",
+      "truth": "benign-true-positive",
+      "why": "The detection was RIGHT — that really is encoded PowerShell — but the parent is the patch-management agent and a standing change ticket authorizes it. That's a Benign True Positive, not a False Positive: the rule didn't misfire, the activity was simply sanctioned. Closing it as 'FP' would be wrong reasoning (and would tempt someone to suppress the rule that correctly catches the malicious version in A1)."
+    },
+    {
+      "acceptableDispositions": [
+        "escalate-tier2"
+      ],
+      "alertTitle": "Periodic DNS to high-entropy domains",
+      "archetype": "dns-c2",
+      "asset": "ENG-LAP-09 · user mlopez (Engineering)",
+      "correctDisposition": "escalate-ir-isolate",
+      "detectionRule": "SIEM · regular-interval DNS to algorithmically-generated domains (DGA heuristic)",
+      "evidence": [
+        {
+          "detail": "Queries fire on a near-exact 60s cadence; labels are long high-entropy strings across many unrelated registrations; most return NXDOMAIN with the occasional resolve; rare TLDs (.top/.xyz).",
+          "id": "c1-dns",
+          "label": "Fixed-interval, high-entropy, NXDOMAIN bursts",
+          "sourceId": "dns-logs",
+          "weight": "decisive"
+        },
+        {
+          "detail": "The queries come from an unsigned binary running out of %TEMP% — not the system resolver, not a browser.",
+          "id": "c1-tree",
+          "label": "A temp-path binary, not a browser",
+          "sourceId": "edr-process-tree",
+          "weight": "decisive"
+        },
+        {
+          "detail": "After each resolve: a small fixed-size outbound POST. The hallmark of a beacon check-in, not human browsing.",
+          "id": "c1-net",
+          "label": "Small, regular, equal-sized POSTs",
+          "sourceId": "network-proxy",
+          "weight": "supporting"
+        },
+        {
+          "detail": "Of the resolving domains, one matches a tracked C2 infrastructure feed.",
+          "id": "c1-intel",
+          "label": "One domain on a C2 feed",
+          "sourceId": "threat-intel",
+          "weight": "supporting"
+        },
+        {
+          "detail": "No change/asset record for this binary; software inventory shows it isn't an approved application.",
+          "id": "c1-ticket",
+          "label": "No authorized tooling",
+          "sourceId": "change-tickets",
+          "weight": "supporting"
+        }
+      ],
+      "handoff": null,
+      "id": "soc-dns-beacon",
+      "keySourceIds": [
+        "dns-logs",
+        "edr-process-tree"
+      ],
+      "learn": {
+        "concept": "DNS C2 tells: regular timing (beaconing), long high-entropy domains (DGA), NXDOMAIN bursts, rare TLDs — but always confirm the PROCESS making the queries isn't a browser or the resolver. Behaviour, then attribution.",
+        "mitreId": "T1071.004",
+        "mitreName": "Application Layer Protocol: DNS",
+        "pointer": "MITRE ATT&CK T1071.004 · DNS log analysis, entropy/DGA detection"
+      },
+      "sourceIds": [
+        "dns-logs",
+        "edr-process-tree",
+        "network-proxy",
+        "threat-intel",
+        "change-tickets"
+      ],
+      "toolSeverity": "High",
+      "trigger": "ENG-LAP-09 queries a rotating set of long, random-looking domains every ~60s, around the clock.",
+      "truth": "true-positive",
+      "why": "Fixed-interval queries (beaconing), high-entropy domains across many registrations (DGA), NXDOMAIN bursts, rare TLDs — and crucially the queries come from an unsigned temp-path binary with small regular outbound POSTs. That's command-and-control, not browsing. Isolate the host and escalate."
+    },
+    {
+      "acceptableDispositions": [
+        "escalate-tier2"
+      ],
+      "alertTitle": "Failed-logon burst then success — user msmith",
+      "archetype": "auth-bruteforce",
+      "asset": "account msmith · via VPN-GW",
+      "correctDisposition": "escalate-ir-isolate",
+      "detectionRule": "SIEM · ≥20× 4625 then a 4624 from the same source within 5m",
+      "evidence": [
+        {
+          "detail": "37× 4625 against this one account from a single external IP in 4 minutes — guessing in depth — then a 4624 success, logon type 3 (network) over the VPN.",
+          "id": "b1-auth",
+          "label": "Brute-force burst then a hit",
+          "sourceId": "auth-logs",
+          "weight": "decisive"
+        },
+        {
+          "detail": "Source IP geolocates to a country msmith has never used; the success lands minutes apart from msmith's last normal logon in the home country — too far to travel between the two. Impossible travel.",
+          "id": "b1-geo",
+          "label": "Impossible travel",
+          "sourceId": "geo-vpn",
+          "weight": "decisive"
+        },
+        {
+          "detail": "Minutes after the logon, a 4672 (special privileges assigned) fires for msmith — an account that shouldn't be elevating.",
+          "id": "b1-priv",
+          "label": "4672 right after success",
+          "sourceId": "privilege-events",
+          "weight": "supporting"
+        },
+        {
+          "detail": "The external IP appears on a known brute-force / password-guessing feed.",
+          "id": "b1-intel",
+          "label": "Source IP on a brute-force list",
+          "sourceId": "threat-intel",
+          "weight": "supporting"
+        },
+        {
+          "detail": "No pentest authorization or RoE covering credential testing against VPN-GW this window.",
+          "id": "b1-ticket",
+          "label": "No authorized testing",
+          "sourceId": "change-tickets",
+          "weight": "decisive"
+        },
+        {
+          "detail": "HR calendar shows msmith on leave all week — shouldn't be logging in at all.",
+          "id": "b1-hr",
+          "label": "User is on PTO",
+          "sourceId": "hr-directory",
+          "weight": "supporting"
+        }
+      ],
+      "handoff": null,
+      "id": "soc-auth-bruteforce",
+      "keySourceIds": [
+        "auth-logs",
+        "geo-vpn",
+        "change-tickets"
+      ],
+      "learn": {
+        "concept": "4625 = failed logon (a deep burst against one account = brute-force/password-guessing), 4624 = success, 4672 = special privileges. The signature is burst→success from an anomalous source/time. Correlate source IP / time / account — and check whether the user should even be active.",
+        "mitreId": "T1110.001",
+        "mitreName": "Brute Force: Password Guessing",
+        "pointer": "MITRE ATT&CK T1110.001 · Splunk/Sentinel auth detections"
+      },
+      "sourceIds": [
+        "auth-logs",
+        "geo-vpn",
+        "privilege-events",
+        "threat-intel",
+        "change-tickets",
+        "hr-directory"
+      ],
+      "toolSeverity": "High",
+      "trigger": "37× failed logons (4625) then a success (4624) for msmith from a foreign ASN at 03:40.",
+      "truth": "true-positive",
+      "why": "A 4625 burst → 4624 success from a foreign IP, impossible travel (two logons too far apart to be one person), a 4672 elevation right after, source IP on a brute-force feed, no authorized-testing ticket, and the user is on PTO. That's a confirmed account compromise — disable the account / isolate the session and escalate to IR now."
+    },
+    {
+      "acceptableDispositions": [],
+      "alertTitle": "DGA heuristic fired on marketing laptop",
+      "archetype": "dns-c2",
+      "asset": "MKT-WS-12 · user dpark (Marketing)",
+      "correctDisposition": "close-false-positive",
+      "detectionRule": "SIEM · regular-interval DNS to algorithmically-generated domains (DGA heuristic)",
+      "evidence": [
+        {
+          "detail": "The random-looking labels are all subdomains of a single well-known CDN / anti-bot parent domain. Every query resolves cleanly — no NXDOMAIN bursts — and timing is bursty with user activity, not a fixed beacon.",
+          "id": "c2-dns",
+          "label": "Subdomains of ONE reputable CDN",
+          "sourceId": "dns-logs",
+          "weight": "decisive"
+        },
+        {
+          "detail": "The queries come from chrome.exe and a known analytics SDK — normal web components, not an unknown binary.",
+          "id": "c2-tree",
+          "label": "It's the browser",
+          "sourceId": "edr-process-tree",
+          "weight": "decisive"
+        },
+        {
+          "detail": "The CDN parent domain has a long history and clean reputation across feeds.",
+          "id": "c2-intel",
+          "label": "Parent domain is clean",
+          "sourceId": "threat-intel",
+          "weight": "supporting"
+        },
+        {
+          "detail": "Months ago, one of the CDN's many shared IPs also hosted something later flagged. That's shared-hosting coincidence, not this host's traffic — tempting, irrelevant.",
+          "id": "c2-noise",
+          "label": "One historical IP overlap",
+          "sourceId": "threat-intel",
+          "weight": "noise"
+        },
+        {
+          "detail": "Variable-sized HTTPS tied to page loads; no fixed-size periodic check-ins.",
+          "id": "c2-net",
+          "label": "Ordinary web traffic",
+          "sourceId": "network-proxy",
+          "weight": "supporting"
+        },
+        {
+          "detail": "No change relevant; this is end-user browsing.",
+          "id": "c2-ticket",
+          "label": "n/a",
+          "sourceId": "change-tickets",
+          "weight": "neutral"
+        }
+      ],
+      "handoff": null,
+      "id": "soc-dns-cdn",
+      "keySourceIds": [
+        "dns-logs",
+        "edr-process-tree"
+      ],
+      "learn": {
+        "concept": "DGA heuristics over-fire on CDNs and anti-bot subdomains. Discriminate: one parent domain vs many registrations, clean resolution vs NXDOMAIN bursts, browser vs unknown process, activity-driven vs fixed-interval timing. Then tune the rule.",
+        "mitreId": "T1071.004",
+        "mitreName": "Application Layer Protocol: DNS",
+        "pointer": "Entropy/DGA detection · allow-list known CDN parents to cut the noise"
+      },
+      "sourceIds": [
+        "dns-logs",
+        "edr-process-tree",
+        "threat-intel",
+        "network-proxy",
+        "change-tickets"
+      ],
+      "toolSeverity": "Medium",
+      "trigger": "MKT-WS-12 makes frequent queries to long, random-looking subdomains.",
+      "truth": "false-positive",
+      "why": "The 'high-entropy domains' are CDN / anti-bot subdomains under one reputable parent, resolving cleanly, queried irregularly by a browser. That's ordinary modern web traffic — the DGA heuristic over-fired. The discriminators against C1: one parent vs many registrations, clean resolution vs NXDOMAIN bursts, browser vs temp-path binary, activity-driven vs fixed interval."
+    },
+    {
+      "acceptableDispositions": [],
+      "alertTitle": "Credential spray across many accounts",
+      "archetype": "auth-bruteforce",
+      "asset": "multiple accounts · source host PENTEST-01",
+      "correctDisposition": "close-benign",
+      "detectionRule": "SIEM · 4625 across ≥15 accounts from one source, with some 4624 successes",
+      "evidence": [
+        {
+          "detail": "One internal source, 23 accounts, one password each, then 3 successes. This IS attack behaviour — the detection is correct.",
+          "id": "b3-auth",
+          "label": "Textbook spray — and it worked",
+          "sourceId": "auth-logs",
+          "weight": "supporting"
+        },
+        {
+          "detail": "Authorization CHG-2310 / signed RoE covers credential testing from PENTEST-01 this week. Deconfliction note names the testing team.",
+          "id": "b3-ticket",
+          "label": "Approved pentest CHG-2310",
+          "sourceId": "change-tickets",
+          "weight": "decisive"
+        },
+        {
+          "detail": "PENTEST-01 is an internal, inventoried host on the security team's segment.",
+          "id": "b3-geo",
+          "label": "Internal source",
+          "sourceId": "geo-vpn",
+          "weight": "supporting"
+        },
+        {
+          "detail": "Internal source; no external reputation in play.",
+          "id": "b3-intel",
+          "label": "Nothing external",
+          "sourceId": "threat-intel",
+          "weight": "neutral"
+        },
+        {
+          "detail": "Security calendar shows an authorized engagement running this week.",
+          "id": "b3-hr",
+          "label": "Testing window confirmed",
+          "sourceId": "hr-directory",
+          "weight": "supporting"
+        }
+      ],
+      "handoff": null,
+      "id": "soc-auth-pentest",
+      "keySourceIds": [
+        "auth-logs",
+        "change-tickets"
+      ],
+      "learn": {
+        "concept": "Authorized attack activity (a sanctioned pentest) is a Benign True Positive, not a False Positive and not something to escalate. Check for a deconfliction / RoE record before you act — and document it so the next analyst doesn't re-fire on the same engagement.",
+        "mitreId": "T1110.003",
+        "mitreName": "Brute Force: Password Spraying",
+        "pointer": "Purple-team deconfliction · 'is this us or someone else?'"
+      },
+      "sourceIds": [
+        "auth-logs",
+        "change-tickets",
+        "geo-vpn",
+        "threat-intel",
+        "hr-directory"
+      ],
+      "toolSeverity": "Critical",
+      "trigger": "A spray across 23 accounts then 3 successes, all from one internal host, 14:00 on a Wednesday.",
+      "truth": "benign-true-positive",
+      "why": "This looks exactly like an attack because it IS attack behaviour — but there's a signed pentest authorization covering this host and window. That's the cleanest Benign True Positive there is: a correct detection of AUTHORIZED activity. (It's also the bridge to the red team's world: same tradecraft, opposite verdict.) Escalating it wastes IR; isolating PENTEST-01 would blow up a sanctioned engagement. Confirm the RoE, note it on the ticket, close benign."
+    },
+    {
+      "acceptableDispositions": [],
+      "alertTitle": "Reported phishing — credential harvest impersonating IT",
+      "archetype": "phishing",
+      "asset": "user pdavis (Sales) · sender it-support@m1crosoft-helpdesk.co",
+      "correctDisposition": "escalate-tier2",
+      "detectionRule": "Defender for Office 365 · user-reported + URL re-scored suspicious",
+      "evidence": [
+        {
+          "detail": "SPF fail, DKIM none, DMARC none/fail — the visible From impersonates a trusted brand but aligns with nothing that authenticated it. (Corroborates the look-alike; a look-alike can pass its OWN auth, so this isn't the verdict by itself.)",
+          "id": "ph1-auth",
+          "label": "Doesn't align with the brand it imitates",
+          "sourceId": "email-auth",
+          "weight": "supporting"
+        },
+        {
+          "detail": "Sender domain registered 6 days ago — a look-alike of the brand it imitates, not the corporate mail domain.",
+          "id": "ph1-sender",
+          "label": "Week-old look-alike domain",
+          "sourceId": "sender-reputation",
+          "weight": "decisive"
+        },
+        {
+          "detail": "The link resolves to a fake corporate-login page — a form that captures whatever's typed and sends it onward. A harvester, not a real portal.",
+          "id": "ph1-url",
+          "label": "Credential-harvesting landing page",
+          "sourceId": "url-detonation",
+          "weight": "decisive"
+        },
+        {
+          "detail": "The harvester domain appears on two phishing-URL feeds.",
+          "id": "ph1-intel",
+          "label": "Landing domain on phishing feeds",
+          "sourceId": "threat-intel",
+          "weight": "supporting"
+        },
+        {
+          "detail": "pdavis reported it before clicking; no anomalous sign-in for the account. Caught early.",
+          "id": "ph1-signin",
+          "label": "No creds entered (yet)",
+          "sourceId": "signin-logs",
+          "weight": "supporting"
+        },
+        {
+          "detail": "A security-awareness phishing simulation runs this quarter — but its register shows no send to pdavis and a different sending platform. Tempting, but not this.",
+          "id": "ph1-noise",
+          "label": "There IS an awareness campaign…",
+          "sourceId": "awareness-campaign",
+          "weight": "noise"
+        }
+      ],
+      "handoff": null,
+      "id": "soc-phish-harvest",
+      "keySourceIds": [
+        "email-auth",
+        "sender-reputation",
+        "url-detonation"
+      ],
+      "learn": {
+        "concept": "Authentication answers 'did the From domain authenticate ITSELF' — not 'is this safe'. The decisive tells are the look-alike domain + the credential-harvest page + that it's in no campaign register; SPF/DKIM authenticate and DMARC governs disposition + From-alignment, but a look-alike can pass its own auth. (The visible From check is DMARC alignment, not raw SPF/DKIM.)",
+        "mitreId": "T1566",
+        "mitreName": "Phishing",
+        "pointer": "MITRE ATT&CK T1566 · LetsDefend 'Phishing Email Analysis'"
+      },
+      "sourceIds": [
+        "email-auth",
+        "sender-reputation",
+        "url-detonation",
+        "awareness-campaign",
+        "threat-intel",
+        "signin-logs"
+      ],
+      "toolSeverity": "High",
+      "trigger": "A user forwarded an 'IT: your mailbox is over quota — verify now' email; the gateway re-scored the link as suspicious.",
+      "truth": "true-positive",
+      "why": "Nothing authenticated the message (SPF/DKIM/DMARC all fail, From unaligned), the sender is a week-old look-alike, and the link is a live credential-harvesting page on two phishing feeds. It is NOT the sanctioned simulation — that campaign never targeted this user and uses a different platform. Real phish, no creds entered yet: escalate, block the sender/URL, and hunt for anyone who did click."
+    },
+    {
+      "acceptableDispositions": [],
+      "alertTitle": "Atypical travel — sign-in from two countries",
+      "archetype": "impossible-travel",
+      "asset": "account rwong (Engineering)",
+      "correctDisposition": "close-false-positive",
+      "detectionRule": "Entra ID Protection · risky sign-in (unlikelyTravel)",
+      "evidence": [
+        {
+          "detail": "The 'foreign' IP belongs to the company VPN egress range — already used by dozens of staff, just never added to Named locations.",
+          "id": "id1-named",
+          "label": "It's the corporate VPN egress",
+          "sourceId": "named-locations",
+          "weight": "decisive"
+        },
+        {
+          "detail": "Both sign-ins are from rwong's registered, compliant laptop, the normal client app and the usual user-agent. Only the egress IP differs.",
+          "id": "id1-signin",
+          "label": "Same device, app, user-agent",
+          "sourceId": "signin-logs",
+          "weight": "decisive"
+        },
+        {
+          "detail": "Detection is unlikelyTravel (Entra-native), risk Medium; the account is still inside its 14-day / 10-login learning window where these FPs are expected.",
+          "id": "id1-risk",
+          "label": "Atypical travel, in learning window",
+          "sourceId": "entra-risk",
+          "weight": "supporting"
+        },
+        {
+          "detail": "The egress IP has clean reputation.",
+          "id": "id1-intel",
+          "label": "VPN IP is clean",
+          "sourceId": "threat-intel",
+          "weight": "neutral"
+        },
+        {
+          "detail": "rwong has an approved trip abroad next month — unrelated to today's sign-in.",
+          "id": "id1-noise",
+          "label": "Upcoming trip abroad",
+          "sourceId": "hr-directory",
+          "weight": "noise"
+        }
+      ],
+      "handoff": null,
+      "id": "soc-id-vpn",
+      "keySourceIds": [
+        "signin-logs",
+        "named-locations"
+      ],
+      "learn": {
+        "concept": "Atypical/impossible travel over-fires on VPNs and during the 14-day/10-login learning period. Validate the sign-in fields — registered device, app, location, IP, user-agent — before you call it; a corporate VPN egress → confirm safe + add to Named locations.",
+        "mitreId": "T1078.004",
+        "mitreName": "Valid Accounts: Cloud Accounts",
+        "pointer": "Entra ID Protection investigate-risk · Named locations"
+      },
+      "sourceIds": [
+        "entra-risk",
+        "signin-logs",
+        "named-locations",
+        "threat-intel",
+        "hr-directory"
+      ],
+      "toolSeverity": "Medium",
+      "trigger": "rwong signed in from the office, then from a neighbouring country the account has never used before — flagged as atypical travel.",
+      "truth": "false-positive",
+      "why": "Same shape as a compromise, but the 'impossible' location is the corporate VPN egress: a registered, compliant device, normal app and user-agent — only the IP differs — and the account is still in its learning window. Confirm the sign-in safe and add the VPN range to Named locations so it stops firing. The detection misfired; close FP."
+    },
+    {
+      "acceptableDispositions": [],
+      "alertTitle": "EDR: offensive-security tool detected",
+      "archetype": "edr-malware",
+      "asset": "SEC-LAB-02 · security-team segment",
+      "correctDisposition": "close-benign",
+      "detectionRule": "Defender for Endpoint · 'hacktool' / behavioral detection",
+      "evidence": [
+        {
+          "detail": "Change CHG-3120 authorizes a red-team engagement on SEC-LAB-02 this week; the tool and host are named in the signed RoE / deconfliction note.",
+          "id": "ed2-ticket",
+          "label": "Approved red-team engagement",
+          "sourceId": "change-tickets",
+          "weight": "decisive"
+        },
+        {
+          "detail": "AlertEvidence: the binary is a well-known security-testing tool, on the security team's lab host SEC-LAB-02, run by a security-team account.",
+          "id": "ed2-evidence",
+          "label": "Security-team lab box",
+          "sourceId": "alert-evidence",
+          "weight": "decisive"
+        },
+        {
+          "detail": "Lineage shows an interactive launch by the tester — not spawned from a document or a temp-path dropper.",
+          "id": "ed2-tree",
+          "label": "Launched interactively by the tester",
+          "sourceId": "edr-process-tree",
+          "weight": "supporting"
+        },
+        {
+          "detail": "The hash is 'known', but it's a legitimate dual-use offensive-security utility, not malware.",
+          "id": "ed2-intel",
+          "label": "Dual-use, not malware-by-author",
+          "sourceId": "threat-intel",
+          "weight": "neutral"
+        },
+        {
+          "detail": "The account belongs to the security team.",
+          "id": "ed2-hr",
+          "label": "Security-team account",
+          "sourceId": "hr-directory",
+          "weight": "neutral"
+        }
+      ],
+      "handoff": null,
+      "id": "soc-edr-test",
+      "keySourceIds": [
+        "change-tickets",
+        "alert-evidence"
+      ],
+      "learn": {
+        "concept": "An authorized red-team / security-test tool is a Benign True Positive ('Informational, expected activity'), not malware to escalate. Check the engagement/change ticket and deconfliction note first; suppress for the window — don't kill the rule that catches the real thing.",
+        "mitreId": "T1204",
+        "mitreName": "User Execution",
+        "pointer": "Defender for Endpoint classification: Informational, expected activity (Security test)"
+      },
+      "sourceIds": [
+        "change-tickets",
+        "alert-evidence",
+        "edr-process-tree",
+        "threat-intel",
+        "hr-directory"
+      ],
+      "toolSeverity": "High",
+      "trigger": "Defender flagged a known offensive-security tool running on SEC-LAB-02.",
+      "truth": "benign-true-positive",
+      "why": "The detection is correct — that really is an offensive-security tool — but it's running inside an authorized red-team engagement on the security team's own lab box, named in the change ticket and RoE. That's Defender's 'Informational, expected activity' / Benign-TP: classify benign and suppress for the engagement window; don't escalate (you'd burn IR and blow the test), and don't permanently whitelist the rule. Isolating SEC-LAB-02 would break a sanctioned exercise. (A red-team engagement's run, seen from the blue chair.)"
+    },
+    {
+      "acceptableDispositions": [
+        "escalate-tier2"
+      ],
+      "alertTitle": "User reported suspicious MFA activity",
+      "archetype": "mfa-fatigue",
+      "asset": "account tkaur (Finance)",
+      "correctDisposition": "escalate-ir-isolate",
+      "detectionRule": "Entra ID Protection · userReportedSuspiciousActivity",
+      "evidence": [
+        {
+          "detail": "A burst of MFA push prompts to tkaur's authenticator at 01:50, none tied to a sign-in she started; she denied and reported them. Classic MFA fatigue.",
+          "id": "id2-mfa",
+          "label": "Prompt bombing, denied + reported",
+          "sourceId": "mfa-logs",
+          "weight": "decisive"
+        },
+        {
+          "detail": "Alongside it, a passwordSpray detection on tkaur — which fires ONLY once the attacker has validated the correct password. The credential is already compromised.",
+          "id": "id2-risk",
+          "label": "passwordSpray means the password is known",
+          "sourceId": "entra-risk",
+          "weight": "decisive"
+        },
+        {
+          "detail": "The attempts driving the prompts come from an anonymized IP on an unregistered device, off-hours.",
+          "id": "id2-signin",
+          "label": "Anonymized IP, unregistered device",
+          "sourceId": "signin-logs",
+          "weight": "supporting"
+        },
+        {
+          "detail": "The source IP is on a credential-attack feed.",
+          "id": "id2-intel",
+          "label": "Source on a credential-attack feed",
+          "sourceId": "threat-intel",
+          "weight": "supporting"
+        },
+        {
+          "detail": "The source isn't a sanctioned VPN or a known duty location.",
+          "id": "id2-named",
+          "label": "Not a known VPN/duty IP",
+          "sourceId": "named-locations",
+          "weight": "supporting"
+        }
+      ],
+      "handoff": null,
+      "id": "soc-id-mfa",
+      "keySourceIds": [
+        "mfa-logs",
+        "entra-risk"
+      ],
+      "learn": {
+        "concept": "MFA fatigue = unsolicited prompt-bombing hoping the user taps approve. 'User reported suspicious activity' fires on a denied+reported prompt; a paired passwordSpray means the password is already known. Treat as compromise — reset + revoke, don't just dismiss the prompts.",
+        "mitreId": "T1621",
+        "mitreName": "Multi-Factor Authentication Request Generation",
+        "pointer": "MITRE T1621 / T1078 · enable Authenticator number-matching"
+      },
+      "sourceIds": [
+        "mfa-logs",
+        "entra-risk",
+        "signin-logs",
+        "threat-intel",
+        "named-locations"
+      ],
+      "toolSeverity": "High",
+      "trigger": "tkaur tapped 'No, it's not me' on a flood of MFA push prompts at 01:50 that she never started, and reported them.",
+      "truth": "true-positive",
+      "why": "She denied and reported prompts she never started — MFA fatigue — and the paired passwordSpray detection only fires once the attacker has the correct password, so the credential is already compromised and they're hammering MFA to get in. Confirm compromised: disable the account, force a reset, revoke sessions, escalate to IR. (Number-matching / login-context in Authenticator is what stops the fatigue working.)"
+    },
+    {
+      "acceptableDispositions": [],
+      "alertTitle": "Large outbound transfer to cloud storage",
+      "archetype": "data-exfil",
+      "asset": "SRV-BACKUP-01 · service account svc-backup",
+      "correctDisposition": "close-benign",
+      "detectionRule": "DLP / proxy · high-volume egress to cloud storage",
+      "evidence": [
+        {
+          "detail": "A standing change authorizes nightly backup of this share to the CORPORATE cloud tenant in exactly this window.",
+          "id": "ex2-ticket",
+          "label": "Standing backup change CHG-2980",
+          "sourceId": "change-tickets",
+          "weight": "decisive"
+        },
+        {
+          "detail": "The transfer is the sanctioned backup product (not an ad-hoc script), under svc-backup, to the corporate tenant — not a personal account.",
+          "id": "ex2-cloud",
+          "label": "Backup agent → corporate tenant",
+          "sourceId": "cloud-activity",
+          "weight": "decisive"
+        },
+        {
+          "detail": "DLP matched on volume/class, but the destination is the approved corporate backup target.",
+          "id": "ex2-dlp",
+          "label": "Matched on volume, approved target",
+          "sourceId": "dlp-hits",
+          "weight": "supporting"
+        },
+        {
+          "detail": "The process is the backup product's signed binary, on its schedule.",
+          "id": "ex2-tree",
+          "label": "Signed, scheduled backup binary",
+          "sourceId": "edr-process-tree",
+          "weight": "supporting"
+        },
+        {
+          "detail": "Destination is the corporate cloud tenant; clean reputation.",
+          "id": "ex2-intel",
+          "label": "Corporate tenant, clean",
+          "sourceId": "threat-intel",
+          "weight": "neutral"
+        }
+      ],
+      "handoff": null,
+      "id": "soc-exfil-backup",
+      "keySourceIds": [
+        "change-tickets",
+        "cloud-activity"
+      ],
+      "learn": {
+        "concept": "A scheduled backup or sanctioned cloud-sync to the CORPORATE tenant is a Benign-TP, not exfil. Discriminate on process (backup product vs ad-hoc script), destination (corporate vs personal cloud), and a change ticket — then add a DLP exclusion for the approved path.",
+        "mitreId": "T1567.002",
+        "mitreName": "Exfiltration to Cloud Storage",
+        "pointer": "DLP exclusions · authorized-backup path"
+      },
+      "sourceIds": [
+        "change-tickets",
+        "cloud-activity",
+        "dlp-hits",
+        "edr-process-tree",
+        "threat-intel"
+      ],
+      "toolSeverity": "Medium",
+      "trigger": "A service account moved a large volume of data to cloud storage overnight.",
+      "truth": "benign-true-positive",
+      "why": "Same DLP/egress trigger as exfil, opposite verdict: it's the sanctioned nightly backup — the approved backup agent under the backup service account, to the CORPORATE tenant, covered by a standing change ticket. Correct detection of authorized activity = Benign-TP. Note it and close benign; escalating would page IR for a backup. Tells vs real exfil: signed backup product (not ad-hoc script), corporate destination (not personal), and a change ticket."
+    },
+    {
+      "acceptableDispositions": [
+        "escalate-tier2"
+      ],
+      "alertTitle": "EDR: malware that executed on an endpoint",
+      "archetype": "edr-malware",
+      "asset": "ENG-WS-21 · user nbianchi (Engineering)",
+      "correctDisposition": "escalate-ir-isolate",
+      "detectionRule": "Defender for Endpoint · behavioral + AV detection",
+      "evidence": [
+        {
+          "detail": "AlertEvidence (DetectionSource=Antivirus, ServiceSource=Defender for Endpoint): an unsigned binary in %TEMP%, status NOT quarantined — it executed.",
+          "id": "ed1-evidence",
+          "label": "Unsigned temp-path binary, NOT quarantined",
+          "sourceId": "alert-evidence",
+          "weight": "decisive"
+        },
+        {
+          "detail": "Lineage: a mail attachment → the binary → it wrote a Run key and a scheduled task, then reached out. Persistence established.",
+          "id": "ed1-tree",
+          "label": "Mail attachment → persistence",
+          "sourceId": "edr-process-tree",
+          "weight": "decisive"
+        },
+        {
+          "detail": "Regular-interval outbound to a first-seen domain right after execution — beacon-like.",
+          "id": "ed1-net",
+          "label": "Beaconing to a fresh domain",
+          "sourceId": "network-proxy",
+          "weight": "supporting"
+        },
+        {
+          "detail": "Both the file hash and the callout domain are on malware feeds.",
+          "id": "ed1-intel",
+          "label": "Hash + domain known-bad",
+          "sourceId": "threat-intel",
+          "weight": "supporting"
+        },
+        {
+          "detail": "No change record; ENG-WS-21 isn't a security/test host and nbianchi isn't IT.",
+          "id": "ed1-ticket",
+          "label": "No change, not a test box",
+          "sourceId": "change-tickets",
+          "weight": "decisive"
+        },
+        {
+          "detail": "nbianchi changed teams recently — irrelevant to the detection.",
+          "id": "ed1-noise",
+          "label": "Recently changed teams",
+          "sourceId": "hr-directory",
+          "weight": "noise"
+        }
+      ],
+      "handoff": null,
+      "id": "soc-edr-loader",
+      "keySourceIds": [
+        "alert-evidence",
+        "edr-process-tree"
+      ],
+      "learn": {
+        "concept": "EDR triage: read AlertEvidence for the file + quarantine state, then the process tree for lineage and persistence (Run keys / scheduled tasks), then network for C2. 'Not quarantined' + persistence + beacon = it executed and is live → isolate.",
+        "mitreId": "T1204",
+        "mitreName": "User Execution",
+        "pointer": "MITRE ATT&CK · Defender for Endpoint AlertEvidence table"
+      },
+      "sourceIds": [
+        "alert-evidence",
+        "edr-process-tree",
+        "network-proxy",
+        "change-tickets",
+        "threat-intel",
+        "hr-directory"
+      ],
+      "toolSeverity": "High",
+      "trigger": "Defender flagged a suspicious binary on ENG-WS-21; AlertEvidence shows it ran and is not yet contained.",
+      "truth": "true-positive",
+      "why": "An unsigned temp-path binary that actually executed (not quarantined), spawned from a mail attachment, set up persistence (Run key + scheduled task), and is beaconing to a flagged domain — hash and domain both known-bad, no change ticket. That's a live infection: isolate the host and escalate to IR. (Most EDR remediation is reversible — you can restore a quarantined file later if it turns out benign.)"
+    },
+    {
+      "acceptableDispositions": [],
+      "alertTitle": "Reported phishing — 'Q3 bonus, confirm details'",
+      "archetype": "phishing",
+      "asset": "multiple users · sender rewards@hr-yourco-bonus.com",
+      "correctDisposition": "close-benign",
+      "detectionRule": "Defender for Office 365 · user-reported",
+      "evidence": [
+        {
+          "detail": "The awareness register shows an ACTIVE authorized phishing-simulation campaign this week, from the sanctioned platform, targeting exactly this user group — subject 'Q3 bonus'.",
+          "id": "ph2-aware",
+          "label": "Active authorized simulation",
+          "sourceId": "awareness-campaign",
+          "weight": "decisive"
+        },
+        {
+          "detail": "SPF/DKIM/DMARC pass for the simulation platform's domain — consistent with the register. (Auth-pass alone never proves benign; the register makes the call.)",
+          "id": "ph2-auth",
+          "label": "Authenticates to the sim platform",
+          "sourceId": "email-auth",
+          "weight": "supporting"
+        },
+        {
+          "detail": "The lure domain is owned by the awareness vendor — not a look-alike of a real corporate brand.",
+          "id": "ph2-sender",
+          "label": "Vendor lure domain, not a look-alike",
+          "sourceId": "sender-reputation",
+          "weight": "supporting"
+        },
+        {
+          "detail": "The link goes to the training platform's tracking/teaching page, not a live credential harvester.",
+          "id": "ph2-url",
+          "label": "Training 'gotcha' page",
+          "sourceId": "url-detonation",
+          "weight": "supporting"
+        },
+        {
+          "detail": "No external malicious indicators.",
+          "id": "ph2-intel",
+          "label": "No malicious indicators",
+          "sourceId": "threat-intel",
+          "weight": "neutral"
+        }
+      ],
+      "handoff": null,
+      "id": "soc-phish-sim",
+      "keySourceIds": [
+        "awareness-campaign",
+        "email-auth"
+      ],
+      "learn": {
+        "concept": "A sanctioned phishing simulation is a Benign True Positive: the email really is phishing-shaped, but it's authorized. The campaign register is the proof — NOT the auth result (a real phish can pass its own auth, and sims are often allow-listed while failing it). Check the register before escalating user reports — and still credit the report.",
+        "mitreId": "T1566",
+        "mitreName": "Phishing",
+        "pointer": "Microsoft Attack Simulation Training / KnowBe4 · TP vs B-TP"
+      },
+      "sourceIds": [
+        "awareness-campaign",
+        "email-auth",
+        "sender-reputation",
+        "url-detonation",
+        "threat-intel"
+      ],
+      "toolSeverity": "Medium",
+      "trigger": "Several users reported a 'Q3 bonus — confirm your details' email with a login link.",
+      "truth": "benign-true-positive",
+      "why": "The reporters were right — it IS a phishing-shaped email. But it's the org's own sanctioned awareness simulation: the register shows an active authorized run from the training platform to this exact group, and the mail authenticates to that platform. Correct detection of authorized activity = Benign-TP. Don't escalate (you'd waste IR and tip off the test); note it and close benign — and the reports are exactly the behaviour the simulation trains."
+    },
+    {
+      "acceptableDispositions": [
+        "escalate-tier2"
+      ],
+      "alertTitle": "Possible exfiltration to personal cloud storage",
+      "archetype": "data-exfil",
+      "asset": "FIN-WS-08 · user jmensah (Finance)",
+      "correctDisposition": "escalate-ir-isolate",
+      "detectionRule": "Defender for Cloud Apps / DLP · unusual upload to cloud storage",
+      "evidence": [
+        {
+          "detail": "An unusual process (powershell.exe) read large local files at 02:30, then made HTTPS POSTs to a PERSONAL cloud-storage account — not the corporate tenant.",
+          "id": "ex1-cloud",
+          "label": "Ad-hoc process → personal cloud",
+          "sourceId": "cloud-activity",
+          "weight": "decisive"
+        },
+        {
+          "detail": "The files matched the 'PII / financial-records' DLP policy; the volume is far above this user's normal.",
+          "id": "ex1-dlp",
+          "label": "Classified data, far above baseline",
+          "sourceId": "dlp-hits",
+          "weight": "decisive"
+        },
+        {
+          "detail": "powershell.exe wasn't launched by a backup product — it's an ad-hoc script, off-hours.",
+          "id": "ex1-tree",
+          "label": "Not a backup product",
+          "sourceId": "edr-process-tree",
+          "weight": "supporting"
+        },
+        {
+          "detail": "The destination is a personal cloud-storage endpoint with no business relationship to the company.",
+          "id": "ex1-intel",
+          "label": "No business relationship",
+          "sourceId": "threat-intel",
+          "weight": "supporting"
+        },
+        {
+          "detail": "No backup or data-migration change record covers this transfer.",
+          "id": "ex1-ticket",
+          "label": "No backup/migration change",
+          "sourceId": "change-tickets",
+          "weight": "decisive"
+        }
+      ],
+      "handoff": null,
+      "id": "soc-exfil-cloud",
+      "keySourceIds": [
+        "cloud-activity",
+        "dlp-hits"
+      ],
+      "learn": {
+        "concept": "Exfil to cloud storage (T1567.002) blends into normal cloud traffic — a common cloud service, often a personal account the host doesn't normally use. The read: unusual process + large reads + HTTPS POST to cloud storage + off-hours + DLP class + above baseline. The discriminator vs a benign backup is destination (personal vs corporate) and whether a backup/sync is authorized.",
+        "mitreId": "T1567.002",
+        "mitreName": "Exfiltration to Cloud Storage",
+        "pointer": "MITRE ATT&CK T1567.002 · Defender for Cloud Apps anomaly alerts"
+      },
+      "sourceIds": [
+        "cloud-activity",
+        "dlp-hits",
+        "edr-process-tree",
+        "change-tickets",
+        "threat-intel"
+      ],
+      "toolSeverity": "High",
+      "trigger": "Off-hours, a script on FIN-WS-08 read a large batch of classified finance files and POSTed them to a personal cloud-storage account.",
+      "truth": "true-positive",
+      "why": "Hallmark exfil: an unusual process (powershell, not a backup product) reading large classified files off-hours and POSTing them to a PERSONAL cloud account with no business relationship, far above baseline, no change ticket. Adversaries hide exfil in cloud storage the host already uses — but the personal destination + DLP class + volume give it away. Contain and escalate to IR."
+    },
+    {
+      "acceptableDispositions": [],
+      "alertTitle": "Repeated account lockouts — user achen",
+      "archetype": "account-lockout",
+      "asset": "account achen (Marketing)",
+      "correctDisposition": "close-false-positive",
+      "detectionRule": "SIEM · Event 4740 (account locked out) ×6 in an hour",
+      "evidence": [
+        {
+          "detail": "Correlating 4771/4776: every failure traces to achen's phone (ActiveSync) and a mapped drive — both still submitting the OLD password from before the weekend reset.",
+          "id": "al2-fail",
+          "label": "Bad passwords come from achen's OWN devices",
+          "sourceId": "auth-failures",
+          "weight": "decisive"
+        },
+        {
+          "detail": "Ticket from achen right after the scheduled weekend reset: 'my account keeps locking every few minutes.'",
+          "id": "al2-help",
+          "label": "Helpdesk ticket: 'keeps locking'",
+          "sourceId": "it-helpdesk",
+          "weight": "decisive"
+        },
+        {
+          "detail": "The 4740s repeat, but the Caller Computer Name is blank — the true source only shows once you correlate 4771/4776.",
+          "id": "al2-lockout",
+          "label": "4740 fires, Caller Computer Name blank",
+          "sourceId": "lockout-events",
+          "weight": "supporting"
+        },
+        {
+          "detail": "The org-wide weekend password reset (CHG-4102) lines up with when the lockouts started — timing, not authorization.",
+          "id": "al2-ticket",
+          "label": "Weekend reset explains the timing",
+          "sourceId": "change-tickets",
+          "weight": "supporting"
+        },
+        {
+          "detail": "Every source is internal; nothing external to enrich.",
+          "id": "al2-intel",
+          "label": "All internal",
+          "sourceId": "threat-intel",
+          "weight": "neutral"
+        },
+        {
+          "detail": "A single failure once came from an unfamiliar subnet — but it resolves to the corporate VPN pool, not an attacker.",
+          "id": "al2-noise",
+          "label": "One failure from an odd subnet",
+          "sourceId": "auth-failures",
+          "weight": "noise"
+        },
+        {
+          "detail": "HR calendar shows achen on a normal in-office day — nothing anomalous about the account being in use.",
+          "id": "al2-hr",
+          "label": "User active, in office",
+          "sourceId": "hr-directory",
+          "weight": "neutral"
+        }
+      ],
+      "handoff": null,
+      "id": "soc-lockout-stale",
+      "keySourceIds": [
+        "auth-failures",
+        "it-helpdesk"
+      ],
+      "learn": {
+        "concept": "Most account lockouts aren't an attack — a device caching an OLD password after a change. Event 4740's Caller Computer Name is often blank; correlate Kerberos 4771 / NTLM 4776 to find the true source. Escalate only when that source is anomalous/external.",
+        "mitreId": "T1110",
+        "mitreName": "Brute Force",
+        "pointer": "Microsoft event-4740 · 4771/4776 correlation to find the lockout source"
+      },
+      "sourceIds": [
+        "auth-failures",
+        "it-helpdesk",
+        "lockout-events",
+        "change-tickets",
+        "threat-intel",
+        "hr-directory"
+      ],
+      "toolSeverity": "Medium",
+      "trigger": "achen's account has locked out six times since the weekend password reset.",
+      "truth": "false-positive",
+      "why": "The #1 real cause of lockouts, and it looks alarming until you read it right. Event 4740's Caller Computer Name is blank, so you correlate 4771/4776 — and the bad passwords all come from achen's OWN phone and a mapped drive, still submitting the pre-reset password after the weekend change. No attack; a stale cached credential. Close FP, and have the user update the stored password everywhere it's cached."
+    },
+    {
+      "acceptableDispositions": [
+        "escalate-tier2"
+      ],
+      "alertTitle": "Account lockouts across many users",
+      "archetype": "account-lockout",
+      "asset": "multiple accounts · via VPN-GW",
+      "correctDisposition": "escalate-ir-isolate",
+      "detectionRule": "SIEM · Event 4740 across ≥10 accounts within minutes",
+      "evidence": [
+        {
+          "detail": "4771/4776 failures across 10+ accounts from a single external IP in minutes — a credential attack noisy enough to trip each account's lockout threshold. The lockouts are collateral of the attack.",
+          "id": "al1-fail",
+          "label": "Failures across 10+ accounts from one external IP",
+          "sourceId": "auth-failures",
+          "weight": "decisive"
+        },
+        {
+          "detail": "No penetration-test authorization or credential-testing RoE covers this window.",
+          "id": "al1-ticket",
+          "label": "No authorized testing",
+          "sourceId": "change-tickets",
+          "weight": "decisive"
+        },
+        {
+          "detail": "The external source IP appears on a credential-attack feed.",
+          "id": "al1-intel",
+          "label": "Source on a credential-attack feed",
+          "sourceId": "threat-intel",
+          "weight": "supporting"
+        },
+        {
+          "detail": "4740 across many accounts within the same short window — not one user's device.",
+          "id": "al1-lockout",
+          "label": "Many accounts, near-simultaneous",
+          "sourceId": "lockout-events",
+          "weight": "supporting"
+        },
+        {
+          "detail": "The source geolocates to a country none of these users log in from.",
+          "id": "al1-geo",
+          "label": "Foreign origin",
+          "sourceId": "geo-vpn",
+          "weight": "supporting"
+        },
+        {
+          "detail": "The affected accounts are a spread of active users, none on leave — not one person's cached device.",
+          "id": "al1-hr",
+          "label": "Targeted users are active",
+          "sourceId": "hr-directory",
+          "weight": "supporting"
+        }
+      ],
+      "handoff": null,
+      "id": "soc-lockout-attack",
+      "keySourceIds": [
+        "auth-failures",
+        "change-tickets"
+      ],
+      "learn": {
+        "concept": "A credential attack noisy enough to lock accounts hits MANY accounts from ONE source — vs the single-user stale-cred case. Correlate 4771/4776 to the source: external + many accounts + no RoE = active attack, not a misconfigured device.",
+        "mitreId": "T1110",
+        "mitreName": "Brute Force",
+        "pointer": "MITRE ATT&CK T1110 · lockout as spray collateral"
+      },
+      "sourceIds": [
+        "auth-failures",
+        "change-tickets",
+        "threat-intel",
+        "lockout-events",
+        "geo-vpn",
+        "hr-directory"
+      ],
+      "toolSeverity": "High",
+      "trigger": "Ten accounts locked out within a few minutes, all failing from one source.",
+      "truth": "true-positive",
+      "why": "Not a stale-cred misconfig: the 4771/4776 failures span 10+ accounts from a single external IP flagged on a credential-attack feed, foreign, with no authorized-testing ticket — noisy enough to lock each account. That's an active credential attack, and the lockouts are collateral. Escalate to IR and block the source. The tell vs the stale-cred case: MANY accounts from ONE external source, not one user's own device."
+    },
+    {
+      "acceptableDispositions": [],
+      "alertTitle": "Lockouts across accounts from an internal host",
+      "archetype": "account-lockout",
+      "asset": "multiple accounts · source PENTEST-01",
+      "correctDisposition": "close-benign",
+      "detectionRule": "SIEM · Event 4740 across ≥15 accounts from one source",
+      "evidence": [
+        {
+          "detail": "A signed pentest RoE covers credential testing from PENTEST-01 this week — lockouts are noted as an accepted side-effect.",
+          "id": "al3-ticket",
+          "label": "Approved pentest RoE CHG-4130",
+          "sourceId": "change-tickets",
+          "weight": "decisive"
+        },
+        {
+          "detail": "4771/4776 failures across 18 accounts from PENTEST-01 (internal, security-team segment) — a spray, which is exactly what the engagement does.",
+          "id": "al3-fail",
+          "label": "Spray from the internal test host",
+          "sourceId": "auth-failures",
+          "weight": "decisive"
+        },
+        {
+          "detail": "4740 across many accounts; correlation points at the internal test host, not an external attacker.",
+          "id": "al3-lockout",
+          "label": "Source correlates to PENTEST-01",
+          "sourceId": "lockout-events",
+          "weight": "supporting"
+        },
+        {
+          "detail": "Internal source; nothing external in play.",
+          "id": "al3-intel",
+          "label": "Internal source",
+          "sourceId": "threat-intel",
+          "weight": "neutral"
+        },
+        {
+          "detail": "The security calendar shows an authorized engagement running this week — consistent with the RoE.",
+          "id": "al3-hr",
+          "label": "Engagement window on the calendar",
+          "sourceId": "hr-directory",
+          "weight": "supporting"
+        }
+      ],
+      "handoff": null,
+      "id": "soc-lockout-pentest",
+      "keySourceIds": [
+        "change-tickets",
+        "auth-failures"
+      ],
+      "learn": {
+        "concept": "A sanctioned pentest can trip lockouts too — real spray behaviour, but authorized. Check the RoE / deconfliction before escalating a mass-lockout event; source-internal + a signed engagement = Benign-TP, same detection as the malicious spray.",
+        "mitreId": "T1110",
+        "mitreName": "Brute Force",
+        "pointer": "Purple-team deconfliction · 'is this us or someone else?'"
+      },
+      "sourceIds": [
+        "change-tickets",
+        "auth-failures",
+        "lockout-events",
+        "threat-intel",
+        "hr-directory"
+      ],
+      "toolSeverity": "High",
+      "trigger": "A burst of lockouts across 18 accounts, all failing from one internal host.",
+      "truth": "benign-true-positive",
+      "why": "It looks exactly like the malicious case — a spray causing lockouts across 18 accounts — and it IS spray behaviour, so the detection is correct. But the source is the security team's internal test host, and a signed pentest RoE covers it (lockouts noted as an accepted side-effect). Correct detection of authorized activity = Benign-TP: confirm the RoE, note it, close benign. Escalating would burn IR on a sanctioned test."
+    },
+    {
+      "acceptableDispositions": [],
+      "alertTitle": "Insider risk — departing-employee data theft",
+      "archetype": "insider-threat",
+      "asset": "user jwalsh (Sales) · resignation on file",
+      "correctDisposition": "escalate-tier2",
+      "detectionRule": "Purview IRM · 'Data theft by departing users' (High)",
+      "evidence": [
+        {
+          "detail": "HR: jwalsh resigned; last working day is Friday. IRM's departing-user policy is scoring exfiltration indicators against that end date.",
+          "id": "in1-hr",
+          "label": "Departing — last day Friday",
+          "sourceId": "hr-directory",
+          "weight": "decisive"
+        },
+        {
+          "detail": "A sequence: bulk SharePoint downloads, then copies to a personal cloud account and a USB, this week — well above jwalsh's 90-day baseline.",
+          "id": "in1-cloud",
+          "label": "Download-then-exfiltrate to a PERSONAL account",
+          "sourceId": "cloud-activity",
+          "weight": "decisive"
+        },
+        {
+          "detail": "No approved bulk-export, data-migration, or offboarding-handover ticket covers this activity.",
+          "id": "in1-ticket",
+          "label": "No authorized export",
+          "sourceId": "change-tickets",
+          "weight": "decisive"
+        },
+        {
+          "detail": "The files match the customer-list / pricing DLP policy — sensitive, and far above a Sales rep's normal export volume.",
+          "id": "in1-dlp",
+          "label": "Sensitive customer data, above norm",
+          "sourceId": "dlp-hits",
+          "weight": "supporting"
+        },
+        {
+          "detail": "Several accessed folders sit outside jwalsh's team's normal scope.",
+          "id": "in1-role",
+          "label": "Some access is out of scope",
+          "sourceId": "role-scope",
+          "weight": "supporting"
+        },
+        {
+          "detail": "No external indicators — this is a trusted insider, not an outside attacker. That's exactly why it's hard: the account is legitimate.",
+          "id": "in1-neutral",
+          "label": "Nothing external to enrich",
+          "sourceId": "threat-intel",
+          "weight": "neutral"
+        }
+      ],
+      "handoff": null,
+      "id": "soc-insider-departing",
+      "keySourceIds": [
+        "hr-directory",
+        "change-tickets",
+        "cloud-activity"
+      ],
+      "learn": {
+        "concept": "Insider threat is the archetype where the action alone tells you nothing — the same download is malicious or benign depending on intent, authorization and role. Read CONTEXT: employment status (departing?), an authorized-export ticket, and whether the data is in scope. And the disposition inverts the usual instinct: ESCALATE to a multi-stakeholder insider-risk / HR / legal program — do NOT isolate or confront. A Tier-1 hands it up.",
+        "mitreId": "T1567",
+        "mitreName": "Exfiltration Over Web Service",
+        "pointer": "Microsoft Purview Insider Risk Management · CISA Insider Threat Mitigation Guide"
+      },
+      "sourceIds": [
+        "hr-directory",
+        "cloud-activity",
+        "change-tickets",
+        "dlp-hits",
+        "role-scope",
+        "threat-intel"
+      ],
+      "toolSeverity": "High",
+      "trigger": "IRM flagged jwalsh (resignation on file, last day Friday): a spike of SharePoint bulk-downloads and copies to a personal cloud account this week.",
+      "truth": "true-positive",
+      "why": "The subtlest archetype: the SAME bulk-download is theft or business-as-usual depending on AUTHORIZATION and ROLE. Here every discriminator points to theft — jwalsh resigned (last day Friday), there's a download-then-exfiltrate sequence to a personal cloud + USB well above baseline, on sensitive customer data, with no authorized-export ticket. Escalate to the insider-risk / HR / legal program — and do NOT unilaterally isolate or confront: that's an HR/legal matter, and tipping them off or acting alone destroys the case. Hand it up; preserve the evidence."
+    },
+    {
+      "acceptableDispositions": [],
+      "alertTitle": "Insider risk — bulk dataset access, user rmehta",
+      "archetype": "insider-threat",
+      "asset": "user rmehta (Data Science)",
+      "correctDisposition": "close-false-positive",
+      "detectionRule": "Purview IRM · anomalous activity above baseline (Medium)",
+      "evidence": [
+        {
+          "detail": "rmehta is a data scientist — large dataset access is squarely in scope. A data-heavy role has a high normal, so this isn't actually anomalous for them.",
+          "id": "in2-role",
+          "label": "Large dataset access IS the job",
+          "sourceId": "role-scope",
+          "weight": "decisive"
+        },
+        {
+          "detail": "rmehta's 90-day baseline already includes regular large pulls; this week is within their normal range, prior history clean, no employment-status change.",
+          "id": "in2-risk",
+          "label": "Within their 90-day baseline",
+          "sourceId": "insider-risk",
+          "weight": "decisive"
+        },
+        {
+          "detail": "Everything stays in the corporate analytics environment — no USB, no personal cloud, no external sharing.",
+          "id": "in2-cloud",
+          "label": "Stays in the corporate environment",
+          "sourceId": "cloud-activity",
+          "weight": "supporting"
+        },
+        {
+          "detail": "A long-tenured active employee; no resignation or end-date signal.",
+          "id": "in2-hr",
+          "label": "Long-tenured, not departing",
+          "sourceId": "hr-directory",
+          "weight": "supporting"
+        },
+        {
+          "detail": "Routine analytics; no special ticket, but none is needed for in-role access.",
+          "id": "in2-ticket",
+          "label": "In-role work, no special ticket needed",
+          "sourceId": "change-tickets",
+          "weight": "neutral"
+        },
+        {
+          "detail": "DLP matched on volume — which is what tripped the anomaly — but volume alone isn't the story for this role.",
+          "id": "in2-dlp",
+          "label": "Matched on volume",
+          "sourceId": "dlp-hits",
+          "weight": "noise"
+        }
+      ],
+      "handoff": null,
+      "id": "soc-insider-baseline",
+      "keySourceIds": [
+        "role-scope",
+        "insider-risk"
+      ],
+      "learn": {
+        "concept": "UEBA insider anomalies over-fire on data-heavy roles — a data scientist's 'anomalous' bulk access is their baseline. Read role/scope + the user's own 90-day norm, not the raw volume. Same action, opposite verdict from the departing-employee case.",
+        "mitreId": "T1078",
+        "mitreName": "Valid Accounts",
+        "pointer": "Purview IRM · behavioral baselines · tune per-role thresholds"
+      },
+      "sourceIds": [
+        "role-scope",
+        "insider-risk",
+        "cloud-activity",
+        "hr-directory",
+        "change-tickets",
+        "dlp-hits"
+      ],
+      "toolSeverity": "Medium",
+      "trigger": "IRM flagged rmehta for a spike in large dataset downloads this week.",
+      "truth": "false-positive",
+      "why": "The mirror of the departing-employee case: the SAME bulk access, opposite verdict. rmehta is a data scientist — large dataset access is their JOB, in scope, and within their 90-day baseline; it stays in the corporate environment; they're not departing. The UEBA 'anomaly' misfired because a data-heavy role has a high normal. Close FP and tune the baseline for the role. The action told you nothing — role and context did."
+    },
+    {
+      "acceptableDispositions": [],
+      "alertTitle": "Insider risk — large export to cloud, user tokafor",
+      "archetype": "insider-threat",
+      "asset": "user tokafor (IT · Migrations)",
+      "correctDisposition": "close-benign",
+      "detectionRule": "Purview IRM · 'Data leaks' (High-severity DLP)",
+      "evidence": [
+        {
+          "detail": "An approved data-migration change authorizes moving this records set to the new CORPORATE cloud tenant this week; tokafor is the assigned migration engineer.",
+          "id": "in3-ticket",
+          "label": "Approved migration CHG-5330",
+          "sourceId": "change-tickets",
+          "weight": "decisive"
+        },
+        {
+          "detail": "The export goes to the corporate tenant (the migration target), not a personal account — a real bulk export, but the sanctioned one.",
+          "id": "in3-cloud",
+          "label": "To the corporate tenant, not personal",
+          "sourceId": "cloud-activity",
+          "weight": "decisive"
+        },
+        {
+          "detail": "tokafor is on the migrations team; this records set is in scope for the project.",
+          "id": "in3-role",
+          "label": "Migrations engineer, in scope",
+          "sourceId": "role-scope",
+          "weight": "supporting"
+        },
+        {
+          "detail": "Active employee; no resignation or end-date signal.",
+          "id": "in3-hr",
+          "label": "Active, not departing",
+          "sourceId": "hr-directory",
+          "weight": "supporting"
+        },
+        {
+          "detail": "DLP matched on volume/class correctly: it genuinely is a large sensitive export (the detection is right).",
+          "id": "in3-dlp",
+          "label": "Correctly matched — it IS a big export",
+          "sourceId": "dlp-hits",
+          "weight": "neutral"
+        },
+        {
+          "detail": "No prior insider-risk history; nothing correlating with employment status.",
+          "id": "in3-risk",
+          "label": "No prior risk history",
+          "sourceId": "insider-risk",
+          "weight": "neutral"
+        }
+      ],
+      "handoff": null,
+      "id": "soc-insider-migration",
+      "keySourceIds": [
+        "change-tickets",
+        "cloud-activity"
+      ],
+      "learn": {
+        "concept": "A sanctioned bulk export / migration is a Benign-TP: the detection correctly fires on a real large transfer, but a change ticket authorizes it and the destination is corporate, not personal. Distinguish the three: role-baseline (FP — the anomaly never happened) vs authorized migration (Benign-TP — it happened, and a ticket sanctioned it) vs departing-employee theft (TP — unauthorized, personal destination, leaving).",
+        "mitreId": "T1567",
+        "mitreName": "Exfiltration Over Web Service",
+        "pointer": "Purview IRM · authorized-export / migration exclusion"
+      },
+      "sourceIds": [
+        "change-tickets",
+        "cloud-activity",
+        "role-scope",
+        "hr-directory",
+        "dlp-hits",
+        "insider-risk"
+      ],
+      "toolSeverity": "High",
+      "trigger": "IRM flagged tokafor for a large one-off export of a records set to cloud storage.",
+      "truth": "benign-true-positive",
+      "why": "Unlike the role-baseline FP, this IS a real, above-baseline bulk export — the detection is correct — but it's the sanctioned migration: an approved change ticket, tokafor is the assigned engineer, and the destination is the CORPORATE tenant, not a personal account. Correct detection of authorized activity = Benign-TP: confirm the ticket, note it, close benign. The discriminators vs the departing-employee theft: authorization + corporate destination + in-role, and the user isn't leaving."
+    },
+    {
+      "acceptableDispositions": [],
+      "alertTitle": "Data accessed and moved off Polaris Capital settlement mesh",
+      "archetype": "data-exfil",
+      "asset": "Polaris Capital settlement mesh · operator ghost_0x2A",
+      "correctDisposition": "close-benign",
+      "detectionRule": "DLP / Cloud Apps · scoped read + egress",
+      "evidence": [
+        {
+          "detail": "A spray of 4625 failures across many accounts from one source, then a 4624 success — the access step of the operator's run.",
+          "id": "the-key-sig0",
+          "label": "Password spray → 4624 success",
+          "sourceId": "auth-logs",
+          "weight": "decisive"
+        },
+        {
+          "detail": "The session's source routes through anonymizing hops (anonymized-IP style) — no single clean origin.",
+          "id": "the-key-sig1",
+          "label": "Source chains through proxies",
+          "sourceId": "signin-logs",
+          "weight": "supporting"
+        },
+        {
+          "detail": "A new session from a device and user-agent not seen for this account before.",
+          "id": "the-key-sig2",
+          "label": "New session, unfamiliar host",
+          "sourceId": "signin-logs",
+          "weight": "supporting"
+        },
+        {
+          "detail": "A read of the exact files named in scope, followed by an outbound transfer — the objective itself.",
+          "id": "the-key-sig3",
+          "label": "Scoped files read, then egress",
+          "sourceId": "dlp-hits",
+          "weight": "decisive"
+        },
+        {
+          "detail": "An authorized engagement / RoE (RoE-PLR-14) covers this operator, target and window. The activity is real attack behaviour — but sanctioned.",
+          "id": "the-key-roe",
+          "label": "Approved engagement RoE-PLR-14",
+          "sourceId": "change-tickets",
+          "weight": "decisive"
+        }
+      ],
+      "handoff": {
+        "fromRun": "the-key",
+        "operator": "ghost_0x2A"
+      },
+      "id": "soc-handoff-the-key",
+      "keySourceIds": [
+        "change-tickets",
+        "auth-logs",
+        "dlp-hits"
+      ],
+      "learn": {
+        "concept": "Same board, two seats: a red-team run seen from the blue chair. The ONLY thing separating a Benign-TP from a TP is authorization — check for the engagement / RoE / deconfliction record before you act, not who the tradecraft looks like. That's exactly why those records exist.",
+        "mitreId": "T1567.002",
+        "mitreName": "Exfiltration to Cloud Storage",
+        "pointer": "Purple-team deconfliction · 'is this us or someone else?'"
+      },
+      "sourceIds": [
+        "auth-logs",
+        "signin-logs",
+        "dlp-hits",
+        "change-tickets"
+      ],
+      "toolSeverity": "Medium",
+      "trigger": "ghost_0x2A's session moved quietly through Polaris Capital settlement mesh: Password spray → 4624 success; Source chains through proxies; New session, unfamiliar host; Scoped files read, then egress.",
+      "truth": "benign-true-positive",
+      "why": "This alert IS a red-team engagement's run, seen from your chair — the same board, the other seat. The tradecraft (Password spray → 4624 success; Source chains through proxies; New session, unfamiliar host; Scoped files read, then egress) is genuine attack behaviour and the detection is CORRECT, but an authorized engagement (RoE-PLR-14) covers this operator, target and window. That's a Benign True Positive: verify the RoE / deconfliction, note it, close benign. Escalating would page IR for a sanctioned test; isolating would blow up the engagement."
+    },
+    {
+      "acceptableDispositions": [],
+      "alertTitle": "Log/integrity tampering on Charon substation historian",
+      "archetype": "edr-malware",
+      "asset": "Charon substation historian · operator ghost_0x2A",
+      "correctDisposition": "close-benign",
+      "detectionRule": "SIEM · audit log cleared (1102) + file modification",
+      "evidence": [
+        {
+          "detail": "The session's source routes through anonymizing hops (anonymized-IP style) — no single clean origin.",
+          "id": "burn-notice-sig0",
+          "label": "Source chains through proxies",
+          "sourceId": "signin-logs",
+          "weight": "supporting"
+        },
+        {
+          "detail": "A new session from a device and user-agent not seen for this account before.",
+          "id": "burn-notice-sig1",
+          "label": "New session, unfamiliar host",
+          "sourceId": "signin-logs",
+          "weight": "supporting"
+        },
+        {
+          "detail": "A single, surgical edit to a log/manifest on the target — precise, not bulk.",
+          "id": "burn-notice-sig2",
+          "label": "Manifest/log entry modified",
+          "sourceId": "alert-evidence",
+          "weight": "supporting"
+        },
+        {
+          "detail": "The security audit log was cleared — a 1102 event. Cleanup or anti-forensics depends entirely on who did it, and whether they were allowed to.",
+          "id": "burn-notice-sig3",
+          "label": "Audit log cleared (Event ID 1102)",
+          "sourceId": "alert-evidence",
+          "weight": "decisive"
+        },
+        {
+          "detail": "An authorized engagement / RoE (RoE-CHR-09) covers this operator, target and window. The activity is real attack behaviour — but sanctioned. Noisy cleanup (audit-log clear) is noted in the engagement record as an accepted side-effect.",
+          "id": "burn-notice-roe",
+          "label": "Approved engagement RoE-CHR-09",
+          "sourceId": "change-tickets",
+          "weight": "decisive"
+        }
+      ],
+      "handoff": {
+        "fromRun": "burn-notice",
+        "operator": "ghost_0x2A"
+      },
+      "id": "soc-handoff-burn-notice",
+      "keySourceIds": [
+        "change-tickets",
+        "alert-evidence"
+      ],
+      "learn": {
+        "concept": "Same board, two seats: a red-team run seen from the blue chair. The ONLY thing separating a Benign-TP from a TP is authorization — check for the engagement / RoE / deconfliction record before you act, not who the tradecraft looks like. That's exactly why those records exist.",
+        "mitreId": "T1070.001",
+        "mitreName": "Indicator Removal: Clear Windows Event Logs",
+        "pointer": "Purple-team deconfliction · 'is this us or someone else?'"
+      },
+      "sourceIds": [
+        "signin-logs",
+        "alert-evidence",
+        "change-tickets"
+      ],
+      "toolSeverity": "High",
+      "trigger": "ghost_0x2A's session was noisy on Charon substation historian: Source chains through proxies; New session, unfamiliar host; Manifest/log entry modified; Audit log cleared (Event ID 1102).",
+      "truth": "benign-true-positive",
+      "why": "This alert IS a red-team engagement's run, seen from your chair — the same board, the other seat. The tradecraft (Source chains through proxies; New session, unfamiliar host; Manifest/log entry modified; Audit log cleared (Event ID 1102)) is genuine attack behaviour and the detection is CORRECT, but an authorized engagement (RoE-CHR-09) covers this operator, target and window. That's a Benign True Positive: verify the RoE / deconfliction, note it, close benign. Escalating would page IR for a sanctioned test; isolating would blow up the engagement."
+    },
+    {
+      "acceptableDispositions": [
+        "escalate-tier2"
+      ],
+      "alertTitle": "Data accessed and moved off Aurora Labs LIMS",
+      "archetype": "data-exfil",
+      "asset": "Aurora Labs LIMS · operator ghost_0x2A",
+      "correctDisposition": "escalate-ir-isolate",
+      "detectionRule": "DLP / Cloud Apps · scoped read + egress",
+      "evidence": [
+        {
+          "detail": "The session's source routes through anonymizing hops (anonymized-IP style) — no single clean origin.",
+          "id": "unsanctioned-sig0",
+          "label": "Source chains through proxies",
+          "sourceId": "signin-logs",
+          "weight": "supporting"
+        },
+        {
+          "detail": "A spray of 4625 failures across many accounts from one source, then a 4624 success — the access step of the operator's run.",
+          "id": "unsanctioned-sig1",
+          "label": "Password spray → 4624 success",
+          "sourceId": "auth-logs",
+          "weight": "decisive"
+        },
+        {
+          "detail": "A new session from a device and user-agent not seen for this account before.",
+          "id": "unsanctioned-sig2",
+          "label": "New session, unfamiliar host",
+          "sourceId": "signin-logs",
+          "weight": "supporting"
+        },
+        {
+          "detail": "A read of the exact files named in scope, followed by an outbound transfer — the objective itself.",
+          "id": "unsanctioned-sig3",
+          "label": "Scoped files read, then egress",
+          "sourceId": "dlp-hits",
+          "weight": "decisive"
+        },
+        {
+          "detail": "The security audit log was cleared — a 1102 event. Cleanup or anti-forensics depends entirely on who did it, and whether they were allowed to.",
+          "id": "unsanctioned-sig4",
+          "label": "Audit log cleared (Event ID 1102)",
+          "sourceId": "alert-evidence",
+          "weight": "decisive"
+        },
+        {
+          "detail": "No RoE, change ticket, or authorized-testing record covers this operator, target or window.",
+          "id": "unsanctioned-noroe",
+          "label": "No engagement covers this",
+          "sourceId": "change-tickets",
+          "weight": "decisive"
+        }
+      ],
+      "handoff": {
+        "fromRun": "unsanctioned",
+        "operator": "ghost_0x2A"
+      },
+      "id": "soc-handoff-unsanctioned",
+      "keySourceIds": [
+        "change-tickets",
+        "auth-logs",
+        "dlp-hits",
+        "alert-evidence"
+      ],
+      "learn": {
+        "concept": "Same board, two seats: a red-team run seen from the blue chair. The ONLY thing separating a Benign-TP from a TP is authorization — check for the engagement / RoE / deconfliction record before you act, not who the tradecraft looks like. That's exactly why those records exist.",
+        "mitreId": "T1567.002",
+        "mitreName": "Exfiltration to Cloud Storage",
+        "pointer": "Purple-team deconfliction · 'is this us or someone else?'"
+      },
+      "sourceIds": [
+        "signin-logs",
+        "auth-logs",
+        "dlp-hits",
+        "alert-evidence",
+        "change-tickets"
+      ],
+      "toolSeverity": "High",
+      "trigger": "ghost_0x2A's session was noisy on Aurora Labs LIMS: Source chains through proxies; Password spray → 4624 success; New session, unfamiliar host; Scoped files read, then egress; Audit log cleared (Event ID 1102).",
+      "truth": "true-positive",
+      "why": "The same tradecraft a sanctioned run leaves (Source chains through proxies; Password spray → 4624 success; New session, unfamiliar host; Scoped files read, then egress; Audit log cleared (Event ID 1102)) — but nothing authorizes this one: no RoE, no change ticket, no engagement. They also cleared the audit log (a 1102) on the way out — anti-forensics layered on top. Correct detection of REAL, unauthorized attack activity → a True Positive. Contain and escalate to IR. The ONLY thing separating this from a Benign-TP is the missing authorization — not who ran it."
+    }
+  ],
+  "contentHash": "sha256:6fdddac6430e0cf485f08e3c353aaebabec4db743612dc4cca6d3aa87893ffc4",
+  "dispositions": [
+    "close-false-positive",
+    "close-benign",
+    "escalate-tier2",
+    "escalate-ir-isolate"
+  ],
+  "kit": [
+    {
+      "blurb": "Every case opens with the threat-intel enrichment already pulled — one less source to spend shift-time on.",
+      "cost": 300,
+      "id": "intel-feed",
+      "label": "Threat-intel feed subscription"
+    }
+  ],
+  "ranks": [
+    {
+      "id": "trainee",
+      "label": "Trainee",
+      "min": 0
+    },
+    {
+      "id": "t1",
+      "label": "Tier-1 Analyst",
+      "min": 40
+    },
+    {
+      "id": "t1-senior",
+      "label": "Tier-1 · Senior",
+      "min": 150
+    },
+    {
+      "id": "t2",
+      "label": "Tier-2 · candidate",
+      "min": 210
+    }
+  ],
+  "schemaVersion": 1,
+  "shifts": [
+    {
+      "caseIds": [
+        "soc-ps-cradle",
+        "soc-auth-reset",
+        "soc-ps-patch",
+        "soc-dns-beacon",
+        "soc-auth-bruteforce",
+        "soc-dns-cdn",
+        "soc-auth-pentest"
+      ],
+      "id": "first-shift",
+      "kind": "campaign",
+      "label": "Shift 1 · fundamentals",
+      "note": null,
+      "requiresRedRun": false,
+      "unlockStanding": 0
+    },
+    {
+      "caseIds": [
+        "soc-phish-harvest",
+        "soc-id-vpn",
+        "soc-edr-test",
+        "soc-id-mfa",
+        "soc-exfil-backup",
+        "soc-edr-loader",
+        "soc-phish-sim",
+        "soc-exfil-cloud"
+      ],
+      "id": "second-shift",
+      "kind": "campaign",
+      "label": "Shift 2 · phishing · identity · EDR · exfil",
+      "note": null,
+      "requiresRedRun": false,
+      "unlockStanding": 40
+    },
+    {
+      "caseIds": [
+        "soc-lockout-stale",
+        "soc-lockout-attack",
+        "soc-lockout-pentest"
+      ],
+      "id": "lockout-shift",
+      "kind": "campaign",
+      "label": "Shift 3 · the lockout queue (mostly not a threat)",
+      "note": null,
+      "requiresRedRun": false,
+      "unlockStanding": 80
+    },
+    {
+      "caseIds": [
+        "soc-handoff-the-key",
+        "soc-handoff-burn-notice",
+        "soc-handoff-unsanctioned"
+      ],
+      "id": "handoff-shift",
+      "kind": "campaign",
+      "label": "Shift 4 · the other chair (a red team's runs)",
+      "note": "Adjudicate a contracted red team's tradecraft from the blue side.",
+      "requiresRedRun": false,
+      "unlockStanding": 120
+    },
+    {
+      "caseIds": [
+        "soc-insider-departing",
+        "soc-insider-baseline",
+        "soc-insider-migration"
+      ],
+      "id": "insider-shift",
+      "kind": "campaign",
+      "label": "Shift 5 · the insider desk (context is the call)",
+      "note": null,
+      "requiresRedRun": false,
+      "unlockStanding": 160
+    }
+  ],
+  "sources": [
+    {
+      "cost": 8,
+      "id": "alert-evidence",
+      "label": "EDR AlertEvidence (Advanced Hunting)",
+      "question": "what file/device, and the detection + quarantine state?"
+    },
+    {
+      "cost": 8,
+      "id": "auth-failures",
+      "label": "Kerberos / NTLM failures (4771 / 4776)",
+      "question": "where are the bad passwords actually coming from?"
+    },
+    {
+      "cost": 8,
+      "id": "auth-logs",
+      "label": "Auth logs (4624 / 4625 / 4672)",
+      "question": "what's the logon pattern, and from where?"
+    },
+    {
+      "cost": 5,
+      "id": "awareness-campaign",
+      "label": "Security-awareness campaign register",
+      "question": "is this part of an authorized phishing simulation?"
+    },
+    {
+      "cost": 6,
+      "id": "change-tickets",
+      "label": "Change tickets / asset register",
+      "question": "was this activity authorized or scheduled?"
+    },
+    {
+      "cost": 8,
+      "id": "cloud-activity",
+      "label": "Cloud-app / egress activity",
+      "question": "what process sent how much, and to where?"
+    },
+    {
+      "cost": 10,
+      "id": "decoded-command",
+      "label": "Decode the command",
+      "question": "what does the encoded blob actually say?"
+    },
+    {
+      "cost": 6,
+      "id": "dlp-hits",
+      "label": "DLP policy hits",
+      "question": "what data matched which policy, and how much?"
+    },
+    {
+      "cost": 8,
+      "id": "dns-logs",
+      "label": "DNS query logs",
+      "question": "what's the timing, entropy and resolution of the queries?"
+    },
+    {
+      "cost": 10,
+      "id": "edr-process-tree",
+      "label": "EDR — process tree & lineage",
+      "question": "what spawned this, and what did it do after?"
+    },
+    {
+      "cost": 6,
+      "id": "email-auth",
+      "label": "Email authentication (SPF/DKIM/DMARC)",
+      "question": "did it authenticate and align with the From domain?"
+    },
+    {
+      "cost": 6,
+      "id": "entra-risk",
+      "label": "Entra ID Protection risk detections",
+      "question": "which risk detection fired, and what's the user risk?"
+    },
+    {
+      "cost": 6,
+      "id": "geo-vpn",
+      "label": "VPN / geo-IP",
+      "question": "where did this originate, and does it fit the user?"
+    },
+    {
+      "cost": 5,
+      "id": "hr-directory",
+      "label": "HR directory / calendar",
+      "question": "should this account even be active right now?"
+    },
+    {
+      "cost": 6,
+      "id": "insider-risk",
+      "label": "Insider-risk score & history",
+      "question": "how risky is this user, and does it correlate with employment status?"
+    },
+    {
+      "cost": 5,
+      "id": "it-helpdesk",
+      "label": "IT helpdesk tickets",
+      "question": "did the user report anything?"
+    },
+    {
+      "cost": 6,
+      "id": "lockout-events",
+      "label": "Account-lockout events (4740)",
+      "question": "which account locked, how often — and is the caller machine even populated?"
+    },
+    {
+      "cost": 6,
+      "id": "mfa-logs",
+      "label": "MFA / auth-method logs",
+      "question": "did the user initiate or deny the prompts?"
+    },
+    {
+      "cost": 5,
+      "id": "named-locations",
+      "label": "Named locations / VPN register",
+      "question": "is this IP a corporate VPN or known duty location?"
+    },
+    {
+      "cost": 8,
+      "id": "network-proxy",
+      "label": "Firewall / proxy logs",
+      "question": "did it call out, and to what?"
+    },
+    {
+      "cost": 6,
+      "id": "privilege-events",
+      "label": "Privilege assignment (4672)",
+      "question": "were special privileges granted, and to whom?"
+    },
+    {
+      "cost": 5,
+      "id": "role-scope",
+      "label": "Role & entitlement context",
+      "question": "is this data in scope for the user's job?"
+    },
+    {
+      "cost": 5,
+      "id": "sender-reputation",
+      "label": "Sender & URL reputation",
+      "question": "is the sender domain or link known-bad / a look-alike?"
+    },
+    {
+      "cost": 8,
+      "id": "signin-logs",
+      "label": "Entra sign-in logs",
+      "question": "where from, which device, which app, what user-agent?"
+    },
+    {
+      "cost": 5,
+      "id": "threat-intel",
+      "label": "Threat-intel enrichment",
+      "question": "is this indicator known-bad?"
+    },
+    {
+      "cost": 10,
+      "id": "url-detonation",
+      "label": "URL / attachment detonation",
+      "question": "what does the link or attachment actually do?"
+    }
+  ],
+  "tuning": {
+    "bpm": {
+      "ALERT": 76,
+      "CALM": 50,
+      "HUNT": 112,
+      "LOCKDOWN": 150
+    },
+    "career": {
+      "cashPerCorrect": 50,
+      "cleanBonus": 150,
+      "redRunCut": 150,
+      "standingBreached": 5,
+      "standingClean": 40,
+      "standingRough": 15
+    },
+    "grade": {
+      "btpClosedAsFpNoise": 4,
+      "btpEscalateT2Noise": 14,
+      "btpIsolateNoise": 24,
+      "fpEscalateIsolateNoise": 20,
+      "fpEscalateT2Noise": 12,
+      "tpMissedBreach": 30,
+      "tpOverContainNoise": 12,
+      "tpUnderContainBreach": 10
+    },
+    "heartbeat": {
+      "autoSuspendMs": 40000,
+      "dubOffsetMs": 120,
+      "minPeriodMs": 400
+    },
+    "shift": {
+      "breachedMissedDetections": 2,
+      "cleanAccuracy": 0.8
+    },
+    "timeBudgetDefault": 90,
+    "trace": {
+      "alert": 25,
+      "hunt": 50,
+      "lockdown": 80,
+      "max": 100,
+      "min": 0
+    }
+  }
+}

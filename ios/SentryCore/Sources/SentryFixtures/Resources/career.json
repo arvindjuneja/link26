@@ -1,0 +1,775 @@
+{
+  "awards": [
+    {
+      "before": {
+        "cash": 0,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 0,
+        "standing": 0
+      },
+      "name": "clean-7",
+      "nextRank": {
+        "id": "t1-senior",
+        "label": "Tier-1 · Senior",
+        "min": 150
+      },
+      "rank": {
+        "id": "t1",
+        "label": "Tier-1 Analyst",
+        "min": 40
+      },
+      "reward": {
+        "cashGain": 500,
+        "rankUp": {
+          "id": "t1",
+          "label": "Tier-1 Analyst",
+          "min": 40
+        },
+        "standingGain": 40,
+        "state": {
+          "cash": 500,
+          "gear": [],
+          "redRunsDone": 0,
+          "shiftsCleaned": 1,
+          "standing": 40
+        }
+      },
+      "score": {
+        "accuracy": 1,
+        "accuracyDenominator": 7,
+        "accuracyNumerator": 7,
+        "blindCalls": 0,
+        "breachRisk": 0,
+        "dispositionCorrect": 7,
+        "falseEscalations": 0,
+        "grade": "clean",
+        "investigationRate": 1,
+        "investigationRateDenominator": 7,
+        "investigationRateNumerator": 7,
+        "missedDetections": 0,
+        "noise": 0,
+        "thoroughCalls": 7,
+        "total": 7,
+        "verdictCorrect": 7
+      },
+      "unlockedIds": [
+        "first-shift",
+        "second-shift"
+      ]
+    },
+    {
+      "before": {
+        "cash": 500,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 1,
+        "standing": 40
+      },
+      "name": "clean-8",
+      "nextRank": {
+        "id": "t1-senior",
+        "label": "Tier-1 · Senior",
+        "min": 150
+      },
+      "rank": {
+        "id": "t1",
+        "label": "Tier-1 Analyst",
+        "min": 40
+      },
+      "reward": {
+        "cashGain": 550,
+        "rankUp": null,
+        "standingGain": 40,
+        "state": {
+          "cash": 1050,
+          "gear": [],
+          "redRunsDone": 0,
+          "shiftsCleaned": 2,
+          "standing": 80
+        }
+      },
+      "score": {
+        "accuracy": 1,
+        "accuracyDenominator": 8,
+        "accuracyNumerator": 8,
+        "blindCalls": 0,
+        "breachRisk": 0,
+        "dispositionCorrect": 8,
+        "falseEscalations": 0,
+        "grade": "clean",
+        "investigationRate": 1,
+        "investigationRateDenominator": 8,
+        "investigationRateNumerator": 8,
+        "missedDetections": 0,
+        "noise": 0,
+        "thoroughCalls": 8,
+        "total": 8,
+        "verdictCorrect": 8
+      },
+      "unlockedIds": [
+        "first-shift",
+        "second-shift",
+        "lockout-shift"
+      ]
+    },
+    {
+      "before": {
+        "cash": 1050,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 2,
+        "standing": 80
+      },
+      "name": "clean-3",
+      "nextRank": {
+        "id": "t1-senior",
+        "label": "Tier-1 · Senior",
+        "min": 150
+      },
+      "rank": {
+        "id": "t1",
+        "label": "Tier-1 Analyst",
+        "min": 40
+      },
+      "reward": {
+        "cashGain": 300,
+        "rankUp": null,
+        "standingGain": 40,
+        "state": {
+          "cash": 1350,
+          "gear": [],
+          "redRunsDone": 0,
+          "shiftsCleaned": 3,
+          "standing": 120
+        }
+      },
+      "score": {
+        "accuracy": 1,
+        "accuracyDenominator": 3,
+        "accuracyNumerator": 3,
+        "blindCalls": 0,
+        "breachRisk": 0,
+        "dispositionCorrect": 3,
+        "falseEscalations": 0,
+        "grade": "clean",
+        "investigationRate": 1,
+        "investigationRateDenominator": 3,
+        "investigationRateNumerator": 3,
+        "missedDetections": 0,
+        "noise": 0,
+        "thoroughCalls": 3,
+        "total": 3,
+        "verdictCorrect": 3
+      },
+      "unlockedIds": [
+        "first-shift",
+        "second-shift",
+        "lockout-shift",
+        "handoff-shift"
+      ]
+    },
+    {
+      "before": {
+        "cash": 1350,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 3,
+        "standing": 120
+      },
+      "name": "rough-2of3",
+      "nextRank": {
+        "id": "t1-senior",
+        "label": "Tier-1 · Senior",
+        "min": 150
+      },
+      "rank": {
+        "id": "t1",
+        "label": "Tier-1 Analyst",
+        "min": 40
+      },
+      "reward": {
+        "cashGain": 100,
+        "rankUp": null,
+        "standingGain": 15,
+        "state": {
+          "cash": 1450,
+          "gear": [],
+          "redRunsDone": 0,
+          "shiftsCleaned": 3,
+          "standing": 135
+        }
+      },
+      "score": {
+        "accuracy": 0.6666666666666666,
+        "accuracyDenominator": 3,
+        "accuracyNumerator": 2,
+        "blindCalls": 1,
+        "breachRisk": 0,
+        "dispositionCorrect": 2,
+        "falseEscalations": 1,
+        "grade": "rough",
+        "investigationRate": 1,
+        "investigationRateDenominator": 3,
+        "investigationRateNumerator": 3,
+        "missedDetections": 0,
+        "noise": 0,
+        "thoroughCalls": 2,
+        "total": 3,
+        "verdictCorrect": 2
+      },
+      "unlockedIds": [
+        "first-shift",
+        "second-shift",
+        "lockout-shift",
+        "handoff-shift"
+      ]
+    },
+    {
+      "before": {
+        "cash": 1450,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 3,
+        "standing": 135
+      },
+      "name": "clean-3-again",
+      "nextRank": {
+        "id": "t2",
+        "label": "Tier-2 · candidate",
+        "min": 210
+      },
+      "rank": {
+        "id": "t1-senior",
+        "label": "Tier-1 · Senior",
+        "min": 150
+      },
+      "reward": {
+        "cashGain": 300,
+        "rankUp": {
+          "id": "t1-senior",
+          "label": "Tier-1 · Senior",
+          "min": 150
+        },
+        "standingGain": 40,
+        "state": {
+          "cash": 1750,
+          "gear": [],
+          "redRunsDone": 0,
+          "shiftsCleaned": 4,
+          "standing": 175
+        }
+      },
+      "score": {
+        "accuracy": 1,
+        "accuracyDenominator": 3,
+        "accuracyNumerator": 3,
+        "blindCalls": 0,
+        "breachRisk": 0,
+        "dispositionCorrect": 3,
+        "falseEscalations": 0,
+        "grade": "clean",
+        "investigationRate": 1,
+        "investigationRateDenominator": 3,
+        "investigationRateNumerator": 3,
+        "missedDetections": 0,
+        "noise": 0,
+        "thoroughCalls": 3,
+        "total": 3,
+        "verdictCorrect": 3
+      },
+      "unlockedIds": [
+        "first-shift",
+        "second-shift",
+        "lockout-shift",
+        "handoff-shift",
+        "insider-shift"
+      ]
+    },
+    {
+      "before": {
+        "cash": 1750,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 4,
+        "standing": 175
+      },
+      "name": "breached-1of3",
+      "nextRank": {
+        "id": "t2",
+        "label": "Tier-2 · candidate",
+        "min": 210
+      },
+      "rank": {
+        "id": "t1-senior",
+        "label": "Tier-1 · Senior",
+        "min": 150
+      },
+      "reward": {
+        "cashGain": 50,
+        "rankUp": null,
+        "standingGain": 5,
+        "state": {
+          "cash": 1800,
+          "gear": [],
+          "redRunsDone": 0,
+          "shiftsCleaned": 4,
+          "standing": 180
+        }
+      },
+      "score": {
+        "accuracy": 0.3333333333333333,
+        "accuracyDenominator": 3,
+        "accuracyNumerator": 1,
+        "blindCalls": 1,
+        "breachRisk": 80,
+        "dispositionCorrect": 1,
+        "falseEscalations": 2,
+        "grade": "breached",
+        "investigationRate": 1,
+        "investigationRateDenominator": 3,
+        "investigationRateNumerator": 3,
+        "missedDetections": 2,
+        "noise": 0,
+        "thoroughCalls": 1,
+        "total": 3,
+        "verdictCorrect": 1
+      },
+      "unlockedIds": [
+        "first-shift",
+        "second-shift",
+        "lockout-shift",
+        "handoff-shift",
+        "insider-shift"
+      ]
+    },
+    {
+      "before": {
+        "cash": 1800,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 4,
+        "standing": 180
+      },
+      "name": "rough-5of8",
+      "nextRank": {
+        "id": "t2",
+        "label": "Tier-2 · candidate",
+        "min": 210
+      },
+      "rank": {
+        "id": "t1-senior",
+        "label": "Tier-1 · Senior",
+        "min": 150
+      },
+      "reward": {
+        "cashGain": 250,
+        "rankUp": null,
+        "standingGain": 15,
+        "state": {
+          "cash": 2050,
+          "gear": [],
+          "redRunsDone": 0,
+          "shiftsCleaned": 4,
+          "standing": 195
+        }
+      },
+      "score": {
+        "accuracy": 0.625,
+        "accuracyDenominator": 8,
+        "accuracyNumerator": 5,
+        "blindCalls": 1,
+        "breachRisk": 0,
+        "dispositionCorrect": 5,
+        "falseEscalations": 3,
+        "grade": "rough",
+        "investigationRate": 1,
+        "investigationRateDenominator": 8,
+        "investigationRateNumerator": 8,
+        "missedDetections": 0,
+        "noise": 0,
+        "thoroughCalls": 5,
+        "total": 8,
+        "verdictCorrect": 5
+      },
+      "unlockedIds": [
+        "first-shift",
+        "second-shift",
+        "lockout-shift",
+        "handoff-shift",
+        "insider-shift"
+      ]
+    },
+    {
+      "before": {
+        "cash": 2050,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 4,
+        "standing": 195
+      },
+      "name": "rough-4of7",
+      "nextRank": null,
+      "rank": {
+        "id": "t2",
+        "label": "Tier-2 · candidate",
+        "min": 210
+      },
+      "reward": {
+        "cashGain": 200,
+        "rankUp": {
+          "id": "t2",
+          "label": "Tier-2 · candidate",
+          "min": 210
+        },
+        "standingGain": 15,
+        "state": {
+          "cash": 2250,
+          "gear": [],
+          "redRunsDone": 0,
+          "shiftsCleaned": 4,
+          "standing": 210
+        }
+      },
+      "score": {
+        "accuracy": 0.5714285714285714,
+        "accuracyDenominator": 7,
+        "accuracyNumerator": 4,
+        "blindCalls": 1,
+        "breachRisk": 0,
+        "dispositionCorrect": 4,
+        "falseEscalations": 3,
+        "grade": "rough",
+        "investigationRate": 1,
+        "investigationRateDenominator": 7,
+        "investigationRateNumerator": 7,
+        "missedDetections": 0,
+        "noise": 0,
+        "thoroughCalls": 4,
+        "total": 7,
+        "verdictCorrect": 4
+      },
+      "unlockedIds": [
+        "first-shift",
+        "second-shift",
+        "lockout-shift",
+        "handoff-shift",
+        "insider-shift"
+      ]
+    },
+    {
+      "before": {
+        "cash": 2250,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 4,
+        "standing": 210
+      },
+      "name": "clean-5",
+      "nextRank": null,
+      "rank": {
+        "id": "t2",
+        "label": "Tier-2 · candidate",
+        "min": 210
+      },
+      "reward": {
+        "cashGain": 400,
+        "rankUp": null,
+        "standingGain": 40,
+        "state": {
+          "cash": 2650,
+          "gear": [],
+          "redRunsDone": 0,
+          "shiftsCleaned": 5,
+          "standing": 250
+        }
+      },
+      "score": {
+        "accuracy": 1,
+        "accuracyDenominator": 5,
+        "accuracyNumerator": 5,
+        "blindCalls": 0,
+        "breachRisk": 0,
+        "dispositionCorrect": 5,
+        "falseEscalations": 0,
+        "grade": "clean",
+        "investigationRate": 1,
+        "investigationRateDenominator": 5,
+        "investigationRateNumerator": 5,
+        "missedDetections": 0,
+        "noise": 0,
+        "thoroughCalls": 5,
+        "total": 5,
+        "verdictCorrect": 5
+      },
+      "unlockedIds": [
+        "first-shift",
+        "second-shift",
+        "lockout-shift",
+        "handoff-shift",
+        "insider-shift"
+      ]
+    },
+    {
+      "before": {
+        "cash": 2650,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 5,
+        "standing": 250
+      },
+      "name": "rough-3of5",
+      "nextRank": null,
+      "rank": {
+        "id": "t2",
+        "label": "Tier-2 · candidate",
+        "min": 210
+      },
+      "reward": {
+        "cashGain": 150,
+        "rankUp": null,
+        "standingGain": 15,
+        "state": {
+          "cash": 2800,
+          "gear": [],
+          "redRunsDone": 0,
+          "shiftsCleaned": 5,
+          "standing": 265
+        }
+      },
+      "score": {
+        "accuracy": 0.6,
+        "accuracyDenominator": 5,
+        "accuracyNumerator": 3,
+        "blindCalls": 1,
+        "breachRisk": 0,
+        "dispositionCorrect": 3,
+        "falseEscalations": 2,
+        "grade": "rough",
+        "investigationRate": 1,
+        "investigationRateDenominator": 5,
+        "investigationRateNumerator": 5,
+        "missedDetections": 0,
+        "noise": 0,
+        "thoroughCalls": 3,
+        "total": 5,
+        "verdictCorrect": 3
+      },
+      "unlockedIds": [
+        "first-shift",
+        "second-shift",
+        "lockout-shift",
+        "handoff-shift",
+        "insider-shift"
+      ]
+    },
+    {
+      "before": {
+        "cash": 2800,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 5,
+        "standing": 265
+      },
+      "name": "breached-2of5",
+      "nextRank": null,
+      "rank": {
+        "id": "t2",
+        "label": "Tier-2 · candidate",
+        "min": 210
+      },
+      "reward": {
+        "cashGain": 100,
+        "rankUp": null,
+        "standingGain": 5,
+        "state": {
+          "cash": 2900,
+          "gear": [],
+          "redRunsDone": 0,
+          "shiftsCleaned": 5,
+          "standing": 270
+        }
+      },
+      "score": {
+        "accuracy": 0.4,
+        "accuracyDenominator": 5,
+        "accuracyNumerator": 2,
+        "blindCalls": 1,
+        "breachRisk": 80,
+        "dispositionCorrect": 2,
+        "falseEscalations": 3,
+        "grade": "breached",
+        "investigationRate": 1,
+        "investigationRateDenominator": 5,
+        "investigationRateNumerator": 5,
+        "missedDetections": 2,
+        "noise": 0,
+        "thoroughCalls": 2,
+        "total": 5,
+        "verdictCorrect": 2
+      },
+      "unlockedIds": [
+        "first-shift",
+        "second-shift",
+        "lockout-shift",
+        "handoff-shift",
+        "insider-shift"
+      ]
+    },
+    {
+      "before": {
+        "cash": 2900,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 5,
+        "standing": 270
+      },
+      "name": "clean-7-again",
+      "nextRank": null,
+      "rank": {
+        "id": "t2",
+        "label": "Tier-2 · candidate",
+        "min": 210
+      },
+      "reward": {
+        "cashGain": 500,
+        "rankUp": null,
+        "standingGain": 40,
+        "state": {
+          "cash": 3400,
+          "gear": [],
+          "redRunsDone": 0,
+          "shiftsCleaned": 6,
+          "standing": 310
+        }
+      },
+      "score": {
+        "accuracy": 1,
+        "accuracyDenominator": 7,
+        "accuracyNumerator": 7,
+        "blindCalls": 0,
+        "breachRisk": 0,
+        "dispositionCorrect": 7,
+        "falseEscalations": 0,
+        "grade": "clean",
+        "investigationRate": 1,
+        "investigationRateDenominator": 7,
+        "investigationRateNumerator": 7,
+        "missedDetections": 0,
+        "noise": 0,
+        "thoroughCalls": 7,
+        "total": 7,
+        "verdictCorrect": 7
+      },
+      "unlockedIds": [
+        "first-shift",
+        "second-shift",
+        "lockout-shift",
+        "handoff-shift",
+        "insider-shift"
+      ]
+    }
+  ],
+  "buys": [
+    {
+      "after": {
+        "cash": 50,
+        "gear": [
+          "intel-feed"
+        ],
+        "redRunsDone": 0,
+        "shiftsCleaned": 1,
+        "standing": 40
+      },
+      "before": {
+        "cash": 350,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 1,
+        "standing": 40
+      },
+      "itemId": "intel-feed",
+      "name": "afford"
+    },
+    {
+      "after": {
+        "cash": 299,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 1,
+        "standing": 40
+      },
+      "before": {
+        "cash": 299,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 1,
+        "standing": 40
+      },
+      "itemId": "intel-feed",
+      "name": "unafford"
+    },
+    {
+      "after": {
+        "cash": 600,
+        "gear": [
+          "intel-feed"
+        ],
+        "redRunsDone": 0,
+        "shiftsCleaned": 1,
+        "standing": 40
+      },
+      "before": {
+        "cash": 600,
+        "gear": [
+          "intel-feed"
+        ],
+        "redRunsDone": 0,
+        "shiftsCleaned": 1,
+        "standing": 40
+      },
+      "itemId": "intel-feed",
+      "name": "already-owned"
+    }
+  ],
+  "contentHash": "sha256:6fdddac6430e0cf485f08e3c353aaebabec4db743612dc4cca6d3aa87893ffc4",
+  "redRuns": [
+    {
+      "after": {
+        "cash": 250,
+        "gear": [],
+        "redRunsDone": 1,
+        "shiftsCleaned": 1,
+        "standing": 20
+      },
+      "before": {
+        "cash": 100,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 1,
+        "standing": 20
+      },
+      "cut": null,
+      "name": "default-cut"
+    },
+    {
+      "after": {
+        "cash": 350,
+        "gear": [],
+        "redRunsDone": 1,
+        "shiftsCleaned": 1,
+        "standing": 20
+      },
+      "before": {
+        "cash": 100,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 1,
+        "standing": 20
+      },
+      "cut": 250,
+      "name": "explicit-cut"
+    }
+  ],
+  "schemaVersion": 1
+}

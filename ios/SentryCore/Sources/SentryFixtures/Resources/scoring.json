@@ -1,0 +1,1403 @@
+{
+  "applyRows": [
+    {
+      "after": {
+        "breachRisk": 30,
+        "caseIds": [
+          "soc-ps-cradle",
+          "soc-auth-reset"
+        ],
+        "index": 3,
+        "noise": 0,
+        "results": [
+          {
+            "caseId": "soc-ps-cradle",
+            "chosen": "close-false-positive",
+            "dispositionCorrect": false,
+            "keySourcesPulled": 0,
+            "queriedSourceIds": [],
+            "timeSpent": 0,
+            "verdictCorrect": false
+          },
+          {
+            "caseId": "soc-auth-reset",
+            "chosen": "close-false-positive",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 2,
+            "queriedSourceIds": [
+              "auth-logs",
+              "it-helpdesk"
+            ],
+            "timeSpent": 13,
+            "verdictCorrect": true
+          }
+        ],
+        "shiftId": "synthetic-replace",
+        "timeBudget": 90,
+        "timeUsed": 39
+      },
+      "before": {
+        "breachRisk": 0,
+        "caseIds": [
+          "soc-ps-cradle",
+          "soc-auth-reset"
+        ],
+        "index": 2,
+        "noise": 0,
+        "results": [
+          {
+            "caseId": "soc-ps-cradle",
+            "chosen": "escalate-ir-isolate",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 3,
+            "queriedSourceIds": [
+              "edr-process-tree",
+              "decoded-command",
+              "change-tickets"
+            ],
+            "timeSpent": 26,
+            "verdictCorrect": true
+          },
+          {
+            "caseId": "soc-auth-reset",
+            "chosen": "close-false-positive",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 2,
+            "queriedSourceIds": [
+              "auth-logs",
+              "it-helpdesk"
+            ],
+            "timeSpent": 13,
+            "verdictCorrect": true
+          }
+        ],
+        "shiftId": "synthetic-replace",
+        "timeBudget": 90,
+        "timeUsed": 39
+      },
+      "caseId": "soc-ps-cradle",
+      "chosen": "close-false-positive",
+      "name": "replace-in-place",
+      "queriedSourceIds": [],
+      "timeSpent": 0
+    },
+    {
+      "after": {
+        "breachRisk": 0,
+        "caseIds": [
+          "soc-ps-cradle"
+        ],
+        "index": 1,
+        "noise": 0,
+        "results": [
+          {
+            "caseId": "soc-ps-cradle",
+            "chosen": "escalate-ir-isolate",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 2,
+            "queriedSourceIds": [
+              "edr-process-tree",
+              "edr-process-tree"
+            ],
+            "timeSpent": 20,
+            "verdictCorrect": true
+          }
+        ],
+        "shiftId": "synthetic-duplicate",
+        "timeBudget": 90,
+        "timeUsed": 20
+      },
+      "before": {
+        "breachRisk": 0,
+        "caseIds": [
+          "soc-ps-cradle"
+        ],
+        "index": 0,
+        "noise": 0,
+        "results": [],
+        "shiftId": "synthetic-duplicate",
+        "timeBudget": 90,
+        "timeUsed": 0
+      },
+      "caseId": "soc-ps-cradle",
+      "chosen": "escalate-ir-isolate",
+      "name": "duplicate-queried-id",
+      "queriedSourceIds": [
+        "edr-process-tree",
+        "edr-process-tree"
+      ],
+      "timeSpent": 20
+    }
+  ],
+  "cases": [
+    {
+      "acceptableDispositions": [],
+      "alertTitle": "Sign-in from an unfamiliar network",
+      "archetype": "impossible-travel",
+      "asset": "account fixture-user (Fixtures)",
+      "correctDisposition": "close-false-positive",
+      "detectionRule": "Entra ID Protection · anomalous sign-in",
+      "evidence": [
+        {
+          "detail": "A single interactive sign-in from the account's usual registered device.",
+          "id": "syn-nokeys-fp-signin",
+          "label": "One sign-in, one device",
+          "sourceId": "signin-logs",
+          "weight": "neutral"
+        }
+      ],
+      "handoff": null,
+      "id": "syn-nokeys-fp",
+      "keySourceIds": [],
+      "learn": {
+        "concept": "Fixture-only case — it exists to pin the zero-key-source path through scoreShift.",
+        "mitreId": null,
+        "mitreName": null,
+        "pointer": "Fixture-only case."
+      },
+      "sourceIds": [
+        "signin-logs",
+        "named-locations"
+      ],
+      "toolSeverity": "Low",
+      "trigger": "A sign-in for this account arrived from a network the directory has not seen before.",
+      "truth": "false-positive",
+      "why": "A fixture case with no key sources, so investigation coverage divides by zero and the engine must report a full rate rather than a NaN."
+    },
+    {
+      "acceptableDispositions": [],
+      "alertTitle": "Sign-in from an unfamiliar network",
+      "archetype": "impossible-travel",
+      "asset": "account fixture-user (Fixtures)",
+      "correctDisposition": "close-benign",
+      "detectionRule": "Entra ID Protection · anomalous sign-in",
+      "evidence": [
+        {
+          "detail": "A single interactive sign-in from the account's usual registered device.",
+          "id": "syn-nokeys-btp-signin",
+          "label": "One sign-in, one device",
+          "sourceId": "signin-logs",
+          "weight": "neutral"
+        }
+      ],
+      "handoff": null,
+      "id": "syn-nokeys-btp",
+      "keySourceIds": [],
+      "learn": {
+        "concept": "Fixture-only case — it exists to pin the zero-key-source path through scoreShift.",
+        "mitreId": null,
+        "mitreName": null,
+        "pointer": "Fixture-only case."
+      },
+      "sourceIds": [
+        "signin-logs",
+        "named-locations"
+      ],
+      "toolSeverity": "Low",
+      "trigger": "A sign-in for this account arrived from a network the directory has not seen before.",
+      "truth": "benign-true-positive",
+      "why": "A fixture case with no key sources, so investigation coverage divides by zero and the engine must report a full rate rather than a NaN."
+    },
+    {
+      "acceptableDispositions": [],
+      "alertTitle": "Sign-in from an unfamiliar network",
+      "archetype": "impossible-travel",
+      "asset": "account fixture-user (Fixtures)",
+      "correctDisposition": "escalate-tier2",
+      "detectionRule": "Entra ID Protection · anomalous sign-in",
+      "evidence": [
+        {
+          "detail": "A single interactive sign-in from the account's usual registered device.",
+          "id": "syn-nokeys-tp-signin",
+          "label": "One sign-in, one device",
+          "sourceId": "signin-logs",
+          "weight": "neutral"
+        }
+      ],
+      "handoff": null,
+      "id": "syn-nokeys-tp",
+      "keySourceIds": [],
+      "learn": {
+        "concept": "Fixture-only case — it exists to pin the zero-key-source path through scoreShift.",
+        "mitreId": null,
+        "mitreName": null,
+        "pointer": "Fixture-only case."
+      },
+      "sourceIds": [
+        "signin-logs",
+        "named-locations"
+      ],
+      "toolSeverity": "Low",
+      "trigger": "A sign-in for this account arrived from a network the directory has not seen before.",
+      "truth": "true-positive",
+      "why": "A fixture case with no key sources, so investigation coverage divides by zero and the engine must report a full rate rather than a NaN."
+    }
+  ],
+  "contentHash": "sha256:6fdddac6430e0cf485f08e3c353aaebabec4db743612dc4cca6d3aa87893ffc4",
+  "rows": [
+    {
+      "investigations": [],
+      "name": "empty-shift",
+      "overallStatus": "CALM",
+      "score": {
+        "accuracy": 0,
+        "accuracyDenominator": 0,
+        "accuracyNumerator": 0,
+        "blindCalls": 0,
+        "breachRisk": 0,
+        "dispositionCorrect": 0,
+        "falseEscalations": 0,
+        "grade": "rough",
+        "investigationRate": 1,
+        "investigationRateDenominator": 0,
+        "investigationRateNumerator": 0,
+        "missedDetections": 0,
+        "noise": 0,
+        "thoroughCalls": 0,
+        "total": 0,
+        "verdictCorrect": 0
+      },
+      "shift": {
+        "breachRisk": 0,
+        "caseIds": [],
+        "index": 0,
+        "noise": 0,
+        "results": [],
+        "shiftId": "synthetic-empty",
+        "timeBudget": 90,
+        "timeUsed": 0
+      }
+    },
+    {
+      "investigations": [
+        {
+          "caseId": "soc-ps-cradle",
+          "quality": "blind"
+        },
+        {
+          "caseId": "soc-auth-reset",
+          "quality": "blind"
+        },
+        {
+          "caseId": "soc-ps-patch",
+          "quality": "blind"
+        }
+      ],
+      "name": "all-blind",
+      "overallStatus": "CALM",
+      "score": {
+        "accuracy": 1,
+        "accuracyDenominator": 3,
+        "accuracyNumerator": 3,
+        "blindCalls": 3,
+        "breachRisk": 0,
+        "dispositionCorrect": 3,
+        "falseEscalations": 0,
+        "grade": "rough",
+        "investigationRate": 0,
+        "investigationRateDenominator": 7,
+        "investigationRateNumerator": 0,
+        "missedDetections": 0,
+        "noise": 0,
+        "thoroughCalls": 0,
+        "total": 3,
+        "verdictCorrect": 3
+      },
+      "shift": {
+        "breachRisk": 0,
+        "caseIds": [
+          "soc-ps-cradle",
+          "soc-auth-reset",
+          "soc-ps-patch"
+        ],
+        "index": 3,
+        "noise": 0,
+        "results": [
+          {
+            "caseId": "soc-ps-cradle",
+            "chosen": "escalate-ir-isolate",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 0,
+            "queriedSourceIds": [],
+            "timeSpent": 0,
+            "verdictCorrect": true
+          },
+          {
+            "caseId": "soc-auth-reset",
+            "chosen": "close-false-positive",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 0,
+            "queriedSourceIds": [],
+            "timeSpent": 0,
+            "verdictCorrect": true
+          },
+          {
+            "caseId": "soc-ps-patch",
+            "chosen": "close-benign",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 0,
+            "queriedSourceIds": [],
+            "timeSpent": 0,
+            "verdictCorrect": true
+          }
+        ],
+        "shiftId": "synthetic-all-blind",
+        "timeBudget": 90,
+        "timeUsed": 0
+      }
+    },
+    {
+      "investigations": [
+        {
+          "caseId": "soc-ps-cradle",
+          "quality": "thorough"
+        },
+        {
+          "caseId": "soc-dns-beacon",
+          "quality": "thorough"
+        },
+        {
+          "caseId": "soc-ps-patch",
+          "quality": "thorough"
+        }
+      ],
+      "name": "two-missed",
+      "overallStatus": "HUNT",
+      "score": {
+        "accuracy": 0.3333333333333333,
+        "accuracyDenominator": 3,
+        "accuracyNumerator": 1,
+        "blindCalls": 0,
+        "breachRisk": 60,
+        "dispositionCorrect": 1,
+        "falseEscalations": 0,
+        "grade": "breached",
+        "investigationRate": 1,
+        "investigationRateDenominator": 7,
+        "investigationRateNumerator": 7,
+        "missedDetections": 2,
+        "noise": 0,
+        "thoroughCalls": 3,
+        "total": 3,
+        "verdictCorrect": 1
+      },
+      "shift": {
+        "breachRisk": 60,
+        "caseIds": [
+          "soc-ps-cradle",
+          "soc-dns-beacon",
+          "soc-ps-patch"
+        ],
+        "index": 3,
+        "noise": 0,
+        "results": [
+          {
+            "caseId": "soc-ps-cradle",
+            "chosen": "close-false-positive",
+            "dispositionCorrect": false,
+            "keySourcesPulled": 3,
+            "queriedSourceIds": [
+              "edr-process-tree",
+              "decoded-command",
+              "change-tickets"
+            ],
+            "timeSpent": 26,
+            "verdictCorrect": false
+          },
+          {
+            "caseId": "soc-dns-beacon",
+            "chosen": "close-benign",
+            "dispositionCorrect": false,
+            "keySourcesPulled": 2,
+            "queriedSourceIds": [
+              "dns-logs",
+              "edr-process-tree"
+            ],
+            "timeSpent": 18,
+            "verdictCorrect": false
+          },
+          {
+            "caseId": "soc-ps-patch",
+            "chosen": "close-benign",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 2,
+            "queriedSourceIds": [
+              "edr-process-tree",
+              "change-tickets"
+            ],
+            "timeSpent": 16,
+            "verdictCorrect": true
+          }
+        ],
+        "shiftId": "synthetic-two-missed",
+        "timeBudget": 90,
+        "timeUsed": 60
+      }
+    },
+    {
+      "investigations": [
+        {
+          "caseId": "soc-ps-cradle",
+          "quality": "thorough"
+        },
+        {
+          "caseId": "soc-ps-patch",
+          "quality": "partial"
+        },
+        {
+          "caseId": "soc-auth-reset",
+          "quality": "thorough"
+        }
+      ],
+      "name": "noise-hunt-perfect",
+      "overallStatus": "HUNT",
+      "score": {
+        "accuracy": 1,
+        "accuracyDenominator": 3,
+        "accuracyNumerator": 3,
+        "blindCalls": 0,
+        "breachRisk": 0,
+        "dispositionCorrect": 3,
+        "falseEscalations": 0,
+        "grade": "rough",
+        "investigationRate": 0.8571428571428571,
+        "investigationRateDenominator": 7,
+        "investigationRateNumerator": 6,
+        "missedDetections": 0,
+        "noise": 50,
+        "thoroughCalls": 2,
+        "total": 3,
+        "verdictCorrect": 3
+      },
+      "shift": {
+        "breachRisk": 0,
+        "caseIds": [
+          "soc-ps-cradle",
+          "soc-ps-patch",
+          "soc-auth-reset"
+        ],
+        "index": 3,
+        "noise": 50,
+        "results": [
+          {
+            "caseId": "soc-ps-cradle",
+            "chosen": "escalate-ir-isolate",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 3,
+            "queriedSourceIds": [
+              "edr-process-tree",
+              "decoded-command",
+              "change-tickets"
+            ],
+            "timeSpent": 26,
+            "verdictCorrect": true
+          },
+          {
+            "caseId": "soc-ps-patch",
+            "chosen": "close-benign",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 1,
+            "queriedSourceIds": [
+              "edr-process-tree"
+            ],
+            "timeSpent": 10,
+            "verdictCorrect": true
+          },
+          {
+            "caseId": "soc-auth-reset",
+            "chosen": "close-false-positive",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 2,
+            "queriedSourceIds": [
+              "auth-logs",
+              "it-helpdesk"
+            ],
+            "timeSpent": 13,
+            "verdictCorrect": true
+          }
+        ],
+        "shiftId": "synthetic-noise-hunt",
+        "timeBudget": 90,
+        "timeUsed": 49
+      }
+    },
+    {
+      "investigations": [
+        {
+          "caseId": "soc-ps-cradle",
+          "quality": "thorough"
+        },
+        {
+          "caseId": "soc-auth-reset",
+          "quality": "thorough"
+        },
+        {
+          "caseId": "soc-ps-patch",
+          "quality": "thorough"
+        }
+      ],
+      "name": "breach-exactly-80",
+      "overallStatus": "LOCKDOWN",
+      "score": {
+        "accuracy": 1,
+        "accuracyDenominator": 3,
+        "accuracyNumerator": 3,
+        "blindCalls": 0,
+        "breachRisk": 80,
+        "dispositionCorrect": 3,
+        "falseEscalations": 0,
+        "grade": "breached",
+        "investigationRate": 1,
+        "investigationRateDenominator": 7,
+        "investigationRateNumerator": 7,
+        "missedDetections": 0,
+        "noise": 0,
+        "thoroughCalls": 3,
+        "total": 3,
+        "verdictCorrect": 3
+      },
+      "shift": {
+        "breachRisk": 80,
+        "caseIds": [
+          "soc-ps-cradle",
+          "soc-auth-reset",
+          "soc-ps-patch"
+        ],
+        "index": 3,
+        "noise": 0,
+        "results": [
+          {
+            "caseId": "soc-ps-cradle",
+            "chosen": "escalate-ir-isolate",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 3,
+            "queriedSourceIds": [
+              "edr-process-tree",
+              "decoded-command",
+              "change-tickets"
+            ],
+            "timeSpent": 26,
+            "verdictCorrect": true
+          },
+          {
+            "caseId": "soc-auth-reset",
+            "chosen": "close-false-positive",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 2,
+            "queriedSourceIds": [
+              "auth-logs",
+              "it-helpdesk"
+            ],
+            "timeSpent": 13,
+            "verdictCorrect": true
+          },
+          {
+            "caseId": "soc-ps-patch",
+            "chosen": "close-benign",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 2,
+            "queriedSourceIds": [
+              "edr-process-tree",
+              "change-tickets"
+            ],
+            "timeSpent": 16,
+            "verdictCorrect": true
+          }
+        ],
+        "shiftId": "synthetic-breach-80",
+        "timeBudget": 90,
+        "timeUsed": 55
+      }
+    },
+    {
+      "investigations": [
+        {
+          "caseId": "syn-nokeys-fp",
+          "quality": "thorough"
+        },
+        {
+          "caseId": "syn-nokeys-btp",
+          "quality": "thorough"
+        },
+        {
+          "caseId": "syn-nokeys-tp",
+          "quality": "thorough"
+        }
+      ],
+      "name": "no-key-sources",
+      "overallStatus": "CALM",
+      "score": {
+        "accuracy": 1,
+        "accuracyDenominator": 3,
+        "accuracyNumerator": 3,
+        "blindCalls": 0,
+        "breachRisk": 0,
+        "dispositionCorrect": 3,
+        "falseEscalations": 0,
+        "grade": "clean",
+        "investigationRate": 1,
+        "investigationRateDenominator": 0,
+        "investigationRateNumerator": 0,
+        "missedDetections": 0,
+        "noise": 0,
+        "thoroughCalls": 3,
+        "total": 3,
+        "verdictCorrect": 3
+      },
+      "shift": {
+        "breachRisk": 0,
+        "caseIds": [
+          "syn-nokeys-fp",
+          "syn-nokeys-btp",
+          "syn-nokeys-tp"
+        ],
+        "index": 3,
+        "noise": 0,
+        "results": [
+          {
+            "caseId": "syn-nokeys-fp",
+            "chosen": "close-false-positive",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 0,
+            "queriedSourceIds": [],
+            "timeSpent": 0,
+            "verdictCorrect": true
+          },
+          {
+            "caseId": "syn-nokeys-btp",
+            "chosen": "close-benign",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 0,
+            "queriedSourceIds": [],
+            "timeSpent": 0,
+            "verdictCorrect": true
+          },
+          {
+            "caseId": "syn-nokeys-tp",
+            "chosen": "escalate-tier2",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 0,
+            "queriedSourceIds": [],
+            "timeSpent": 0,
+            "verdictCorrect": true
+          }
+        ],
+        "shiftId": "synthetic-no-keys",
+        "timeBudget": 90,
+        "timeUsed": 0
+      }
+    },
+    {
+      "investigations": [
+        {
+          "caseId": "soc-ps-cradle",
+          "quality": "thorough"
+        },
+        {
+          "caseId": "soc-auth-reset",
+          "quality": "thorough"
+        }
+      ],
+      "name": "unknown-case-id",
+      "overallStatus": "CALM",
+      "score": {
+        "accuracy": 0.6666666666666666,
+        "accuracyDenominator": 3,
+        "accuracyNumerator": 2,
+        "blindCalls": 0,
+        "breachRisk": 0,
+        "dispositionCorrect": 2,
+        "falseEscalations": 0,
+        "grade": "rough",
+        "investigationRate": 1,
+        "investigationRateDenominator": 5,
+        "investigationRateNumerator": 5,
+        "missedDetections": 0,
+        "noise": 0,
+        "thoroughCalls": 2,
+        "total": 3,
+        "verdictCorrect": 2
+      },
+      "shift": {
+        "breachRisk": 0,
+        "caseIds": [
+          "soc-ps-cradle",
+          "soc-auth-reset"
+        ],
+        "index": 3,
+        "noise": 0,
+        "results": [
+          {
+            "caseId": "soc-ps-cradle",
+            "chosen": "escalate-ir-isolate",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 3,
+            "queriedSourceIds": [
+              "edr-process-tree",
+              "decoded-command",
+              "change-tickets"
+            ],
+            "timeSpent": 26,
+            "verdictCorrect": true
+          },
+          {
+            "caseId": "soc-auth-reset",
+            "chosen": "close-false-positive",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 2,
+            "queriedSourceIds": [
+              "auth-logs",
+              "it-helpdesk"
+            ],
+            "timeSpent": 13,
+            "verdictCorrect": true
+          },
+          {
+            "caseId": "soc-case-that-no-longer-exists",
+            "chosen": "close-benign",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 1,
+            "queriedSourceIds": [
+              "change-tickets"
+            ],
+            "timeSpent": 6,
+            "verdictCorrect": true
+          }
+        ],
+        "shiftId": "synthetic-unknown-case",
+        "timeBudget": 90,
+        "timeUsed": 45
+      }
+    },
+    {
+      "investigations": [
+        {
+          "caseId": "soc-ps-cradle",
+          "quality": "thorough"
+        },
+        {
+          "caseId": "soc-ps-patch",
+          "quality": "thorough"
+        },
+        {
+          "caseId": "soc-dns-beacon",
+          "quality": "thorough"
+        },
+        {
+          "caseId": "soc-auth-pentest",
+          "quality": "thorough"
+        },
+        {
+          "caseId": "soc-auth-reset",
+          "quality": "thorough"
+        }
+      ],
+      "name": "clean-accuracy-exactly-080",
+      "overallStatus": "CALM",
+      "score": {
+        "accuracy": 0.8,
+        "accuracyDenominator": 5,
+        "accuracyNumerator": 4,
+        "blindCalls": 0,
+        "breachRisk": 0,
+        "dispositionCorrect": 4,
+        "falseEscalations": 0,
+        "grade": "clean",
+        "investigationRate": 1,
+        "investigationRateDenominator": 11,
+        "investigationRateNumerator": 11,
+        "missedDetections": 0,
+        "noise": 0,
+        "thoroughCalls": 5,
+        "total": 5,
+        "verdictCorrect": 4
+      },
+      "shift": {
+        "breachRisk": 0,
+        "caseIds": [
+          "soc-ps-cradle",
+          "soc-ps-patch",
+          "soc-dns-beacon",
+          "soc-auth-pentest",
+          "soc-auth-reset"
+        ],
+        "index": 5,
+        "noise": 0,
+        "results": [
+          {
+            "caseId": "soc-ps-cradle",
+            "chosen": "escalate-ir-isolate",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 3,
+            "queriedSourceIds": [
+              "edr-process-tree",
+              "decoded-command",
+              "change-tickets"
+            ],
+            "timeSpent": 26,
+            "verdictCorrect": true
+          },
+          {
+            "caseId": "soc-ps-patch",
+            "chosen": "close-benign",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 2,
+            "queriedSourceIds": [
+              "edr-process-tree",
+              "change-tickets"
+            ],
+            "timeSpent": 16,
+            "verdictCorrect": true
+          },
+          {
+            "caseId": "soc-dns-beacon",
+            "chosen": "escalate-ir-isolate",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 2,
+            "queriedSourceIds": [
+              "dns-logs",
+              "edr-process-tree"
+            ],
+            "timeSpent": 18,
+            "verdictCorrect": true
+          },
+          {
+            "caseId": "soc-auth-pentest",
+            "chosen": "close-benign",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 2,
+            "queriedSourceIds": [
+              "auth-logs",
+              "change-tickets"
+            ],
+            "timeSpent": 14,
+            "verdictCorrect": true
+          },
+          {
+            "caseId": "soc-auth-reset",
+            "chosen": "close-benign",
+            "dispositionCorrect": false,
+            "keySourcesPulled": 2,
+            "queriedSourceIds": [
+              "auth-logs",
+              "it-helpdesk"
+            ],
+            "timeSpent": 13,
+            "verdictCorrect": false
+          }
+        ],
+        "shiftId": "synthetic-clean-080",
+        "timeBudget": 90,
+        "timeUsed": 87
+      }
+    },
+    {
+      "investigations": [
+        {
+          "caseId": "soc-ps-cradle",
+          "quality": "thorough"
+        },
+        {
+          "caseId": "soc-ps-patch",
+          "quality": "thorough"
+        },
+        {
+          "caseId": "soc-dns-beacon",
+          "quality": "thorough"
+        },
+        {
+          "caseId": "soc-auth-reset",
+          "quality": "thorough"
+        },
+        {
+          "caseId": "soc-dns-cdn",
+          "quality": "thorough"
+        }
+      ],
+      "name": "rough-accuracy-one-step-below",
+      "overallStatus": "CALM",
+      "score": {
+        "accuracy": 0.6,
+        "accuracyDenominator": 5,
+        "accuracyNumerator": 3,
+        "blindCalls": 0,
+        "breachRisk": 0,
+        "dispositionCorrect": 3,
+        "falseEscalations": 0,
+        "grade": "rough",
+        "investigationRate": 1,
+        "investigationRateDenominator": 11,
+        "investigationRateNumerator": 11,
+        "missedDetections": 0,
+        "noise": 0,
+        "thoroughCalls": 5,
+        "total": 5,
+        "verdictCorrect": 3
+      },
+      "shift": {
+        "breachRisk": 0,
+        "caseIds": [
+          "soc-ps-cradle",
+          "soc-ps-patch",
+          "soc-dns-beacon",
+          "soc-auth-reset",
+          "soc-dns-cdn"
+        ],
+        "index": 5,
+        "noise": 0,
+        "results": [
+          {
+            "caseId": "soc-ps-cradle",
+            "chosen": "escalate-ir-isolate",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 3,
+            "queriedSourceIds": [
+              "edr-process-tree",
+              "decoded-command",
+              "change-tickets"
+            ],
+            "timeSpent": 26,
+            "verdictCorrect": true
+          },
+          {
+            "caseId": "soc-ps-patch",
+            "chosen": "close-benign",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 2,
+            "queriedSourceIds": [
+              "edr-process-tree",
+              "change-tickets"
+            ],
+            "timeSpent": 16,
+            "verdictCorrect": true
+          },
+          {
+            "caseId": "soc-dns-beacon",
+            "chosen": "escalate-ir-isolate",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 2,
+            "queriedSourceIds": [
+              "dns-logs",
+              "edr-process-tree"
+            ],
+            "timeSpent": 18,
+            "verdictCorrect": true
+          },
+          {
+            "caseId": "soc-auth-reset",
+            "chosen": "close-benign",
+            "dispositionCorrect": false,
+            "keySourcesPulled": 2,
+            "queriedSourceIds": [
+              "auth-logs",
+              "it-helpdesk"
+            ],
+            "timeSpent": 13,
+            "verdictCorrect": false
+          },
+          {
+            "caseId": "soc-dns-cdn",
+            "chosen": "close-benign",
+            "dispositionCorrect": false,
+            "keySourcesPulled": 2,
+            "queriedSourceIds": [
+              "dns-logs",
+              "edr-process-tree"
+            ],
+            "timeSpent": 18,
+            "verdictCorrect": false
+          }
+        ],
+        "shiftId": "synthetic-rough-060",
+        "timeBudget": 90,
+        "timeUsed": 91
+      }
+    },
+    {
+      "investigations": [
+        {
+          "caseId": "soc-ps-cradle",
+          "quality": "thorough"
+        },
+        {
+          "caseId": "soc-ps-patch",
+          "quality": "thorough"
+        },
+        {
+          "caseId": "soc-dns-beacon",
+          "quality": "thorough"
+        },
+        {
+          "caseId": "soc-auth-reset",
+          "quality": "blind"
+        }
+      ],
+      "name": "rough-one-blind",
+      "overallStatus": "CALM",
+      "score": {
+        "accuracy": 1,
+        "accuracyDenominator": 4,
+        "accuracyNumerator": 4,
+        "blindCalls": 1,
+        "breachRisk": 0,
+        "dispositionCorrect": 4,
+        "falseEscalations": 0,
+        "grade": "rough",
+        "investigationRate": 0.7777777777777778,
+        "investigationRateDenominator": 9,
+        "investigationRateNumerator": 7,
+        "missedDetections": 0,
+        "noise": 0,
+        "thoroughCalls": 3,
+        "total": 4,
+        "verdictCorrect": 4
+      },
+      "shift": {
+        "breachRisk": 0,
+        "caseIds": [
+          "soc-ps-cradle",
+          "soc-ps-patch",
+          "soc-dns-beacon",
+          "soc-auth-reset"
+        ],
+        "index": 4,
+        "noise": 0,
+        "results": [
+          {
+            "caseId": "soc-ps-cradle",
+            "chosen": "escalate-ir-isolate",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 3,
+            "queriedSourceIds": [
+              "edr-process-tree",
+              "decoded-command",
+              "change-tickets"
+            ],
+            "timeSpent": 26,
+            "verdictCorrect": true
+          },
+          {
+            "caseId": "soc-ps-patch",
+            "chosen": "close-benign",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 2,
+            "queriedSourceIds": [
+              "edr-process-tree",
+              "change-tickets"
+            ],
+            "timeSpent": 16,
+            "verdictCorrect": true
+          },
+          {
+            "caseId": "soc-dns-beacon",
+            "chosen": "escalate-ir-isolate",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 2,
+            "queriedSourceIds": [
+              "dns-logs",
+              "edr-process-tree"
+            ],
+            "timeSpent": 18,
+            "verdictCorrect": true
+          },
+          {
+            "caseId": "soc-auth-reset",
+            "chosen": "close-false-positive",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 0,
+            "queriedSourceIds": [],
+            "timeSpent": 0,
+            "verdictCorrect": true
+          }
+        ],
+        "shiftId": "synthetic-one-blind",
+        "timeBudget": 90,
+        "timeUsed": 60
+      }
+    },
+    {
+      "investigations": [
+        {
+          "caseId": "soc-ps-cradle",
+          "quality": "thorough"
+        },
+        {
+          "caseId": "soc-auth-reset",
+          "quality": "thorough"
+        },
+        {
+          "caseId": "soc-ps-patch",
+          "quality": "thorough"
+        }
+      ],
+      "name": "rough-noise-lockdown",
+      "overallStatus": "LOCKDOWN",
+      "score": {
+        "accuracy": 1,
+        "accuracyDenominator": 3,
+        "accuracyNumerator": 3,
+        "blindCalls": 0,
+        "breachRisk": 0,
+        "dispositionCorrect": 3,
+        "falseEscalations": 0,
+        "grade": "rough",
+        "investigationRate": 1,
+        "investigationRateDenominator": 7,
+        "investigationRateNumerator": 7,
+        "missedDetections": 0,
+        "noise": 80,
+        "thoroughCalls": 3,
+        "total": 3,
+        "verdictCorrect": 3
+      },
+      "shift": {
+        "breachRisk": 0,
+        "caseIds": [
+          "soc-ps-cradle",
+          "soc-auth-reset",
+          "soc-ps-patch"
+        ],
+        "index": 3,
+        "noise": 80,
+        "results": [
+          {
+            "caseId": "soc-ps-cradle",
+            "chosen": "escalate-ir-isolate",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 3,
+            "queriedSourceIds": [
+              "edr-process-tree",
+              "decoded-command",
+              "change-tickets"
+            ],
+            "timeSpent": 26,
+            "verdictCorrect": true
+          },
+          {
+            "caseId": "soc-auth-reset",
+            "chosen": "close-false-positive",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 2,
+            "queriedSourceIds": [
+              "auth-logs",
+              "it-helpdesk"
+            ],
+            "timeSpent": 13,
+            "verdictCorrect": true
+          },
+          {
+            "caseId": "soc-ps-patch",
+            "chosen": "close-benign",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 2,
+            "queriedSourceIds": [
+              "edr-process-tree",
+              "change-tickets"
+            ],
+            "timeSpent": 16,
+            "verdictCorrect": true
+          }
+        ],
+        "shiftId": "synthetic-noise-lockdown",
+        "timeBudget": 90,
+        "timeUsed": 55
+      }
+    },
+    {
+      "investigations": [
+        {
+          "caseId": "soc-ps-cradle",
+          "quality": "thorough"
+        },
+        {
+          "caseId": "soc-auth-reset",
+          "quality": "thorough"
+        },
+        {
+          "caseId": "soc-ps-patch",
+          "quality": "thorough"
+        }
+      ],
+      "name": "rough-one-missed-breach-30",
+      "overallStatus": "ALERT",
+      "score": {
+        "accuracy": 0.6666666666666666,
+        "accuracyDenominator": 3,
+        "accuracyNumerator": 2,
+        "blindCalls": 0,
+        "breachRisk": 30,
+        "dispositionCorrect": 2,
+        "falseEscalations": 0,
+        "grade": "rough",
+        "investigationRate": 1,
+        "investigationRateDenominator": 7,
+        "investigationRateNumerator": 7,
+        "missedDetections": 1,
+        "noise": 0,
+        "thoroughCalls": 3,
+        "total": 3,
+        "verdictCorrect": 2
+      },
+      "shift": {
+        "breachRisk": 30,
+        "caseIds": [
+          "soc-ps-cradle",
+          "soc-auth-reset",
+          "soc-ps-patch"
+        ],
+        "index": 3,
+        "noise": 0,
+        "results": [
+          {
+            "caseId": "soc-ps-cradle",
+            "chosen": "close-false-positive",
+            "dispositionCorrect": false,
+            "keySourcesPulled": 3,
+            "queriedSourceIds": [
+              "edr-process-tree",
+              "decoded-command",
+              "change-tickets"
+            ],
+            "timeSpent": 26,
+            "verdictCorrect": false
+          },
+          {
+            "caseId": "soc-auth-reset",
+            "chosen": "close-false-positive",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 2,
+            "queriedSourceIds": [
+              "auth-logs",
+              "it-helpdesk"
+            ],
+            "timeSpent": 13,
+            "verdictCorrect": true
+          },
+          {
+            "caseId": "soc-ps-patch",
+            "chosen": "close-benign",
+            "dispositionCorrect": true,
+            "keySourcesPulled": 2,
+            "queriedSourceIds": [
+              "edr-process-tree",
+              "change-tickets"
+            ],
+            "timeSpent": 16,
+            "verdictCorrect": true
+          }
+        ],
+        "shiftId": "synthetic-one-missed",
+        "timeBudget": 90,
+        "timeUsed": 55
+      }
+    },
+    {
+      "investigations": [
+        {
+          "caseId": "soc-ps-cradle",
+          "quality": "thorough"
+        },
+        {
+          "caseId": "soc-dns-beacon",
+          "quality": "thorough"
+        },
+        {
+          "caseId": "soc-auth-bruteforce",
+          "quality": "thorough"
+        },
+        {
+          "caseId": "soc-phish-harvest",
+          "quality": "thorough"
+        }
+      ],
+      "name": "overflow-four-missed",
+      "overallStatus": "LOCKDOWN",
+      "score": {
+        "accuracy": 0,
+        "accuracyDenominator": 4,
+        "accuracyNumerator": 0,
+        "blindCalls": 0,
+        "breachRisk": 100,
+        "dispositionCorrect": 0,
+        "falseEscalations": 0,
+        "grade": "breached",
+        "investigationRate": 1,
+        "investigationRateDenominator": 11,
+        "investigationRateNumerator": 11,
+        "missedDetections": 4,
+        "noise": 0,
+        "thoroughCalls": 4,
+        "total": 4,
+        "verdictCorrect": 0
+      },
+      "shift": {
+        "breachRisk": 100,
+        "caseIds": [
+          "soc-ps-cradle",
+          "soc-dns-beacon",
+          "soc-auth-bruteforce",
+          "soc-phish-harvest"
+        ],
+        "index": 4,
+        "noise": 0,
+        "results": [
+          {
+            "caseId": "soc-ps-cradle",
+            "chosen": "close-false-positive",
+            "dispositionCorrect": false,
+            "keySourcesPulled": 3,
+            "queriedSourceIds": [
+              "edr-process-tree",
+              "decoded-command",
+              "change-tickets"
+            ],
+            "timeSpent": 26,
+            "verdictCorrect": false
+          },
+          {
+            "caseId": "soc-dns-beacon",
+            "chosen": "close-false-positive",
+            "dispositionCorrect": false,
+            "keySourcesPulled": 2,
+            "queriedSourceIds": [
+              "dns-logs",
+              "edr-process-tree"
+            ],
+            "timeSpent": 18,
+            "verdictCorrect": false
+          },
+          {
+            "caseId": "soc-auth-bruteforce",
+            "chosen": "close-false-positive",
+            "dispositionCorrect": false,
+            "keySourcesPulled": 3,
+            "queriedSourceIds": [
+              "auth-logs",
+              "geo-vpn",
+              "change-tickets"
+            ],
+            "timeSpent": 20,
+            "verdictCorrect": false
+          },
+          {
+            "caseId": "soc-phish-harvest",
+            "chosen": "close-false-positive",
+            "dispositionCorrect": false,
+            "keySourcesPulled": 3,
+            "queriedSourceIds": [
+              "email-auth",
+              "sender-reputation",
+              "url-detonation"
+            ],
+            "timeSpent": 21,
+            "verdictCorrect": false
+          }
+        ],
+        "shiftId": "synthetic-overflow",
+        "timeBudget": 90,
+        "timeUsed": 85
+      }
+    }
+  ],
+  "schemaVersion": 1
+}

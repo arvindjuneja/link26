@@ -1,0 +1,580 @@
+{
+  "about": {
+    "credits": "MITRE ATT&CK® technique ids are cited as lookup labels only. IBM Plex Mono and Space Grotesk ship under the SIL Open Font Licence.",
+    "fiction": "Every organisation, host, user and log line in this game is fabricated. Cases show how a Tier-1 analyst reads evidence — the concepts and the workflow, never a working technique. Not a training platform, not a certification, and it makes no claims about hiring or pay. MITRE ATT&CK® ids are lookup labels only.",
+    "privacy": "No account. No network. No analytics. Your career is stored only on this device.",
+    "promise": "No ads, no pay-to-win, no timers, no loot boxes, no data selling."
+  },
+  "chrome": {
+    "abandonBody": "You lose this queue's progress. Your career is not touched.",
+    "abandonCancel": "Keep working",
+    "abandonConfirm": "Abandon",
+    "abandonTitle": "Abandon shift",
+    "aboutCreditsTitle": "Credits",
+    "aboutEyebrow": "About · SENTRY — SOC {version}",
+    "aboutFictionTitle": "Fiction simulator",
+    "aboutPrivacyLink": "Privacy policy ↗",
+    "aboutPrivacyTitle": "Privacy",
+    "aboutPromiseTitle": "Our promise",
+    "back": "‹ Desk",
+    "boardAbandon": "Abandon shift",
+    "boardBackToAlert": "Back to the alert ▸",
+    "boardClock": "{n}m",
+    "boardEyebrow": "Alert queue",
+    "boardMeterValue": "{n}%",
+    "boardOpenAlert": "Open alert {n} ▸",
+    "boardPressureEyebrow": "Shift pressure",
+    "boardTimeValue": "{n} / {m} shift-min",
+    "callConfirm": "Confirm",
+    "callFile": "File ▸",
+    "callFileAction": "File this call",
+    "callHoldToFile": "Hold to file · {disposition}",
+    "callKeepInvestigating": "Keep investigating",
+    "callSheetMeta": "{n} sources pulled · {t}m",
+    "callSheetTitle": "MAKE THE CALL",
+    "caseAsset": "asset:",
+    "caseEmptyBoard": "Pull a source to surface findings.",
+    "caseEmptyBoardBlind": "You can't make the call blind.",
+    "caseEvidenceEyebrow": "Evidence board",
+    "caseEvidenceFrom": "FROM {source}",
+    "caseEvidenceTab": "EVIDENCE",
+    "caseFindingsCount": "{n} findings",
+    "caseHandoffChip": "↔ red-team run",
+    "caseSeverityChip": "{severity} · as flagged",
+    "caseSourceHint": "Pulls this log",
+    "caseSourcePulled": "pulled",
+    "caseSourceSpoken": "{label}. Answers: {question}. Costs {n} shift-minutes.",
+    "caseSourcesEyebrow": "Pull a data source — which log answers the question?",
+    "caseSourcesTab": "SOURCES",
+    "cashHint": "cash — earned by the work; spent on kit",
+    "cashUnit": "¢",
+    "close": "Close",
+    "coachEyebrow": "Shift lead · in your ear",
+    "coachSkip": "skip coaching",
+    "coachStepCount": "{n}/{m}",
+    "debriefBlind": "called on thin evidence — that's luck, not a read. Pull the logs that answer the alert.",
+    "debriefCoverage": "you pulled {n}/{m} of the sources that answer this case",
+    "debriefDecisive": "The decisive findings",
+    "debriefEnd": "End shift ▸",
+    "debriefFiled": "Filed: {disposition}",
+    "debriefLearn": "Learn it for real",
+    "debriefNext": "Next alert ▸",
+    "debriefThorough": "thorough — you pulled the logs that answer this.",
+    "debriefTruth": "truth:",
+    "debriefWhy": "Why",
+    "debriefYourCall": "your call:",
+    "dockArmed": "{n} findings · {t}m",
+    "dockClockIn": "Clock in · {shift}",
+    "dockDaily": "Daily shift · {date}",
+    "dockResume": "Resume {shift} · alert {n}/{m}",
+    "hubAbout": "About · fiction simulator · privacy",
+    "hubAlertCount": "{n} alerts",
+    "hubCleared": "cleared · replay",
+    "hubDailyDone": "done today ✓",
+    "hubDailyLabel": "Daily shift · {date}",
+    "hubDailyNote": "a fresh board every day",
+    "hubEyebrow": "The desk · your career",
+    "hubInboxEmpty": "Quiet for now.",
+    "hubInboxEyebrow": "Inbox",
+    "hubKitBuy": "Buy · ¢{cost}",
+    "hubKitEyebrow": "Analyst kit — spend ¢",
+    "hubKitOwned": "owned",
+    "hubLocked": "⬡ LOCKED · opens at ⬢ {n}",
+    "hubLockedSpoken": "Locked. Opens at {n} standing.",
+    "hubOpen": "open",
+    "hubQueuesEyebrow": "Queues — earn ⬢ to open harder work",
+    "hubResumeEyebrow": "Resume",
+    "hubResumeLine": "{shift} · alert {n} of {m} · {t}m",
+    "hubStart": "Start ▸",
+    "hubToNextRank": "{gap} to {rank}",
+    "introShiftMeta": "{shift} · {n} alerts",
+    "introWelcome": "Welcome to the desk.",
+    "investigateFirst": "investigate first",
+    "kitSpend": "Spend ¢ on kit that makes you faster.",
+    "kitTitle": "Analyst kit",
+    "licencesTitle": "Licences",
+    "makeTheCall": "Make the call",
+    "minutes": "{n}m",
+    "queueCount": "{n}/{m}",
+    "queueLabel": "QUEUE",
+    "rankUpContinue": "Continue ▸",
+    "rankUpEyebrow": "Promoted",
+    "rankUpFinaleEyebrow": "The desk is yours",
+    "rankUpRecap": "{shifts} shifts · {clean} clean · {cases} cases read",
+    "rankUpTransition": "{from} → {to}",
+    "settingsCancel": "Cancel",
+    "settingsCoaching": "Coaching on the first alert",
+    "settingsDesk": "Desk",
+    "settingsDeskLine": "{rank} · ⬢ {standing} · ¢ {cash} · {clean} clean",
+    "settingsFeel": "Feel",
+    "settingsHaptics": "Haptics · heartbeat + feedback",
+    "settingsHoldToFile": "Hold to file · off = tap twice",
+    "settingsMotion": "Motion",
+    "settingsMotionValue": "follows system",
+    "settingsReset": "Reset career…",
+    "settingsResetBody": "This clears your rank, standing, cash and kit on this device. It can't be undone.",
+    "settingsResetConfirm": "Reset",
+    "settingsResetTitle": "Reset career",
+    "settingsSaveNotice": "Your last save couldn't be read, so the desk started fresh. The old file is kept on the device.",
+    "settingsTitle": "Settings",
+    "sourceCost": "COST  {n} shift-min",
+    "sourceFindingMany": "{n} FINDINGS SURFACED",
+    "sourceFindingOne": "1 FINDING SURFACED",
+    "sourcePull": "Pull the log ▸",
+    "sourcePullAnother": "Pull another",
+    "sourceQuerying": "querying {source}…",
+    "sourceSheetEyebrow": "Pull a data source",
+    "sourceToBoard": "To the board ▸",
+    "sourceUsed": "USED  {n} / {m}",
+    "standingHint": "standing — earned by clean shifts; it opens harder queues",
+    "standingUnit": "⬢",
+    "statAccuracy": "Accuracy",
+    "statCalls": "Calls",
+    "statFalseEscalations": "False escalations",
+    "statMissed": "Missed threats",
+    "statusCalm": "QUIET",
+    "summaryBack": "Back to the desk ▸",
+    "summaryBlindMany": "{n} calls made blind",
+    "summaryBlindOne": "1 call made blind",
+    "summaryBoard": "The board",
+    "summaryCash": "+{n} ¢",
+    "summaryPayout": "Payout",
+    "summaryPromoted": "promoted → {rank}",
+    "summaryStanding": "+{n} ⬢ standing",
+    "summaryUnlocked": "UNLOCKED",
+    "summaryUnlockedLine": "New queue unlocked — {queue}",
+    "wordmark": "SENTRY · SOC"
+  },
+  "coachSteps": [
+    {
+      "advance": "on-first-source-pulled",
+      "anchor": "sources",
+      "body": "Each source shows the question it answers — that's the skill. Start with the process tree: tap it.",
+      "button": null,
+      "title": "Pull the log that answers the question"
+    },
+    {
+      "advance": "button",
+      "anchor": "evidence",
+      "body": "Findings land here — the evidence, not the tool's 'High' guess. Pull more logs from SOURCES; findings land under EVIDENCE. When you can justify a call, hit Got it.",
+      "button": "Got it ▸",
+      "title": "Read what actually happened"
+    },
+    {
+      "advance": "terminal",
+      "anchor": "call",
+      "body": "True Positive, False Positive, or Benign (authorized)? Pick one — full debrief either way.\nDidn't happen → False Positive. Happened + sanctioned → Benign-TP. Happened + unsanctioned → True Positive.\nFP means the rule's logic is wrong — change what it fires on. Benign-TP means the rule is right — scope an exception and leave the logic alone.",
+      "button": null,
+      "title": "Now make the call"
+    }
+  ],
+  "contentHash": "sha256:6fdddac6430e0cf485f08e3c353aaebabec4db743612dc4cca6d3aa87893ffc4",
+  "debriefHeadlines": {
+    "good": "Good call",
+    "verdictOnly": "Right verdict, off on the response",
+    "wrong": "Wrong call"
+  },
+  "dispositionMeta": {
+    "close-benign": {
+      "label": "Close · Benign (authorized)",
+      "sub": "it happened — and it was sanctioned",
+      "tone": "emerald"
+    },
+    "close-false-positive": {
+      "label": "Close · False Positive",
+      "sub": "didn't happen — the rule misread it",
+      "tone": "cyan"
+    },
+    "escalate-ir-isolate": {
+      "label": "Escalate → IR + isolate host",
+      "sub": "active threat — contain now",
+      "tone": "rose"
+    },
+    "escalate-tier2": {
+      "label": "Escalate → Tier 2",
+      "sub": "suspicious / confirmed — hand up",
+      "tone": "amber"
+    }
+  },
+  "firstRun": {
+    "body": "Every organisation, host, user and log line in this game is fabricated. Cases show how a Tier-1 analyst reads evidence — the concepts and the workflow, never a working technique. Not a training platform, not a certification, and it makes no claims about hiring or pay. MITRE ATT&CK® ids are lookup labels only.",
+    "cta": "I understand",
+    "title": "Fiction simulator"
+  },
+  "gradeMeta": {
+    "breached": {
+      "label": "BREACH ON YOUR WATCH",
+      "line": "Something real got closed and dwelt. It happens to every analyst once — the lesson is which logs you skipped before you called it.",
+      "tone": "rose"
+    },
+    "clean": {
+      "label": "CLEAN SHIFT",
+      "line": "Sharp reads all night. Nothing dwelt, and you didn't bury Tier-2 in noise. This is what a good T1 looks like.",
+      "tone": "emerald"
+    },
+    "rough": {
+      "label": "ROUGH SHIFT",
+      "line": "You held the line, but a few calls were off. Re-read the debriefs — the misses are where the learning is.",
+      "tone": "amber"
+    }
+  },
+  "handler": {
+    "senders": {
+      "mercer": {
+        "from": "Mercer",
+        "role": "handler · red seat"
+      },
+      "vale": {
+        "from": "Vale",
+        "role": "your shift lead"
+      }
+    },
+    "templates": {
+      "ev-breach": {
+        "body": "A real one got closed and dwelt. Every analyst has that night once. The lesson is which log you skipped before you called it — pull the answering source next time. We're still in your corner.",
+        "sender": "vale",
+        "subject": "Something got past you",
+        "tone": "warn"
+      },
+      "ev-clean": {
+        "body": "Sharp reads all the way through. +40 standing. Keep them clean and you're {gap} short of {rank} — then I open a harder queue for you.",
+        "sender": "vale",
+        "subject": "Clean shift — nice work",
+        "tone": "warm"
+      },
+      "ev-clean-max": {
+        "body": "Sharp reads all the way through. +40 standing. You're at the top of what I can put you up for — Tier-2's next, and that's earned, not given.",
+        "sender": "vale",
+        "subject": "Clean shift — nice work",
+        "tone": "warm"
+      },
+      "ev-rankup": {
+        "body": "That's {rank}. I flagged you to the lead. This is the ladder, and you're climbing it the right way — by being right.",
+        "sender": "vale",
+        "subject": "You made {rank}",
+        "tone": "milestone"
+      },
+      "ev-rankup-t2": {
+        "body": "Mercer here. Your shift lead's been talking you up. You've got the read now — and the other chair's a lot easier once you've sat in this one. When you're ready.",
+        "sender": "mercer",
+        "subject": "You made {rank}",
+        "tone": "milestone"
+      },
+      "ev-rankup-t2-blue-only": {
+        "body": "That's Tier-2 · candidate. The desk is yours to run now — and Tier-2 is earned, not given. You earned it.",
+        "sender": "vale",
+        "subject": "You made {rank}",
+        "tone": "milestone"
+      },
+      "ev-rough": {
+        "body": "A few calls were off. It happens to everyone on this desk. Re-read the debriefs — the misses are where the read gets sharper. Standing barely moved; clean shifts are how you climb, not volume.",
+        "sender": "vale",
+        "subject": "Rough one — that's the job",
+        "tone": "warn"
+      },
+      "ev-unlock": {
+        "body": "{queue} is open to you now — you earned it. Harder alerts, same read.",
+        "sender": "vale",
+        "subject": "New queue: {queue}",
+        "tone": "milestone"
+      },
+      "ev-unlock-handoff": {
+        "body": "Mercer. Your lead says you're ready to see the runs I sent you from the blue side. That's Shift 4 — the same board, the other chair. Go find out what your own tradecraft looks like to a defender.",
+        "sender": "mercer",
+        "subject": "The other chair is open to you",
+        "tone": "milestone"
+      },
+      "ev-unlock-handoff-blue-only": {
+        "body": "A contracted red team ran three engagements against us this month. One of them was never sanctioned. Shift 4 is their board, from your chair — go find it.",
+        "sender": "vale",
+        "subject": "The other chair is open to you",
+        "tone": "milestone"
+      },
+      "tip-kit": {
+        "body": "You're at {cash}¢ — enough for the {item}. Grab it before your next shift; it pre-pulls enrichment on every case and saves you shift-time. This is what the cash is for.",
+        "sender": "vale",
+        "subject": "You've banked enough for the intel feed",
+        "tone": "tip"
+      },
+      "tip-redrun": {
+        "body": "Mercer. Your lead says you've got the reads down. Want to see what you're actually defending against? Run one contract in the red seat — do that and the handoff desk opens: your own tradecraft, seen from the blue side.",
+        "sender": "mercer",
+        "subject": "Come sit in the other chair",
+        "tone": "tip"
+      },
+      "welcome": {
+        "body": "I'm Vale — I run this shift. New here? Start with the fundamentals queue. Clean shifts move you up the ladder and I'll open harder work as you earn it; the cash from the job buys kit that makes you faster. You're not alone on this — ping me any time. Go get one.",
+        "sender": "vale",
+        "subject": "Welcome to the desk",
+        "tone": "warm"
+      }
+    }
+  },
+  "handlerToneMeta": {
+    "entries": {
+      "milestone": {
+        "label": "milestone",
+        "tone": "fuchsia"
+      },
+      "tip": {
+        "label": "tip",
+        "tone": "cyan"
+      },
+      "warm": {
+        "label": "good news",
+        "tone": "emerald"
+      },
+      "warn": {
+        "label": "heads up",
+        "tone": "amber"
+      }
+    },
+    "fallback": "muted"
+  },
+  "intro": {
+    "cta": "Start the shift ▸",
+    "disclaimer": "Fiction simulator. Cases are illustrative, not a training platform — every log line is fabricated and teaches the analyst's read, never a working technique.",
+    "eyebrow": "Shift handover · 08:00",
+    "handoff": {
+      "blueOnly": [
+        {
+          "text": "Tonight's queue is different: "
+        },
+        {
+          "text": "every alert is a contracted red team's run, seen from your chair",
+          "tone": "strong"
+        },
+        {
+          "text": ". The tradecraft is real attack behaviour — the tells they left. The only question that decides the verdict is whether an engagement "
+        },
+        {
+          "text": "authorized",
+          "tone": "em"
+        },
+        {
+          "text": " it: a "
+        },
+        {
+          "text": "sanctioned",
+          "tone": "emerald"
+        },
+        {
+          "text": " run (RoE on file) is a Benign-TP; the one with "
+        },
+        {
+          "text": "no engagement behind it",
+          "tone": "rose"
+        },
+        {
+          "text": " is a real intrusion you escalate — "
+        },
+        {
+          "text": "authorization, not authorship",
+          "tone": "strong"
+        },
+        {
+          "text": ". Same board, the other seat."
+        }
+      ],
+      "redSeat": [
+        {
+          "text": "Tonight's queue is different: "
+        },
+        {
+          "text": "every alert is a run YOU pulled off in the red seat",
+          "tone": "strong"
+        },
+        {
+          "text": ", seen from this chair. The tradecraft is real attack behaviour — the tells you left. The only question that decides the verdict is whether an engagement "
+        },
+        {
+          "text": "authorized",
+          "tone": "em"
+        },
+        {
+          "text": " it: a "
+        },
+        {
+          "text": "sanctioned",
+          "tone": "emerald"
+        },
+        {
+          "text": " run (RoE on file) is a Benign-TP; the one you ran "
+        },
+        {
+          "text": "off-book",
+          "tone": "rose"
+        },
+        {
+          "text": ", with no engagement behind it, is a real intrusion you escalate — "
+        },
+        {
+          "text": "authorization, not authorship",
+          "tone": "strong"
+        },
+        {
+          "text": ". Same board, two seats."
+        }
+      ]
+    },
+    "meters": [
+      {
+        "fear": "a real threat you closed is dwelling undetected",
+        "key": "breach",
+        "label": "BREACH RISK"
+      },
+      {
+        "fear": "crying wolf — Tier-2 stops trusting your tickets",
+        "key": "noise",
+        "label": "NOISE / FATIGUE"
+      },
+      {
+        "fear": "a soft budget — surfaced, never scored",
+        "key": "time",
+        "label": "TIME"
+      }
+    ],
+    "severity": [
+      {
+        "text": "The tool's severity label is a "
+      },
+      {
+        "text": "guess",
+        "tone": "em"
+      },
+      {
+        "text": " — most of what it screams about is noise. Your job is to pull the right logs, read what actually happened, and make the call. Escalate a real threat; don't bury Tier-2 in noise; and never isolate a sanctioned operation."
+      }
+    ],
+    "taxonomy": [
+      {
+        "text": "You're the Tier-1 analyst. One question decides every alert on that queue: "
+      },
+      {
+        "text": "did the attack behaviour the rule hunts for actually happen?",
+        "tone": "strong"
+      },
+      {
+        "text": " If it didn't, and ordinary activity only looked like it, that's a "
+      },
+      {
+        "text": "False Positive",
+        "tone": "cyan"
+      },
+      {
+        "text": "; if it did but a pentest, change ticket or known tool sanctioned it, that's a "
+      },
+      {
+        "text": "Benign True Positive",
+        "tone": "emerald"
+      },
+      {
+        "text": "; if it did and nothing sanctioned it, that's a "
+      },
+      {
+        "text": "True Positive",
+        "tone": "rose"
+      },
+      {
+        "text": "."
+      }
+    ],
+    "title": "{n} alerts on the board."
+  },
+  "ladder": {
+    "body": [
+      {
+        "text": "This is the "
+      },
+      {
+        "text": "Tier-1",
+        "tone": "strong"
+      },
+      {
+        "text": " seat: monitor, triage, enrich, escalate. Consistent clean shifts are what move an analyst toward "
+      },
+      {
+        "text": "Tier-2",
+        "tone": "strong"
+      },
+      {
+        "text": " (deep investigation, malware analysis, containment) and on to "
+      },
+      {
+        "text": "Tier-3",
+        "tone": "strong"
+      },
+      {
+        "text": " (threat hunting, detection engineering, forensics) — and it isn't automatic; the jump is earned. The real-world entry credential for this chair is "
+      },
+      {
+        "text": "BTL1 (Blue Team Level 1)",
+        "tone": "strong"
+      },
+      {
+        "text": ", which maps to the NICE “Cyber Defense Analyst” role."
+      }
+    ],
+    "eyebrow": "The ladder",
+    "note": "Credentials people in this chair often cite: BTL1, NICE 'Cyber Defense Analyst'. This is fiction — not a certification, not a training platform, and it makes no claims about hiring or pay."
+  },
+  "meters": {
+    "breach": {
+      "fear": "a real threat you closed is dwelling undetected",
+      "label": "BREACH RISK"
+    },
+    "noise": {
+      "fear": "crying wolf — Tier-2 stops trusting your tickets",
+      "label": "NOISE / FATIGUE"
+    },
+    "time": {
+      "fear": "a soft budget — surfaced, never scored",
+      "label": "TIME"
+    }
+  },
+  "outcomes": {
+    "btp.closed-as-fp": "Closed it (fine), but it wasn't a false positive — the behaviour really happened; it was just sanctioned.",
+    "btp.closed-benign": "Correct — found the authorization and closed it as a benign true positive.",
+    "btp.escalated-t2": "Escalated authorized activity — Tier-2 will bounce it back. The change ticket was right there.",
+    "btp.isolated": "You isolated a sanctioned operation — ops impact, and an angry change-owner. Always check for authorization first.",
+    "fp.closed-as-benign": "Closed it (good), but as 'authorized' rather than 'false positive' — nothing the rule hunts for happened.",
+    "fp.closed-fp": "Correct — recognized the noise and closed it without burning Tier-2 cycles.",
+    "fp.escalated": "False escalation — you sent noise up the chain. Do this often and Tier-2 stops trusting your tickets.",
+    "tp.escalated-correct": "Good call — escalated a genuine threat with the right urgency.",
+    "tp.missed": "MISSED DETECTION — a live threat was closed and is now dwelling undetected.",
+    "tp.over-contained": "Right verdict, but over-reacted — this one should be handed up (HR/legal), not isolated. Isolating tips them off and burns the case.",
+    "tp.under-contained": "Right verdict, but under-contained — the threat had room to move before IR caught up."
+  },
+  "schemaVersion": 1,
+  "severityMeta": {
+    "entries": {
+      "Critical": {
+        "label": "CRITICAL",
+        "tone": "rose"
+      },
+      "High": {
+        "label": "HIGH",
+        "tone": "amber"
+      },
+      "Low": {
+        "label": "LOW",
+        "tone": "muted"
+      },
+      "Medium": {
+        "label": "MEDIUM",
+        "tone": "amber"
+      }
+    },
+    "fallback": "muted"
+  },
+  "summary": {
+    "blindLine": "{blind} — a right call reached blind is luck, not a read; it can't grade clean.",
+    "eyebrow": "Shift complete · 16:00 handover",
+    "investigationLine": "Investigation — pulled {pct}% of the logs that answer these cases"
+  },
+  "verdictLabels": {
+    "benign-true-positive": "Benign True Positive",
+    "false-positive": "False Positive",
+    "true-positive": "True Positive"
+  }
+}

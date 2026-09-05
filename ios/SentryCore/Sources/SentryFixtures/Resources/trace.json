@@ -1,0 +1,480 @@
+{
+  "clamp": [
+    {
+      "level": -5,
+      "value": 0
+    },
+    {
+      "level": -1,
+      "value": 0
+    },
+    {
+      "level": 0,
+      "value": 0
+    },
+    {
+      "level": 50,
+      "value": 50
+    },
+    {
+      "level": 100,
+      "value": 100
+    },
+    {
+      "level": 101,
+      "value": 100
+    },
+    {
+      "level": 150,
+      "value": 100
+    }
+  ],
+  "contentHash": "sha256:6fdddac6430e0cf485f08e3c353aaebabec4db743612dc4cca6d3aa87893ffc4",
+  "schemaVersion": 1,
+  "status": [
+    {
+      "level": -5,
+      "status": "CALM"
+    },
+    {
+      "level": -4,
+      "status": "CALM"
+    },
+    {
+      "level": -3,
+      "status": "CALM"
+    },
+    {
+      "level": -2,
+      "status": "CALM"
+    },
+    {
+      "level": -1,
+      "status": "CALM"
+    },
+    {
+      "level": 0,
+      "status": "CALM"
+    },
+    {
+      "level": 1,
+      "status": "CALM"
+    },
+    {
+      "level": 2,
+      "status": "CALM"
+    },
+    {
+      "level": 3,
+      "status": "CALM"
+    },
+    {
+      "level": 4,
+      "status": "CALM"
+    },
+    {
+      "level": 5,
+      "status": "CALM"
+    },
+    {
+      "level": 6,
+      "status": "CALM"
+    },
+    {
+      "level": 7,
+      "status": "CALM"
+    },
+    {
+      "level": 8,
+      "status": "CALM"
+    },
+    {
+      "level": 9,
+      "status": "CALM"
+    },
+    {
+      "level": 10,
+      "status": "CALM"
+    },
+    {
+      "level": 11,
+      "status": "CALM"
+    },
+    {
+      "level": 12,
+      "status": "CALM"
+    },
+    {
+      "level": 13,
+      "status": "CALM"
+    },
+    {
+      "level": 14,
+      "status": "CALM"
+    },
+    {
+      "level": 15,
+      "status": "CALM"
+    },
+    {
+      "level": 16,
+      "status": "CALM"
+    },
+    {
+      "level": 17,
+      "status": "CALM"
+    },
+    {
+      "level": 18,
+      "status": "CALM"
+    },
+    {
+      "level": 19,
+      "status": "CALM"
+    },
+    {
+      "level": 20,
+      "status": "CALM"
+    },
+    {
+      "level": 21,
+      "status": "CALM"
+    },
+    {
+      "level": 22,
+      "status": "CALM"
+    },
+    {
+      "level": 23,
+      "status": "CALM"
+    },
+    {
+      "level": 24,
+      "status": "CALM"
+    },
+    {
+      "level": 25,
+      "status": "ALERT"
+    },
+    {
+      "level": 26,
+      "status": "ALERT"
+    },
+    {
+      "level": 27,
+      "status": "ALERT"
+    },
+    {
+      "level": 28,
+      "status": "ALERT"
+    },
+    {
+      "level": 29,
+      "status": "ALERT"
+    },
+    {
+      "level": 30,
+      "status": "ALERT"
+    },
+    {
+      "level": 31,
+      "status": "ALERT"
+    },
+    {
+      "level": 32,
+      "status": "ALERT"
+    },
+    {
+      "level": 33,
+      "status": "ALERT"
+    },
+    {
+      "level": 34,
+      "status": "ALERT"
+    },
+    {
+      "level": 35,
+      "status": "ALERT"
+    },
+    {
+      "level": 36,
+      "status": "ALERT"
+    },
+    {
+      "level": 37,
+      "status": "ALERT"
+    },
+    {
+      "level": 38,
+      "status": "ALERT"
+    },
+    {
+      "level": 39,
+      "status": "ALERT"
+    },
+    {
+      "level": 40,
+      "status": "ALERT"
+    },
+    {
+      "level": 41,
+      "status": "ALERT"
+    },
+    {
+      "level": 42,
+      "status": "ALERT"
+    },
+    {
+      "level": 43,
+      "status": "ALERT"
+    },
+    {
+      "level": 44,
+      "status": "ALERT"
+    },
+    {
+      "level": 45,
+      "status": "ALERT"
+    },
+    {
+      "level": 46,
+      "status": "ALERT"
+    },
+    {
+      "level": 47,
+      "status": "ALERT"
+    },
+    {
+      "level": 48,
+      "status": "ALERT"
+    },
+    {
+      "level": 49,
+      "status": "ALERT"
+    },
+    {
+      "level": 50,
+      "status": "HUNT"
+    },
+    {
+      "level": 51,
+      "status": "HUNT"
+    },
+    {
+      "level": 52,
+      "status": "HUNT"
+    },
+    {
+      "level": 53,
+      "status": "HUNT"
+    },
+    {
+      "level": 54,
+      "status": "HUNT"
+    },
+    {
+      "level": 55,
+      "status": "HUNT"
+    },
+    {
+      "level": 56,
+      "status": "HUNT"
+    },
+    {
+      "level": 57,
+      "status": "HUNT"
+    },
+    {
+      "level": 58,
+      "status": "HUNT"
+    },
+    {
+      "level": 59,
+      "status": "HUNT"
+    },
+    {
+      "level": 60,
+      "status": "HUNT"
+    },
+    {
+      "level": 61,
+      "status": "HUNT"
+    },
+    {
+      "level": 62,
+      "status": "HUNT"
+    },
+    {
+      "level": 63,
+      "status": "HUNT"
+    },
+    {
+      "level": 64,
+      "status": "HUNT"
+    },
+    {
+      "level": 65,
+      "status": "HUNT"
+    },
+    {
+      "level": 66,
+      "status": "HUNT"
+    },
+    {
+      "level": 67,
+      "status": "HUNT"
+    },
+    {
+      "level": 68,
+      "status": "HUNT"
+    },
+    {
+      "level": 69,
+      "status": "HUNT"
+    },
+    {
+      "level": 70,
+      "status": "HUNT"
+    },
+    {
+      "level": 71,
+      "status": "HUNT"
+    },
+    {
+      "level": 72,
+      "status": "HUNT"
+    },
+    {
+      "level": 73,
+      "status": "HUNT"
+    },
+    {
+      "level": 74,
+      "status": "HUNT"
+    },
+    {
+      "level": 75,
+      "status": "HUNT"
+    },
+    {
+      "level": 76,
+      "status": "HUNT"
+    },
+    {
+      "level": 77,
+      "status": "HUNT"
+    },
+    {
+      "level": 78,
+      "status": "HUNT"
+    },
+    {
+      "level": 79,
+      "status": "HUNT"
+    },
+    {
+      "level": 80,
+      "status": "LOCKDOWN"
+    },
+    {
+      "level": 81,
+      "status": "LOCKDOWN"
+    },
+    {
+      "level": 82,
+      "status": "LOCKDOWN"
+    },
+    {
+      "level": 83,
+      "status": "LOCKDOWN"
+    },
+    {
+      "level": 84,
+      "status": "LOCKDOWN"
+    },
+    {
+      "level": 85,
+      "status": "LOCKDOWN"
+    },
+    {
+      "level": 86,
+      "status": "LOCKDOWN"
+    },
+    {
+      "level": 87,
+      "status": "LOCKDOWN"
+    },
+    {
+      "level": 88,
+      "status": "LOCKDOWN"
+    },
+    {
+      "level": 89,
+      "status": "LOCKDOWN"
+    },
+    {
+      "level": 90,
+      "status": "LOCKDOWN"
+    },
+    {
+      "level": 91,
+      "status": "LOCKDOWN"
+    },
+    {
+      "level": 92,
+      "status": "LOCKDOWN"
+    },
+    {
+      "level": 93,
+      "status": "LOCKDOWN"
+    },
+    {
+      "level": 94,
+      "status": "LOCKDOWN"
+    },
+    {
+      "level": 95,
+      "status": "LOCKDOWN"
+    },
+    {
+      "level": 96,
+      "status": "LOCKDOWN"
+    },
+    {
+      "level": 97,
+      "status": "LOCKDOWN"
+    },
+    {
+      "level": 98,
+      "status": "LOCKDOWN"
+    },
+    {
+      "level": 99,
+      "status": "LOCKDOWN"
+    },
+    {
+      "level": 100,
+      "status": "LOCKDOWN"
+    },
+    {
+      "level": 101,
+      "status": "LOCKDOWN"
+    },
+    {
+      "level": 102,
+      "status": "LOCKDOWN"
+    },
+    {
+      "level": 103,
+      "status": "LOCKDOWN"
+    },
+    {
+      "level": 104,
+      "status": "LOCKDOWN"
+    },
+    {
+      "level": 105,
+      "status": "LOCKDOWN"
+    }
+  ]
+}

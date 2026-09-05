@@ -1,0 +1,3173 @@
+{
+  "contentHash": "sha256:6fdddac6430e0cf485f08e3c353aaebabec4db743612dc4cca6d3aa87893ffc4",
+  "runs": [
+    {
+      "careerBefore": {
+        "cash": 0,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 0,
+        "standing": 0
+      },
+      "caseIds": [
+        "soc-ps-cradle",
+        "soc-auth-reset",
+        "soc-ps-patch",
+        "soc-dns-beacon",
+        "soc-auth-bruteforce",
+        "soc-dns-cdn",
+        "soc-auth-pentest"
+      ],
+      "event": {
+        "rankUp": {
+          "id": "t1",
+          "label": "Tier-1 Analyst",
+          "min": 40
+        },
+        "type": "shift-clean",
+        "unlocked": [
+          {
+            "id": "second-shift",
+            "label": "Shift 2 · phishing · identity · EDR · exfil"
+          }
+        ]
+      },
+      "inbox": [
+        {
+          "body": "Sharp reads all the way through. +40 standing. Keep them clean and you're 110 short of Tier-1 · Senior — then I open a harder queue for you.",
+          "from": "Vale",
+          "id": "ev-clean",
+          "role": "your shift lead",
+          "subject": "Clean shift — nice work",
+          "tone": "warm"
+        },
+        {
+          "body": "That's Tier-1 Analyst. I flagged you to the lead. This is the ladder, and you're climbing it the right way — by being right.",
+          "from": "Vale",
+          "id": "ev-rankup",
+          "role": "your shift lead",
+          "subject": "You made Tier-1 Analyst",
+          "tone": "milestone"
+        },
+        {
+          "body": "Shift 2 · phishing · identity · EDR · exfil is open to you now — you earned it. Harder alerts, same read.",
+          "from": "Vale",
+          "id": "ev-unlock-second-shift",
+          "role": "your shift lead",
+          "subject": "New queue: Shift 2 · phishing · identity · EDR · exfil",
+          "tone": "milestone"
+        },
+        {
+          "body": "You're at 500¢ — enough for the Threat-intel feed subscription. Grab it before your next shift; it pre-pulls enrichment on every case and saves you shift-time. This is what the cash is for.",
+          "from": "Vale",
+          "id": "tip-kit",
+          "role": "your shift lead",
+          "subject": "You've banked enough for the intel feed",
+          "tone": "tip"
+        }
+      ],
+      "inboxAll": [
+        {
+          "body": "Sharp reads all the way through. +40 standing. Keep them clean and you're 110 short of Tier-1 · Senior — then I open a harder queue for you.",
+          "from": "Vale",
+          "id": "ev-clean",
+          "role": "your shift lead",
+          "subject": "Clean shift — nice work",
+          "tone": "warm"
+        },
+        {
+          "body": "That's Tier-1 Analyst. I flagged you to the lead. This is the ladder, and you're climbing it the right way — by being right.",
+          "from": "Vale",
+          "id": "ev-rankup",
+          "role": "your shift lead",
+          "subject": "You made Tier-1 Analyst",
+          "tone": "milestone"
+        },
+        {
+          "body": "Shift 2 · phishing · identity · EDR · exfil is open to you now — you earned it. Harder alerts, same read.",
+          "from": "Vale",
+          "id": "ev-unlock-second-shift",
+          "role": "your shift lead",
+          "subject": "New queue: Shift 2 · phishing · identity · EDR · exfil",
+          "tone": "milestone"
+        },
+        {
+          "body": "You're at 500¢ — enough for the Threat-intel feed subscription. Grab it before your next shift; it pre-pulls enrichment on every case and saves you shift-time. This is what the cash is for.",
+          "from": "Vale",
+          "id": "tip-kit",
+          "role": "your shift lead",
+          "subject": "You've banked enough for the intel feed",
+          "tone": "tip"
+        }
+      ],
+      "name": "shift1-clean",
+      "reward": {
+        "cashGain": 500,
+        "rankUp": {
+          "id": "t1",
+          "label": "Tier-1 Analyst",
+          "min": 40
+        },
+        "standingGain": 40,
+        "state": {
+          "cash": 500,
+          "gear": [],
+          "redRunsDone": 0,
+          "shiftsCleaned": 1,
+          "standing": 40
+        }
+      },
+      "score": {
+        "accuracy": 1,
+        "accuracyDenominator": 7,
+        "accuracyNumerator": 7,
+        "blindCalls": 0,
+        "breachRisk": 0,
+        "dispositionCorrect": 7,
+        "falseEscalations": 0,
+        "grade": "clean",
+        "investigationRate": 1,
+        "investigationRateDenominator": 16,
+        "investigationRateNumerator": 16,
+        "missedDetections": 0,
+        "noise": 0,
+        "thoroughCalls": 7,
+        "total": 7,
+        "verdictCorrect": 7
+      },
+      "shiftId": "first-shift",
+      "steps": [
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 1,
+            "noise": 0,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-ps-cradle",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "decoded-command",
+                  "change-tickets"
+                ],
+                "timeSpent": 26,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 26
+          },
+          "caseId": "soc-ps-cradle",
+          "chosen": "escalate-ir-isolate",
+          "queriedSourceIds": [
+            "edr-process-tree",
+            "decoded-command",
+            "change-tickets"
+          ],
+          "timeSpent": 26
+        },
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 2,
+            "noise": 0,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-ps-cradle",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "decoded-command",
+                  "change-tickets"
+                ],
+                "timeSpent": 26,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-auth-reset",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "it-helpdesk"
+                ],
+                "timeSpent": 13,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 39
+          },
+          "caseId": "soc-auth-reset",
+          "chosen": "close-false-positive",
+          "queriedSourceIds": [
+            "auth-logs",
+            "it-helpdesk"
+          ],
+          "timeSpent": 13
+        },
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 3,
+            "noise": 0,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-ps-cradle",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "decoded-command",
+                  "change-tickets"
+                ],
+                "timeSpent": 26,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-auth-reset",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "it-helpdesk"
+                ],
+                "timeSpent": 13,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-ps-patch",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "change-tickets"
+                ],
+                "timeSpent": 16,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 55
+          },
+          "caseId": "soc-ps-patch",
+          "chosen": "close-benign",
+          "queriedSourceIds": [
+            "edr-process-tree",
+            "change-tickets"
+          ],
+          "timeSpent": 16
+        },
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 4,
+            "noise": 0,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-ps-cradle",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "decoded-command",
+                  "change-tickets"
+                ],
+                "timeSpent": 26,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-auth-reset",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "it-helpdesk"
+                ],
+                "timeSpent": 13,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-ps-patch",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "change-tickets"
+                ],
+                "timeSpent": 16,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-dns-beacon",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "dns-logs",
+                  "edr-process-tree"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 73
+          },
+          "caseId": "soc-dns-beacon",
+          "chosen": "escalate-ir-isolate",
+          "queriedSourceIds": [
+            "dns-logs",
+            "edr-process-tree"
+          ],
+          "timeSpent": 18
+        },
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 5,
+            "noise": 0,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-ps-cradle",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "decoded-command",
+                  "change-tickets"
+                ],
+                "timeSpent": 26,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-auth-reset",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "it-helpdesk"
+                ],
+                "timeSpent": 13,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-ps-patch",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "change-tickets"
+                ],
+                "timeSpent": 16,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-dns-beacon",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "dns-logs",
+                  "edr-process-tree"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-auth-bruteforce",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "geo-vpn",
+                  "change-tickets"
+                ],
+                "timeSpent": 20,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 93
+          },
+          "caseId": "soc-auth-bruteforce",
+          "chosen": "escalate-ir-isolate",
+          "queriedSourceIds": [
+            "auth-logs",
+            "geo-vpn",
+            "change-tickets"
+          ],
+          "timeSpent": 20
+        },
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 6,
+            "noise": 0,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-ps-cradle",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "decoded-command",
+                  "change-tickets"
+                ],
+                "timeSpent": 26,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-auth-reset",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "it-helpdesk"
+                ],
+                "timeSpent": 13,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-ps-patch",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "change-tickets"
+                ],
+                "timeSpent": 16,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-dns-beacon",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "dns-logs",
+                  "edr-process-tree"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-auth-bruteforce",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "geo-vpn",
+                  "change-tickets"
+                ],
+                "timeSpent": 20,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-dns-cdn",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "dns-logs",
+                  "edr-process-tree"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 111
+          },
+          "caseId": "soc-dns-cdn",
+          "chosen": "close-false-positive",
+          "queriedSourceIds": [
+            "dns-logs",
+            "edr-process-tree"
+          ],
+          "timeSpent": 18
+        },
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 7,
+            "noise": 0,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-ps-cradle",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "decoded-command",
+                  "change-tickets"
+                ],
+                "timeSpent": 26,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-auth-reset",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "it-helpdesk"
+                ],
+                "timeSpent": 13,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-ps-patch",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "change-tickets"
+                ],
+                "timeSpent": 16,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-dns-beacon",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "dns-logs",
+                  "edr-process-tree"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-auth-bruteforce",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "geo-vpn",
+                  "change-tickets"
+                ],
+                "timeSpent": 20,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-dns-cdn",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "dns-logs",
+                  "edr-process-tree"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-auth-pentest",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "change-tickets"
+                ],
+                "timeSpent": 14,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 125
+          },
+          "caseId": "soc-auth-pentest",
+          "chosen": "close-benign",
+          "queriedSourceIds": [
+            "auth-logs",
+            "change-tickets"
+          ],
+          "timeSpent": 14
+        }
+      ],
+      "unlockedAfter": [
+        "first-shift",
+        "second-shift"
+      ],
+      "unlockedBefore": [
+        "first-shift"
+      ]
+    },
+    {
+      "careerBefore": {
+        "cash": 0,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 0,
+        "standing": 0
+      },
+      "caseIds": [
+        "soc-ps-cradle",
+        "soc-auth-reset",
+        "soc-ps-patch",
+        "soc-dns-beacon",
+        "soc-auth-bruteforce",
+        "soc-dns-cdn",
+        "soc-auth-pentest"
+      ],
+      "event": {
+        "rankUp": null,
+        "type": "shift-rough",
+        "unlocked": []
+      },
+      "inbox": [
+        {
+          "body": "A few calls were off. It happens to everyone on this desk. Re-read the debriefs — the misses are where the read gets sharper. Standing barely moved; clean shifts are how you climb, not volume.",
+          "from": "Vale",
+          "id": "ev-rough",
+          "role": "your shift lead",
+          "subject": "Rough one — that's the job",
+          "tone": "warn"
+        },
+        {
+          "body": "You're at 300¢ — enough for the Threat-intel feed subscription. Grab it before your next shift; it pre-pulls enrichment on every case and saves you shift-time. This is what the cash is for.",
+          "from": "Vale",
+          "id": "tip-kit",
+          "role": "your shift lead",
+          "subject": "You've banked enough for the intel feed",
+          "tone": "tip"
+        }
+      ],
+      "inboxAll": [
+        {
+          "body": "A few calls were off. It happens to everyone on this desk. Re-read the debriefs — the misses are where the read gets sharper. Standing barely moved; clean shifts are how you climb, not volume.",
+          "from": "Vale",
+          "id": "ev-rough",
+          "role": "your shift lead",
+          "subject": "Rough one — that's the job",
+          "tone": "warn"
+        },
+        {
+          "body": "You're at 300¢ — enough for the Threat-intel feed subscription. Grab it before your next shift; it pre-pulls enrichment on every case and saves you shift-time. This is what the cash is for.",
+          "from": "Vale",
+          "id": "tip-kit",
+          "role": "your shift lead",
+          "subject": "You've banked enough for the intel feed",
+          "tone": "tip"
+        }
+      ],
+      "name": "shift1-demo-complete",
+      "reward": {
+        "cashGain": 300,
+        "rankUp": null,
+        "standingGain": 15,
+        "state": {
+          "cash": 300,
+          "gear": [],
+          "redRunsDone": 0,
+          "shiftsCleaned": 0,
+          "standing": 15
+        }
+      },
+      "score": {
+        "accuracy": 0.8571428571428571,
+        "accuracyDenominator": 7,
+        "accuracyNumerator": 6,
+        "blindCalls": 1,
+        "breachRisk": 0,
+        "dispositionCorrect": 6,
+        "falseEscalations": 1,
+        "grade": "rough",
+        "investigationRate": 0.875,
+        "investigationRateDenominator": 16,
+        "investigationRateNumerator": 14,
+        "missedDetections": 0,
+        "noise": 12,
+        "thoroughCalls": 6,
+        "total": 7,
+        "verdictCorrect": 6
+      },
+      "shiftId": "first-shift",
+      "steps": [
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 1,
+            "noise": 0,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-ps-cradle",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "decoded-command",
+                  "change-tickets"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 18
+          },
+          "caseId": "soc-ps-cradle",
+          "chosen": "escalate-ir-isolate",
+          "queriedSourceIds": [
+            "edr-process-tree",
+            "decoded-command",
+            "change-tickets"
+          ],
+          "timeSpent": 18
+        },
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 2,
+            "noise": 12,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-ps-cradle",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "decoded-command",
+                  "change-tickets"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-auth-reset",
+                "chosen": "escalate-tier2",
+                "dispositionCorrect": false,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "it-helpdesk"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": false
+              }
+            ],
+            "timeUsed": 36
+          },
+          "caseId": "soc-auth-reset",
+          "chosen": "escalate-tier2",
+          "queriedSourceIds": [
+            "auth-logs",
+            "it-helpdesk"
+          ],
+          "timeSpent": 18
+        },
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 3,
+            "noise": 12,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-ps-cradle",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "decoded-command",
+                  "change-tickets"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-auth-reset",
+                "chosen": "escalate-tier2",
+                "dispositionCorrect": false,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "it-helpdesk"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": false
+              },
+              {
+                "caseId": "soc-ps-patch",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "change-tickets"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 54
+          },
+          "caseId": "soc-ps-patch",
+          "chosen": "close-benign",
+          "queriedSourceIds": [
+            "edr-process-tree",
+            "change-tickets"
+          ],
+          "timeSpent": 18
+        },
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 4,
+            "noise": 12,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-ps-cradle",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "decoded-command",
+                  "change-tickets"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-auth-reset",
+                "chosen": "escalate-tier2",
+                "dispositionCorrect": false,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "it-helpdesk"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": false
+              },
+              {
+                "caseId": "soc-ps-patch",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "change-tickets"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-dns-beacon",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "dns-logs",
+                  "edr-process-tree"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 72
+          },
+          "caseId": "soc-dns-beacon",
+          "chosen": "escalate-ir-isolate",
+          "queriedSourceIds": [
+            "dns-logs",
+            "edr-process-tree"
+          ],
+          "timeSpent": 18
+        },
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 5,
+            "noise": 12,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-ps-cradle",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "decoded-command",
+                  "change-tickets"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-auth-reset",
+                "chosen": "escalate-tier2",
+                "dispositionCorrect": false,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "it-helpdesk"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": false
+              },
+              {
+                "caseId": "soc-ps-patch",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "change-tickets"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-dns-beacon",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "dns-logs",
+                  "edr-process-tree"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-auth-bruteforce",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "geo-vpn",
+                  "change-tickets"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 90
+          },
+          "caseId": "soc-auth-bruteforce",
+          "chosen": "escalate-ir-isolate",
+          "queriedSourceIds": [
+            "auth-logs",
+            "geo-vpn",
+            "change-tickets"
+          ],
+          "timeSpent": 18
+        },
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 6,
+            "noise": 12,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-ps-cradle",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "decoded-command",
+                  "change-tickets"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-auth-reset",
+                "chosen": "escalate-tier2",
+                "dispositionCorrect": false,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "it-helpdesk"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": false
+              },
+              {
+                "caseId": "soc-ps-patch",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "change-tickets"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-dns-beacon",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "dns-logs",
+                  "edr-process-tree"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-auth-bruteforce",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "geo-vpn",
+                  "change-tickets"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-dns-cdn",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 0,
+                "queriedSourceIds": [],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 108
+          },
+          "caseId": "soc-dns-cdn",
+          "chosen": "close-false-positive",
+          "queriedSourceIds": [],
+          "timeSpent": 18
+        },
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 7,
+            "noise": 12,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-ps-cradle",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "decoded-command",
+                  "change-tickets"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-auth-reset",
+                "chosen": "escalate-tier2",
+                "dispositionCorrect": false,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "it-helpdesk"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": false
+              },
+              {
+                "caseId": "soc-ps-patch",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "change-tickets"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-dns-beacon",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "dns-logs",
+                  "edr-process-tree"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-auth-bruteforce",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "geo-vpn",
+                  "change-tickets"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-dns-cdn",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 0,
+                "queriedSourceIds": [],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-auth-pentest",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "change-tickets"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 126
+          },
+          "caseId": "soc-auth-pentest",
+          "chosen": "close-benign",
+          "queriedSourceIds": [
+            "auth-logs",
+            "change-tickets"
+          ],
+          "timeSpent": 18
+        }
+      ],
+      "unlockedAfter": [
+        "first-shift"
+      ],
+      "unlockedBefore": [
+        "first-shift"
+      ]
+    },
+    {
+      "careerBefore": {
+        "cash": 0,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 0,
+        "standing": 0
+      },
+      "caseIds": [
+        "soc-ps-cradle",
+        "soc-auth-reset",
+        "soc-ps-patch",
+        "soc-dns-beacon",
+        "soc-auth-bruteforce",
+        "soc-dns-cdn",
+        "soc-auth-pentest"
+      ],
+      "event": {
+        "rankUp": null,
+        "type": "shift-breached",
+        "unlocked": []
+      },
+      "inbox": [
+        {
+          "body": "A real one got closed and dwelt. Every analyst has that night once. The lesson is which log you skipped before you called it — pull the answering source next time. We're still in your corner.",
+          "from": "Vale",
+          "id": "ev-breach",
+          "role": "your shift lead",
+          "subject": "Something got past you",
+          "tone": "warn"
+        }
+      ],
+      "inboxAll": [
+        {
+          "body": "A real one got closed and dwelt. Every analyst has that night once. The lesson is which log you skipped before you called it — pull the answering source next time. We're still in your corner.",
+          "from": "Vale",
+          "id": "ev-breach",
+          "role": "your shift lead",
+          "subject": "Something got past you",
+          "tone": "warn"
+        }
+      ],
+      "name": "shift1-breached",
+      "reward": {
+        "cashGain": 250,
+        "rankUp": null,
+        "standingGain": 5,
+        "state": {
+          "cash": 250,
+          "gear": [],
+          "redRunsDone": 0,
+          "shiftsCleaned": 0,
+          "standing": 5
+        }
+      },
+      "score": {
+        "accuracy": 0.7142857142857143,
+        "accuracyDenominator": 7,
+        "accuracyNumerator": 5,
+        "blindCalls": 0,
+        "breachRisk": 60,
+        "dispositionCorrect": 5,
+        "falseEscalations": 0,
+        "grade": "breached",
+        "investigationRate": 1,
+        "investigationRateDenominator": 16,
+        "investigationRateNumerator": 16,
+        "missedDetections": 2,
+        "noise": 0,
+        "thoroughCalls": 7,
+        "total": 7,
+        "verdictCorrect": 5
+      },
+      "shiftId": "first-shift",
+      "steps": [
+        {
+          "after": {
+            "breachRisk": 30,
+            "index": 1,
+            "noise": 0,
+            "overallStatus": "ALERT",
+            "results": [
+              {
+                "caseId": "soc-ps-cradle",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": false,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "decoded-command",
+                  "change-tickets"
+                ],
+                "timeSpent": 26,
+                "verdictCorrect": false
+              }
+            ],
+            "timeUsed": 26
+          },
+          "caseId": "soc-ps-cradle",
+          "chosen": "close-false-positive",
+          "queriedSourceIds": [
+            "edr-process-tree",
+            "decoded-command",
+            "change-tickets"
+          ],
+          "timeSpent": 26
+        },
+        {
+          "after": {
+            "breachRisk": 30,
+            "index": 2,
+            "noise": 0,
+            "overallStatus": "ALERT",
+            "results": [
+              {
+                "caseId": "soc-ps-cradle",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": false,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "decoded-command",
+                  "change-tickets"
+                ],
+                "timeSpent": 26,
+                "verdictCorrect": false
+              },
+              {
+                "caseId": "soc-auth-reset",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "it-helpdesk"
+                ],
+                "timeSpent": 13,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 39
+          },
+          "caseId": "soc-auth-reset",
+          "chosen": "close-false-positive",
+          "queriedSourceIds": [
+            "auth-logs",
+            "it-helpdesk"
+          ],
+          "timeSpent": 13
+        },
+        {
+          "after": {
+            "breachRisk": 30,
+            "index": 3,
+            "noise": 0,
+            "overallStatus": "ALERT",
+            "results": [
+              {
+                "caseId": "soc-ps-cradle",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": false,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "decoded-command",
+                  "change-tickets"
+                ],
+                "timeSpent": 26,
+                "verdictCorrect": false
+              },
+              {
+                "caseId": "soc-auth-reset",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "it-helpdesk"
+                ],
+                "timeSpent": 13,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-ps-patch",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "change-tickets"
+                ],
+                "timeSpent": 16,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 55
+          },
+          "caseId": "soc-ps-patch",
+          "chosen": "close-benign",
+          "queriedSourceIds": [
+            "edr-process-tree",
+            "change-tickets"
+          ],
+          "timeSpent": 16
+        },
+        {
+          "after": {
+            "breachRisk": 60,
+            "index": 4,
+            "noise": 0,
+            "overallStatus": "HUNT",
+            "results": [
+              {
+                "caseId": "soc-ps-cradle",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": false,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "decoded-command",
+                  "change-tickets"
+                ],
+                "timeSpent": 26,
+                "verdictCorrect": false
+              },
+              {
+                "caseId": "soc-auth-reset",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "it-helpdesk"
+                ],
+                "timeSpent": 13,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-ps-patch",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "change-tickets"
+                ],
+                "timeSpent": 16,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-dns-beacon",
+                "chosen": "close-benign",
+                "dispositionCorrect": false,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "dns-logs",
+                  "edr-process-tree"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": false
+              }
+            ],
+            "timeUsed": 73
+          },
+          "caseId": "soc-dns-beacon",
+          "chosen": "close-benign",
+          "queriedSourceIds": [
+            "dns-logs",
+            "edr-process-tree"
+          ],
+          "timeSpent": 18
+        },
+        {
+          "after": {
+            "breachRisk": 60,
+            "index": 5,
+            "noise": 0,
+            "overallStatus": "HUNT",
+            "results": [
+              {
+                "caseId": "soc-ps-cradle",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": false,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "decoded-command",
+                  "change-tickets"
+                ],
+                "timeSpent": 26,
+                "verdictCorrect": false
+              },
+              {
+                "caseId": "soc-auth-reset",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "it-helpdesk"
+                ],
+                "timeSpent": 13,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-ps-patch",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "change-tickets"
+                ],
+                "timeSpent": 16,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-dns-beacon",
+                "chosen": "close-benign",
+                "dispositionCorrect": false,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "dns-logs",
+                  "edr-process-tree"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": false
+              },
+              {
+                "caseId": "soc-auth-bruteforce",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "geo-vpn",
+                  "change-tickets"
+                ],
+                "timeSpent": 20,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 93
+          },
+          "caseId": "soc-auth-bruteforce",
+          "chosen": "escalate-ir-isolate",
+          "queriedSourceIds": [
+            "auth-logs",
+            "geo-vpn",
+            "change-tickets"
+          ],
+          "timeSpent": 20
+        },
+        {
+          "after": {
+            "breachRisk": 60,
+            "index": 6,
+            "noise": 0,
+            "overallStatus": "HUNT",
+            "results": [
+              {
+                "caseId": "soc-ps-cradle",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": false,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "decoded-command",
+                  "change-tickets"
+                ],
+                "timeSpent": 26,
+                "verdictCorrect": false
+              },
+              {
+                "caseId": "soc-auth-reset",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "it-helpdesk"
+                ],
+                "timeSpent": 13,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-ps-patch",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "change-tickets"
+                ],
+                "timeSpent": 16,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-dns-beacon",
+                "chosen": "close-benign",
+                "dispositionCorrect": false,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "dns-logs",
+                  "edr-process-tree"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": false
+              },
+              {
+                "caseId": "soc-auth-bruteforce",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "geo-vpn",
+                  "change-tickets"
+                ],
+                "timeSpent": 20,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-dns-cdn",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "dns-logs",
+                  "edr-process-tree"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 111
+          },
+          "caseId": "soc-dns-cdn",
+          "chosen": "close-false-positive",
+          "queriedSourceIds": [
+            "dns-logs",
+            "edr-process-tree"
+          ],
+          "timeSpent": 18
+        },
+        {
+          "after": {
+            "breachRisk": 60,
+            "index": 7,
+            "noise": 0,
+            "overallStatus": "HUNT",
+            "results": [
+              {
+                "caseId": "soc-ps-cradle",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": false,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "decoded-command",
+                  "change-tickets"
+                ],
+                "timeSpent": 26,
+                "verdictCorrect": false
+              },
+              {
+                "caseId": "soc-auth-reset",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "it-helpdesk"
+                ],
+                "timeSpent": 13,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-ps-patch",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "edr-process-tree",
+                  "change-tickets"
+                ],
+                "timeSpent": 16,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-dns-beacon",
+                "chosen": "close-benign",
+                "dispositionCorrect": false,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "dns-logs",
+                  "edr-process-tree"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": false
+              },
+              {
+                "caseId": "soc-auth-bruteforce",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "geo-vpn",
+                  "change-tickets"
+                ],
+                "timeSpent": 20,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-dns-cdn",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "dns-logs",
+                  "edr-process-tree"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-auth-pentest",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "auth-logs",
+                  "change-tickets"
+                ],
+                "timeSpent": 14,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 125
+          },
+          "caseId": "soc-auth-pentest",
+          "chosen": "close-benign",
+          "queriedSourceIds": [
+            "auth-logs",
+            "change-tickets"
+          ],
+          "timeSpent": 14
+        }
+      ],
+      "unlockedAfter": [
+        "first-shift"
+      ],
+      "unlockedBefore": [
+        "first-shift"
+      ]
+    },
+    {
+      "careerBefore": {
+        "cash": 300,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 1,
+        "standing": 40
+      },
+      "caseIds": [
+        "soc-phish-harvest",
+        "soc-id-vpn",
+        "soc-edr-test",
+        "soc-id-mfa",
+        "soc-exfil-backup",
+        "soc-edr-loader",
+        "soc-phish-sim",
+        "soc-exfil-cloud"
+      ],
+      "event": {
+        "rankUp": null,
+        "type": "shift-clean",
+        "unlocked": [
+          {
+            "id": "lockout-shift",
+            "label": "Shift 3 · the lockout queue (mostly not a threat)"
+          }
+        ]
+      },
+      "inbox": [
+        {
+          "body": "Sharp reads all the way through. +40 standing. Keep them clean and you're 70 short of Tier-1 · Senior — then I open a harder queue for you.",
+          "from": "Vale",
+          "id": "ev-clean",
+          "role": "your shift lead",
+          "subject": "Clean shift — nice work",
+          "tone": "warm"
+        },
+        {
+          "body": "Shift 3 · the lockout queue (mostly not a threat) is open to you now — you earned it. Harder alerts, same read.",
+          "from": "Vale",
+          "id": "ev-unlock-lockout-shift",
+          "role": "your shift lead",
+          "subject": "New queue: Shift 3 · the lockout queue (mostly not a threat)",
+          "tone": "milestone"
+        },
+        {
+          "body": "You're at 850¢ — enough for the Threat-intel feed subscription. Grab it before your next shift; it pre-pulls enrichment on every case and saves you shift-time. This is what the cash is for.",
+          "from": "Vale",
+          "id": "tip-kit",
+          "role": "your shift lead",
+          "subject": "You've banked enough for the intel feed",
+          "tone": "tip"
+        }
+      ],
+      "inboxAll": [
+        {
+          "body": "Sharp reads all the way through. +40 standing. Keep them clean and you're 70 short of Tier-1 · Senior — then I open a harder queue for you.",
+          "from": "Vale",
+          "id": "ev-clean",
+          "role": "your shift lead",
+          "subject": "Clean shift — nice work",
+          "tone": "warm"
+        },
+        {
+          "body": "Shift 3 · the lockout queue (mostly not a threat) is open to you now — you earned it. Harder alerts, same read.",
+          "from": "Vale",
+          "id": "ev-unlock-lockout-shift",
+          "role": "your shift lead",
+          "subject": "New queue: Shift 3 · the lockout queue (mostly not a threat)",
+          "tone": "milestone"
+        },
+        {
+          "body": "You're at 850¢ — enough for the Threat-intel feed subscription. Grab it before your next shift; it pre-pulls enrichment on every case and saves you shift-time. This is what the cash is for.",
+          "from": "Vale",
+          "id": "tip-kit",
+          "role": "your shift lead",
+          "subject": "You've banked enough for the intel feed",
+          "tone": "tip"
+        }
+      ],
+      "name": "shift2-clean",
+      "reward": {
+        "cashGain": 550,
+        "rankUp": null,
+        "standingGain": 40,
+        "state": {
+          "cash": 850,
+          "gear": [],
+          "redRunsDone": 0,
+          "shiftsCleaned": 2,
+          "standing": 80
+        }
+      },
+      "score": {
+        "accuracy": 1,
+        "accuracyDenominator": 8,
+        "accuracyNumerator": 8,
+        "blindCalls": 0,
+        "breachRisk": 0,
+        "dispositionCorrect": 8,
+        "falseEscalations": 0,
+        "grade": "clean",
+        "investigationRate": 1,
+        "investigationRateDenominator": 17,
+        "investigationRateNumerator": 17,
+        "missedDetections": 0,
+        "noise": 0,
+        "thoroughCalls": 8,
+        "total": 8,
+        "verdictCorrect": 8
+      },
+      "shiftId": "second-shift",
+      "steps": [
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 1,
+            "noise": 0,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-phish-harvest",
+                "chosen": "escalate-tier2",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "email-auth",
+                  "sender-reputation",
+                  "url-detonation"
+                ],
+                "timeSpent": 21,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 21
+          },
+          "caseId": "soc-phish-harvest",
+          "chosen": "escalate-tier2",
+          "queriedSourceIds": [
+            "email-auth",
+            "sender-reputation",
+            "url-detonation"
+          ],
+          "timeSpent": 21
+        },
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 2,
+            "noise": 0,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-phish-harvest",
+                "chosen": "escalate-tier2",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "email-auth",
+                  "sender-reputation",
+                  "url-detonation"
+                ],
+                "timeSpent": 21,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-id-vpn",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "signin-logs",
+                  "named-locations"
+                ],
+                "timeSpent": 13,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 34
+          },
+          "caseId": "soc-id-vpn",
+          "chosen": "close-false-positive",
+          "queriedSourceIds": [
+            "signin-logs",
+            "named-locations"
+          ],
+          "timeSpent": 13
+        },
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 3,
+            "noise": 0,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-phish-harvest",
+                "chosen": "escalate-tier2",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "email-auth",
+                  "sender-reputation",
+                  "url-detonation"
+                ],
+                "timeSpent": 21,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-id-vpn",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "signin-logs",
+                  "named-locations"
+                ],
+                "timeSpent": 13,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-edr-test",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "change-tickets",
+                  "alert-evidence"
+                ],
+                "timeSpent": 14,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 48
+          },
+          "caseId": "soc-edr-test",
+          "chosen": "close-benign",
+          "queriedSourceIds": [
+            "change-tickets",
+            "alert-evidence"
+          ],
+          "timeSpent": 14
+        },
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 4,
+            "noise": 0,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-phish-harvest",
+                "chosen": "escalate-tier2",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "email-auth",
+                  "sender-reputation",
+                  "url-detonation"
+                ],
+                "timeSpent": 21,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-id-vpn",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "signin-logs",
+                  "named-locations"
+                ],
+                "timeSpent": 13,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-edr-test",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "change-tickets",
+                  "alert-evidence"
+                ],
+                "timeSpent": 14,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-id-mfa",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "mfa-logs",
+                  "entra-risk"
+                ],
+                "timeSpent": 12,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 60
+          },
+          "caseId": "soc-id-mfa",
+          "chosen": "escalate-ir-isolate",
+          "queriedSourceIds": [
+            "mfa-logs",
+            "entra-risk"
+          ],
+          "timeSpent": 12
+        },
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 5,
+            "noise": 0,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-phish-harvest",
+                "chosen": "escalate-tier2",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "email-auth",
+                  "sender-reputation",
+                  "url-detonation"
+                ],
+                "timeSpent": 21,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-id-vpn",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "signin-logs",
+                  "named-locations"
+                ],
+                "timeSpent": 13,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-edr-test",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "change-tickets",
+                  "alert-evidence"
+                ],
+                "timeSpent": 14,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-id-mfa",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "mfa-logs",
+                  "entra-risk"
+                ],
+                "timeSpent": 12,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-exfil-backup",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "change-tickets",
+                  "cloud-activity"
+                ],
+                "timeSpent": 14,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 74
+          },
+          "caseId": "soc-exfil-backup",
+          "chosen": "close-benign",
+          "queriedSourceIds": [
+            "change-tickets",
+            "cloud-activity"
+          ],
+          "timeSpent": 14
+        },
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 6,
+            "noise": 0,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-phish-harvest",
+                "chosen": "escalate-tier2",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "email-auth",
+                  "sender-reputation",
+                  "url-detonation"
+                ],
+                "timeSpent": 21,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-id-vpn",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "signin-logs",
+                  "named-locations"
+                ],
+                "timeSpent": 13,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-edr-test",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "change-tickets",
+                  "alert-evidence"
+                ],
+                "timeSpent": 14,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-id-mfa",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "mfa-logs",
+                  "entra-risk"
+                ],
+                "timeSpent": 12,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-exfil-backup",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "change-tickets",
+                  "cloud-activity"
+                ],
+                "timeSpent": 14,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-edr-loader",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "alert-evidence",
+                  "edr-process-tree"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 92
+          },
+          "caseId": "soc-edr-loader",
+          "chosen": "escalate-ir-isolate",
+          "queriedSourceIds": [
+            "alert-evidence",
+            "edr-process-tree"
+          ],
+          "timeSpent": 18
+        },
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 7,
+            "noise": 0,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-phish-harvest",
+                "chosen": "escalate-tier2",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "email-auth",
+                  "sender-reputation",
+                  "url-detonation"
+                ],
+                "timeSpent": 21,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-id-vpn",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "signin-logs",
+                  "named-locations"
+                ],
+                "timeSpent": 13,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-edr-test",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "change-tickets",
+                  "alert-evidence"
+                ],
+                "timeSpent": 14,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-id-mfa",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "mfa-logs",
+                  "entra-risk"
+                ],
+                "timeSpent": 12,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-exfil-backup",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "change-tickets",
+                  "cloud-activity"
+                ],
+                "timeSpent": 14,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-edr-loader",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "alert-evidence",
+                  "edr-process-tree"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-phish-sim",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "awareness-campaign",
+                  "email-auth"
+                ],
+                "timeSpent": 11,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 103
+          },
+          "caseId": "soc-phish-sim",
+          "chosen": "close-benign",
+          "queriedSourceIds": [
+            "awareness-campaign",
+            "email-auth"
+          ],
+          "timeSpent": 11
+        },
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 8,
+            "noise": 0,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-phish-harvest",
+                "chosen": "escalate-tier2",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "email-auth",
+                  "sender-reputation",
+                  "url-detonation"
+                ],
+                "timeSpent": 21,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-id-vpn",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "signin-logs",
+                  "named-locations"
+                ],
+                "timeSpent": 13,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-edr-test",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "change-tickets",
+                  "alert-evidence"
+                ],
+                "timeSpent": 14,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-id-mfa",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "mfa-logs",
+                  "entra-risk"
+                ],
+                "timeSpent": 12,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-exfil-backup",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "change-tickets",
+                  "cloud-activity"
+                ],
+                "timeSpent": 14,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-edr-loader",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "alert-evidence",
+                  "edr-process-tree"
+                ],
+                "timeSpent": 18,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-phish-sim",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "awareness-campaign",
+                  "email-auth"
+                ],
+                "timeSpent": 11,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-exfil-cloud",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "cloud-activity",
+                  "dlp-hits"
+                ],
+                "timeSpent": 14,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 117
+          },
+          "caseId": "soc-exfil-cloud",
+          "chosen": "escalate-ir-isolate",
+          "queriedSourceIds": [
+            "cloud-activity",
+            "dlp-hits"
+          ],
+          "timeSpent": 14
+        }
+      ],
+      "unlockedAfter": [
+        "first-shift",
+        "second-shift",
+        "lockout-shift"
+      ],
+      "unlockedBefore": [
+        "first-shift",
+        "second-shift"
+      ]
+    },
+    {
+      "careerBefore": {
+        "cash": 600,
+        "gear": [
+          "intel-feed"
+        ],
+        "redRunsDone": 0,
+        "shiftsCleaned": 2,
+        "standing": 80
+      },
+      "caseIds": [
+        "soc-lockout-stale",
+        "soc-lockout-attack",
+        "soc-lockout-pentest"
+      ],
+      "event": {
+        "rankUp": null,
+        "type": "shift-rough",
+        "unlocked": []
+      },
+      "inbox": [
+        {
+          "body": "A few calls were off. It happens to everyone on this desk. Re-read the debriefs — the misses are where the read gets sharper. Standing barely moved; clean shifts are how you climb, not volume.",
+          "from": "Vale",
+          "id": "ev-rough",
+          "role": "your shift lead",
+          "subject": "Rough one — that's the job",
+          "tone": "warn"
+        }
+      ],
+      "inboxAll": [
+        {
+          "body": "A few calls were off. It happens to everyone on this desk. Re-read the debriefs — the misses are where the read gets sharper. Standing barely moved; clean shifts are how you climb, not volume.",
+          "from": "Vale",
+          "id": "ev-rough",
+          "role": "your shift lead",
+          "subject": "Rough one — that's the job",
+          "tone": "warn"
+        },
+        {
+          "body": "Mercer. Your lead says you've got the reads down. Want to see what you're actually defending against? Run one contract in the red seat — do that and the handoff desk opens: your own tradecraft, seen from the blue side.",
+          "from": "Mercer",
+          "id": "tip-redrun",
+          "role": "handler · red seat",
+          "subject": "Come sit in the other chair",
+          "tone": "tip"
+        }
+      ],
+      "name": "shift3-rough",
+      "reward": {
+        "cashGain": 100,
+        "rankUp": null,
+        "standingGain": 15,
+        "state": {
+          "cash": 700,
+          "gear": [
+            "intel-feed"
+          ],
+          "redRunsDone": 0,
+          "shiftsCleaned": 2,
+          "standing": 95
+        }
+      },
+      "score": {
+        "accuracy": 0.6666666666666666,
+        "accuracyDenominator": 3,
+        "accuracyNumerator": 2,
+        "blindCalls": 0,
+        "breachRisk": 0,
+        "dispositionCorrect": 2,
+        "falseEscalations": 1,
+        "grade": "rough",
+        "investigationRate": 1,
+        "investigationRateDenominator": 6,
+        "investigationRateNumerator": 6,
+        "missedDetections": 0,
+        "noise": 12,
+        "thoroughCalls": 3,
+        "total": 3,
+        "verdictCorrect": 2
+      },
+      "shiftId": "lockout-shift",
+      "steps": [
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 1,
+            "noise": 12,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-lockout-stale",
+                "chosen": "escalate-tier2",
+                "dispositionCorrect": false,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "auth-failures",
+                  "it-helpdesk"
+                ],
+                "timeSpent": 13,
+                "verdictCorrect": false
+              }
+            ],
+            "timeUsed": 13
+          },
+          "caseId": "soc-lockout-stale",
+          "chosen": "escalate-tier2",
+          "queriedSourceIds": [
+            "auth-failures",
+            "it-helpdesk"
+          ],
+          "timeSpent": 13
+        },
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 2,
+            "noise": 12,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-lockout-stale",
+                "chosen": "escalate-tier2",
+                "dispositionCorrect": false,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "auth-failures",
+                  "it-helpdesk"
+                ],
+                "timeSpent": 13,
+                "verdictCorrect": false
+              },
+              {
+                "caseId": "soc-lockout-attack",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "auth-failures",
+                  "change-tickets"
+                ],
+                "timeSpent": 14,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 27
+          },
+          "caseId": "soc-lockout-attack",
+          "chosen": "escalate-ir-isolate",
+          "queriedSourceIds": [
+            "auth-failures",
+            "change-tickets"
+          ],
+          "timeSpent": 14
+        },
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 3,
+            "noise": 12,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-lockout-stale",
+                "chosen": "escalate-tier2",
+                "dispositionCorrect": false,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "auth-failures",
+                  "it-helpdesk"
+                ],
+                "timeSpent": 13,
+                "verdictCorrect": false
+              },
+              {
+                "caseId": "soc-lockout-attack",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "auth-failures",
+                  "change-tickets"
+                ],
+                "timeSpent": 14,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-lockout-pentest",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "change-tickets",
+                  "auth-failures"
+                ],
+                "timeSpent": 14,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 41
+          },
+          "caseId": "soc-lockout-pentest",
+          "chosen": "close-benign",
+          "queriedSourceIds": [
+            "change-tickets",
+            "auth-failures"
+          ],
+          "timeSpent": 14
+        }
+      ],
+      "unlockedAfter": [
+        "first-shift",
+        "second-shift",
+        "lockout-shift"
+      ],
+      "unlockedBefore": [
+        "first-shift",
+        "second-shift",
+        "lockout-shift"
+      ]
+    },
+    {
+      "careerBefore": {
+        "cash": 900,
+        "gear": [
+          "intel-feed"
+        ],
+        "redRunsDone": 0,
+        "shiftsCleaned": 3,
+        "standing": 120
+      },
+      "caseIds": [
+        "soc-handoff-the-key",
+        "soc-handoff-burn-notice",
+        "soc-handoff-unsanctioned"
+      ],
+      "event": {
+        "rankUp": {
+          "id": "t1-senior",
+          "label": "Tier-1 · Senior",
+          "min": 150
+        },
+        "type": "shift-clean",
+        "unlocked": [
+          {
+            "id": "insider-shift",
+            "label": "Shift 5 · the insider desk (context is the call)"
+          }
+        ]
+      },
+      "inbox": [
+        {
+          "body": "Sharp reads all the way through. +40 standing. Keep them clean and you're 50 short of Tier-2 · candidate — then I open a harder queue for you.",
+          "from": "Vale",
+          "id": "ev-clean",
+          "role": "your shift lead",
+          "subject": "Clean shift — nice work",
+          "tone": "warm"
+        },
+        {
+          "body": "That's Tier-1 · Senior. I flagged you to the lead. This is the ladder, and you're climbing it the right way — by being right.",
+          "from": "Vale",
+          "id": "ev-rankup",
+          "role": "your shift lead",
+          "subject": "You made Tier-1 · Senior",
+          "tone": "milestone"
+        },
+        {
+          "body": "Shift 5 · the insider desk (context is the call) is open to you now — you earned it. Harder alerts, same read.",
+          "from": "Vale",
+          "id": "ev-unlock-insider-shift",
+          "role": "your shift lead",
+          "subject": "New queue: Shift 5 · the insider desk (context is the call)",
+          "tone": "milestone"
+        }
+      ],
+      "inboxAll": [
+        {
+          "body": "Sharp reads all the way through. +40 standing. Keep them clean and you're 50 short of Tier-2 · candidate — then I open a harder queue for you.",
+          "from": "Vale",
+          "id": "ev-clean",
+          "role": "your shift lead",
+          "subject": "Clean shift — nice work",
+          "tone": "warm"
+        },
+        {
+          "body": "That's Tier-1 · Senior. I flagged you to the lead. This is the ladder, and you're climbing it the right way — by being right.",
+          "from": "Vale",
+          "id": "ev-rankup",
+          "role": "your shift lead",
+          "subject": "You made Tier-1 · Senior",
+          "tone": "milestone"
+        },
+        {
+          "body": "Shift 5 · the insider desk (context is the call) is open to you now — you earned it. Harder alerts, same read.",
+          "from": "Vale",
+          "id": "ev-unlock-insider-shift",
+          "role": "your shift lead",
+          "subject": "New queue: Shift 5 · the insider desk (context is the call)",
+          "tone": "milestone"
+        },
+        {
+          "body": "Mercer. Your lead says you've got the reads down. Want to see what you're actually defending against? Run one contract in the red seat — do that and the handoff desk opens: your own tradecraft, seen from the blue side.",
+          "from": "Mercer",
+          "id": "tip-redrun",
+          "role": "handler · red seat",
+          "subject": "Come sit in the other chair",
+          "tone": "tip"
+        }
+      ],
+      "name": "shift4-clean",
+      "reward": {
+        "cashGain": 300,
+        "rankUp": {
+          "id": "t1-senior",
+          "label": "Tier-1 · Senior",
+          "min": 150
+        },
+        "standingGain": 40,
+        "state": {
+          "cash": 1200,
+          "gear": [
+            "intel-feed"
+          ],
+          "redRunsDone": 0,
+          "shiftsCleaned": 4,
+          "standing": 160
+        }
+      },
+      "score": {
+        "accuracy": 1,
+        "accuracyDenominator": 3,
+        "accuracyNumerator": 3,
+        "blindCalls": 0,
+        "breachRisk": 0,
+        "dispositionCorrect": 3,
+        "falseEscalations": 0,
+        "grade": "clean",
+        "investigationRate": 1,
+        "investigationRateDenominator": 9,
+        "investigationRateNumerator": 9,
+        "missedDetections": 0,
+        "noise": 0,
+        "thoroughCalls": 3,
+        "total": 3,
+        "verdictCorrect": 3
+      },
+      "shiftId": "handoff-shift",
+      "steps": [
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 1,
+            "noise": 0,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-handoff-the-key",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "change-tickets",
+                  "auth-logs",
+                  "dlp-hits"
+                ],
+                "timeSpent": 20,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 20
+          },
+          "caseId": "soc-handoff-the-key",
+          "chosen": "close-benign",
+          "queriedSourceIds": [
+            "change-tickets",
+            "auth-logs",
+            "dlp-hits"
+          ],
+          "timeSpent": 20
+        },
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 2,
+            "noise": 0,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-handoff-the-key",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "change-tickets",
+                  "auth-logs",
+                  "dlp-hits"
+                ],
+                "timeSpent": 20,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-handoff-burn-notice",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "change-tickets",
+                  "alert-evidence"
+                ],
+                "timeSpent": 14,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 34
+          },
+          "caseId": "soc-handoff-burn-notice",
+          "chosen": "close-benign",
+          "queriedSourceIds": [
+            "change-tickets",
+            "alert-evidence"
+          ],
+          "timeSpent": 14
+        },
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 3,
+            "noise": 0,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-handoff-the-key",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "change-tickets",
+                  "auth-logs",
+                  "dlp-hits"
+                ],
+                "timeSpent": 20,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-handoff-burn-notice",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "change-tickets",
+                  "alert-evidence"
+                ],
+                "timeSpent": 14,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-handoff-unsanctioned",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 4,
+                "queriedSourceIds": [
+                  "change-tickets",
+                  "auth-logs",
+                  "dlp-hits",
+                  "alert-evidence"
+                ],
+                "timeSpent": 28,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 62
+          },
+          "caseId": "soc-handoff-unsanctioned",
+          "chosen": "escalate-ir-isolate",
+          "queriedSourceIds": [
+            "change-tickets",
+            "auth-logs",
+            "dlp-hits",
+            "alert-evidence"
+          ],
+          "timeSpent": 28
+        }
+      ],
+      "unlockedAfter": [
+        "first-shift",
+        "second-shift",
+        "lockout-shift",
+        "handoff-shift",
+        "insider-shift"
+      ],
+      "unlockedBefore": [
+        "first-shift",
+        "second-shift",
+        "lockout-shift",
+        "handoff-shift"
+      ]
+    },
+    {
+      "careerBefore": {
+        "cash": 1200,
+        "gear": [
+          "intel-feed"
+        ],
+        "redRunsDone": 0,
+        "shiftsCleaned": 4,
+        "standing": 160
+      },
+      "caseIds": [
+        "soc-insider-departing",
+        "soc-insider-baseline",
+        "soc-insider-migration"
+      ],
+      "event": {
+        "rankUp": null,
+        "type": "shift-rough",
+        "unlocked": []
+      },
+      "inbox": [
+        {
+          "body": "A few calls were off. It happens to everyone on this desk. Re-read the debriefs — the misses are where the read gets sharper. Standing barely moved; clean shifts are how you climb, not volume.",
+          "from": "Vale",
+          "id": "ev-rough",
+          "role": "your shift lead",
+          "subject": "Rough one — that's the job",
+          "tone": "warn"
+        }
+      ],
+      "inboxAll": [
+        {
+          "body": "A few calls were off. It happens to everyone on this desk. Re-read the debriefs — the misses are where the read gets sharper. Standing barely moved; clean shifts are how you climb, not volume.",
+          "from": "Vale",
+          "id": "ev-rough",
+          "role": "your shift lead",
+          "subject": "Rough one — that's the job",
+          "tone": "warn"
+        },
+        {
+          "body": "Mercer. Your lead says you've got the reads down. Want to see what you're actually defending against? Run one contract in the red seat — do that and the handoff desk opens: your own tradecraft, seen from the blue side.",
+          "from": "Mercer",
+          "id": "tip-redrun",
+          "role": "handler · red seat",
+          "subject": "Come sit in the other chair",
+          "tone": "tip"
+        }
+      ],
+      "name": "shift5-rough",
+      "reward": {
+        "cashGain": 150,
+        "rankUp": null,
+        "standingGain": 15,
+        "state": {
+          "cash": 1350,
+          "gear": [
+            "intel-feed"
+          ],
+          "redRunsDone": 0,
+          "shiftsCleaned": 4,
+          "standing": 175
+        }
+      },
+      "score": {
+        "accuracy": 1,
+        "accuracyDenominator": 3,
+        "accuracyNumerator": 3,
+        "blindCalls": 1,
+        "breachRisk": 0,
+        "dispositionCorrect": 2,
+        "falseEscalations": 0,
+        "grade": "rough",
+        "investigationRate": 0.7142857142857143,
+        "investigationRateDenominator": 7,
+        "investigationRateNumerator": 5,
+        "missedDetections": 0,
+        "noise": 12,
+        "thoroughCalls": 2,
+        "total": 3,
+        "verdictCorrect": 3
+      },
+      "shiftId": "insider-shift",
+      "steps": [
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 1,
+            "noise": 12,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-insider-departing",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": false,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "hr-directory",
+                  "change-tickets",
+                  "cloud-activity"
+                ],
+                "timeSpent": 19,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 19
+          },
+          "caseId": "soc-insider-departing",
+          "chosen": "escalate-ir-isolate",
+          "queriedSourceIds": [
+            "hr-directory",
+            "change-tickets",
+            "cloud-activity"
+          ],
+          "timeSpent": 19
+        },
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 2,
+            "noise": 12,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-insider-departing",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": false,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "hr-directory",
+                  "change-tickets",
+                  "cloud-activity"
+                ],
+                "timeSpent": 19,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-insider-baseline",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 0,
+                "queriedSourceIds": [],
+                "timeSpent": 0,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 19
+          },
+          "caseId": "soc-insider-baseline",
+          "chosen": "close-false-positive",
+          "queriedSourceIds": [],
+          "timeSpent": 0
+        },
+        {
+          "after": {
+            "breachRisk": 0,
+            "index": 3,
+            "noise": 12,
+            "overallStatus": "CALM",
+            "results": [
+              {
+                "caseId": "soc-insider-departing",
+                "chosen": "escalate-ir-isolate",
+                "dispositionCorrect": false,
+                "keySourcesPulled": 3,
+                "queriedSourceIds": [
+                  "hr-directory",
+                  "change-tickets",
+                  "cloud-activity"
+                ],
+                "timeSpent": 19,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-insider-baseline",
+                "chosen": "close-false-positive",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 0,
+                "queriedSourceIds": [],
+                "timeSpent": 0,
+                "verdictCorrect": true
+              },
+              {
+                "caseId": "soc-insider-migration",
+                "chosen": "close-benign",
+                "dispositionCorrect": true,
+                "keySourcesPulled": 2,
+                "queriedSourceIds": [
+                  "change-tickets",
+                  "cloud-activity"
+                ],
+                "timeSpent": 14,
+                "verdictCorrect": true
+              }
+            ],
+            "timeUsed": 33
+          },
+          "caseId": "soc-insider-migration",
+          "chosen": "close-benign",
+          "queriedSourceIds": [
+            "change-tickets",
+            "cloud-activity"
+          ],
+          "timeSpent": 14
+        }
+      ],
+      "unlockedAfter": [
+        "first-shift",
+        "second-shift",
+        "lockout-shift",
+        "handoff-shift",
+        "insider-shift"
+      ],
+      "unlockedBefore": [
+        "first-shift",
+        "second-shift",
+        "lockout-shift",
+        "handoff-shift",
+        "insider-shift"
+      ]
+    }
+  ],
+  "schemaVersion": 1
+}

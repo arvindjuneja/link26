@@ -1,0 +1,596 @@
+{
+  "contentHash": "sha256:6fdddac6430e0cf485f08e3c353aaebabec4db743612dc4cca6d3aa87893ffc4",
+  "scenarios": [
+    {
+      "career": {
+        "cash": 0,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 0,
+        "standing": 0
+      },
+      "event": {
+        "rankUp": null,
+        "type": null,
+        "unlocked": []
+      },
+      "messagesAll": [
+        {
+          "body": "I'm Vale — I run this shift. New here? Start with the fundamentals queue. Clean shifts move you up the ladder and I'll open harder work as you earn it; the cash from the job buys kit that makes you faster. You're not alone on this — ping me any time. Go get one.",
+          "from": "Vale",
+          "id": "welcome",
+          "role": "your shift lead",
+          "subject": "Welcome to the desk",
+          "tone": "warm"
+        }
+      ],
+      "messagesBlueOnly": [
+        {
+          "body": "I'm Vale — I run this shift. New here? Start with the fundamentals queue. Clean shifts move you up the ladder and I'll open harder work as you earn it; the cash from the job buys kit that makes you faster. You're not alone on this — ping me any time. Go get one.",
+          "from": "Vale",
+          "id": "welcome",
+          "role": "your shift lead",
+          "subject": "Welcome to the desk",
+          "tone": "warm"
+        }
+      ],
+      "name": "welcome-fresh"
+    },
+    {
+      "career": {
+        "cash": 100,
+        "gear": [],
+        "redRunsDone": 1,
+        "shiftsCleaned": 1,
+        "standing": 40
+      },
+      "event": {
+        "rankUp": null,
+        "type": "shift-clean",
+        "unlocked": []
+      },
+      "messagesAll": [
+        {
+          "body": "Sharp reads all the way through. +40 standing. Keep them clean and you're 110 short of Tier-1 · Senior — then I open a harder queue for you.",
+          "from": "Vale",
+          "id": "ev-clean",
+          "role": "your shift lead",
+          "subject": "Clean shift — nice work",
+          "tone": "warm"
+        }
+      ],
+      "messagesBlueOnly": [
+        {
+          "body": "Sharp reads all the way through. +40 standing. Keep them clean and you're 110 short of Tier-1 · Senior — then I open a harder queue for you.",
+          "from": "Vale",
+          "id": "ev-clean",
+          "role": "your shift lead",
+          "subject": "Clean shift — nice work",
+          "tone": "warm"
+        }
+      ],
+      "name": "shift-clean"
+    },
+    {
+      "career": {
+        "cash": 100,
+        "gear": [],
+        "redRunsDone": 1,
+        "shiftsCleaned": 1,
+        "standing": 55
+      },
+      "event": {
+        "rankUp": null,
+        "type": "shift-rough",
+        "unlocked": []
+      },
+      "messagesAll": [
+        {
+          "body": "A few calls were off. It happens to everyone on this desk. Re-read the debriefs — the misses are where the read gets sharper. Standing barely moved; clean shifts are how you climb, not volume.",
+          "from": "Vale",
+          "id": "ev-rough",
+          "role": "your shift lead",
+          "subject": "Rough one — that's the job",
+          "tone": "warn"
+        }
+      ],
+      "messagesBlueOnly": [
+        {
+          "body": "A few calls were off. It happens to everyone on this desk. Re-read the debriefs — the misses are where the read gets sharper. Standing barely moved; clean shifts are how you climb, not volume.",
+          "from": "Vale",
+          "id": "ev-rough",
+          "role": "your shift lead",
+          "subject": "Rough one — that's the job",
+          "tone": "warn"
+        }
+      ],
+      "name": "shift-rough"
+    },
+    {
+      "career": {
+        "cash": 100,
+        "gear": [],
+        "redRunsDone": 1,
+        "shiftsCleaned": 1,
+        "standing": 45
+      },
+      "event": {
+        "rankUp": null,
+        "type": "shift-breached",
+        "unlocked": []
+      },
+      "messagesAll": [
+        {
+          "body": "A real one got closed and dwelt. Every analyst has that night once. The lesson is which log you skipped before you called it — pull the answering source next time. We're still in your corner.",
+          "from": "Vale",
+          "id": "ev-breach",
+          "role": "your shift lead",
+          "subject": "Something got past you",
+          "tone": "warn"
+        }
+      ],
+      "messagesBlueOnly": [
+        {
+          "body": "A real one got closed and dwelt. Every analyst has that night once. The lesson is which log you skipped before you called it — pull the answering source next time. We're still in your corner.",
+          "from": "Vale",
+          "id": "ev-breach",
+          "role": "your shift lead",
+          "subject": "Something got past you",
+          "tone": "warn"
+        }
+      ],
+      "name": "shift-breached"
+    },
+    {
+      "career": {
+        "cash": 0,
+        "gear": [],
+        "redRunsDone": 1,
+        "shiftsCleaned": 0,
+        "standing": 0
+      },
+      "event": {
+        "rankUp": {
+          "id": "trainee",
+          "label": "Trainee",
+          "min": 0
+        },
+        "type": null,
+        "unlocked": []
+      },
+      "messagesAll": [
+        {
+          "body": "That's Trainee. I flagged you to the lead. This is the ladder, and you're climbing it the right way — by being right.",
+          "from": "Vale",
+          "id": "ev-rankup",
+          "role": "your shift lead",
+          "subject": "You made Trainee",
+          "tone": "milestone"
+        }
+      ],
+      "messagesBlueOnly": [
+        {
+          "body": "That's Trainee. I flagged you to the lead. This is the ladder, and you're climbing it the right way — by being right.",
+          "from": "Vale",
+          "id": "ev-rankup",
+          "role": "your shift lead",
+          "subject": "You made Trainee",
+          "tone": "milestone"
+        }
+      ],
+      "name": "rankup-trainee"
+    },
+    {
+      "career": {
+        "cash": 100,
+        "gear": [],
+        "redRunsDone": 1,
+        "shiftsCleaned": 1,
+        "standing": 40
+      },
+      "event": {
+        "rankUp": {
+          "id": "t1",
+          "label": "Tier-1 Analyst",
+          "min": 40
+        },
+        "type": null,
+        "unlocked": []
+      },
+      "messagesAll": [
+        {
+          "body": "That's Tier-1 Analyst. I flagged you to the lead. This is the ladder, and you're climbing it the right way — by being right.",
+          "from": "Vale",
+          "id": "ev-rankup",
+          "role": "your shift lead",
+          "subject": "You made Tier-1 Analyst",
+          "tone": "milestone"
+        }
+      ],
+      "messagesBlueOnly": [
+        {
+          "body": "That's Tier-1 Analyst. I flagged you to the lead. This is the ladder, and you're climbing it the right way — by being right.",
+          "from": "Vale",
+          "id": "ev-rankup",
+          "role": "your shift lead",
+          "subject": "You made Tier-1 Analyst",
+          "tone": "milestone"
+        }
+      ],
+      "name": "rankup-t1"
+    },
+    {
+      "career": {
+        "cash": 100,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 3,
+        "standing": 150
+      },
+      "event": {
+        "rankUp": {
+          "id": "t1-senior",
+          "label": "Tier-1 · Senior",
+          "min": 150
+        },
+        "type": null,
+        "unlocked": []
+      },
+      "messagesAll": [
+        {
+          "body": "That's Tier-1 · Senior. I flagged you to the lead. This is the ladder, and you're climbing it the right way — by being right.",
+          "from": "Vale",
+          "id": "ev-rankup",
+          "role": "your shift lead",
+          "subject": "You made Tier-1 · Senior",
+          "tone": "milestone"
+        },
+        {
+          "body": "Mercer. Your lead says you've got the reads down. Want to see what you're actually defending against? Run one contract in the red seat — do that and the handoff desk opens: your own tradecraft, seen from the blue side.",
+          "from": "Mercer",
+          "id": "tip-redrun",
+          "role": "handler · red seat",
+          "subject": "Come sit in the other chair",
+          "tone": "tip"
+        }
+      ],
+      "messagesBlueOnly": [
+        {
+          "body": "That's Tier-1 · Senior. I flagged you to the lead. This is the ladder, and you're climbing it the right way — by being right.",
+          "from": "Vale",
+          "id": "ev-rankup",
+          "role": "your shift lead",
+          "subject": "You made Tier-1 · Senior",
+          "tone": "milestone"
+        }
+      ],
+      "name": "rankup-t1-senior"
+    },
+    {
+      "career": {
+        "cash": 100,
+        "gear": [],
+        "redRunsDone": 1,
+        "shiftsCleaned": 5,
+        "standing": 210
+      },
+      "event": {
+        "rankUp": {
+          "id": "t2",
+          "label": "Tier-2 · candidate",
+          "min": 210
+        },
+        "type": "shift-clean",
+        "unlocked": []
+      },
+      "messagesAll": [
+        {
+          "body": "Sharp reads all the way through. +40 standing. You're at the top of what I can put you up for — Tier-2's next, and that's earned, not given.",
+          "from": "Vale",
+          "id": "ev-clean",
+          "role": "your shift lead",
+          "subject": "Clean shift — nice work",
+          "tone": "warm"
+        },
+        {
+          "body": "Mercer here. Your shift lead's been talking you up. You've got the read now — and the other chair's a lot easier once you've sat in this one. When you're ready.",
+          "from": "Mercer",
+          "id": "ev-rankup",
+          "role": "handler · red seat",
+          "subject": "You made Tier-2 · candidate",
+          "tone": "milestone"
+        }
+      ],
+      "messagesBlueOnly": [
+        {
+          "body": "Sharp reads all the way through. +40 standing. You're at the top of what I can put you up for — Tier-2's next, and that's earned, not given.",
+          "from": "Vale",
+          "id": "ev-clean",
+          "role": "your shift lead",
+          "subject": "Clean shift — nice work",
+          "tone": "warm"
+        },
+        {
+          "body": "Mercer here. Your shift lead's been talking you up. You've got the read now — and the other chair's a lot easier once you've sat in this one. When you're ready.",
+          "from": "Mercer",
+          "id": "ev-rankup",
+          "role": "handler · red seat",
+          "subject": "You made Tier-2 · candidate",
+          "tone": "milestone"
+        }
+      ],
+      "name": "rankup-t2-clean"
+    },
+    {
+      "career": {
+        "cash": 100,
+        "gear": [],
+        "redRunsDone": 1,
+        "shiftsCleaned": 3,
+        "standing": 120
+      },
+      "event": {
+        "rankUp": null,
+        "type": null,
+        "unlocked": [
+          {
+            "id": "lockout-shift",
+            "label": "Shift 3 · the lockout queue (mostly not a threat)"
+          },
+          {
+            "id": "handoff-shift",
+            "label": "Shift 4 · the other chair (a red team's runs)"
+          }
+        ]
+      },
+      "messagesAll": [
+        {
+          "body": "Shift 3 · the lockout queue (mostly not a threat) is open to you now — you earned it. Harder alerts, same read.",
+          "from": "Vale",
+          "id": "ev-unlock-lockout-shift",
+          "role": "your shift lead",
+          "subject": "New queue: Shift 3 · the lockout queue (mostly not a threat)",
+          "tone": "milestone"
+        },
+        {
+          "body": "Mercer. Your lead says you're ready to see the runs I sent you from the blue side. That's Shift 4 — the same board, the other chair. Go find out what your own tradecraft looks like to a defender.",
+          "from": "Mercer",
+          "id": "ev-unlock-handoff-shift",
+          "role": "handler · red seat",
+          "subject": "The other chair is open to you",
+          "tone": "milestone"
+        }
+      ],
+      "messagesBlueOnly": [
+        {
+          "body": "Shift 3 · the lockout queue (mostly not a threat) is open to you now — you earned it. Harder alerts, same read.",
+          "from": "Vale",
+          "id": "ev-unlock-lockout-shift",
+          "role": "your shift lead",
+          "subject": "New queue: Shift 3 · the lockout queue (mostly not a threat)",
+          "tone": "milestone"
+        },
+        {
+          "body": "Mercer. Your lead says you're ready to see the runs I sent you from the blue side. That's Shift 4 — the same board, the other chair. Go find out what your own tradecraft looks like to a defender.",
+          "from": "Mercer",
+          "id": "ev-unlock-handoff-shift",
+          "role": "handler · red seat",
+          "subject": "The other chair is open to you",
+          "tone": "milestone"
+        }
+      ],
+      "name": "unlock-queues"
+    },
+    {
+      "career": {
+        "cash": 350,
+        "gear": [],
+        "redRunsDone": 1,
+        "shiftsCleaned": 1,
+        "standing": 40
+      },
+      "event": {
+        "rankUp": null,
+        "type": null,
+        "unlocked": []
+      },
+      "messagesAll": [
+        {
+          "body": "You're at 350¢ — enough for the Threat-intel feed subscription. Grab it before your next shift; it pre-pulls enrichment on every case and saves you shift-time. This is what the cash is for.",
+          "from": "Vale",
+          "id": "tip-kit",
+          "role": "your shift lead",
+          "subject": "You've banked enough for the intel feed",
+          "tone": "tip"
+        }
+      ],
+      "messagesBlueOnly": [
+        {
+          "body": "You're at 350¢ — enough for the Threat-intel feed subscription. Grab it before your next shift; it pre-pulls enrichment on every case and saves you shift-time. This is what the cash is for.",
+          "from": "Vale",
+          "id": "tip-kit",
+          "role": "your shift lead",
+          "subject": "You've banked enough for the intel feed",
+          "tone": "tip"
+        }
+      ],
+      "name": "tip-kit"
+    },
+    {
+      "career": {
+        "cash": 100,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 1,
+        "standing": 120
+      },
+      "event": {
+        "rankUp": null,
+        "type": null,
+        "unlocked": []
+      },
+      "messagesAll": [
+        {
+          "body": "Mercer. Your lead says you've got the reads down. Want to see what you're actually defending against? Run one contract in the red seat — do that and the handoff desk opens: your own tradecraft, seen from the blue side.",
+          "from": "Mercer",
+          "id": "tip-redrun",
+          "role": "handler · red seat",
+          "subject": "Come sit in the other chair",
+          "tone": "tip"
+        }
+      ],
+      "messagesBlueOnly": [],
+      "name": "tip-redrun"
+    },
+    {
+      "career": {
+        "cash": 0,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 1,
+        "standing": 90
+      },
+      "event": {
+        "rankUp": null,
+        "type": null,
+        "unlocked": []
+      },
+      "messagesAll": [
+        {
+          "body": "Mercer. Your lead says you've got the reads down. Want to see what you're actually defending against? Run one contract in the red seat — do that and the handoff desk opens: your own tradecraft, seen from the blue side.",
+          "from": "Mercer",
+          "id": "tip-redrun",
+          "role": "handler · red seat",
+          "subject": "Come sit in the other chair",
+          "tone": "tip"
+        }
+      ],
+      "messagesBlueOnly": [],
+      "name": "standing-90-nudge"
+    },
+    {
+      "career": {
+        "cash": 400,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 2,
+        "standing": 120
+      },
+      "event": {
+        "rankUp": {
+          "id": "t1-senior",
+          "label": "Tier-1 · Senior",
+          "min": 150
+        },
+        "type": "shift-clean",
+        "unlocked": [
+          {
+            "id": "handoff-shift",
+            "label": "Shift 4 · the other chair (a red team's runs)"
+          }
+        ]
+      },
+      "messagesAll": [
+        {
+          "body": "Sharp reads all the way through. +40 standing. Keep them clean and you're 30 short of Tier-1 · Senior — then I open a harder queue for you.",
+          "from": "Vale",
+          "id": "ev-clean",
+          "role": "your shift lead",
+          "subject": "Clean shift — nice work",
+          "tone": "warm"
+        },
+        {
+          "body": "That's Tier-1 · Senior. I flagged you to the lead. This is the ladder, and you're climbing it the right way — by being right.",
+          "from": "Vale",
+          "id": "ev-rankup",
+          "role": "your shift lead",
+          "subject": "You made Tier-1 · Senior",
+          "tone": "milestone"
+        },
+        {
+          "body": "Mercer. Your lead says you're ready to see the runs I sent you from the blue side. That's Shift 4 — the same board, the other chair. Go find out what your own tradecraft looks like to a defender.",
+          "from": "Mercer",
+          "id": "ev-unlock-handoff-shift",
+          "role": "handler · red seat",
+          "subject": "The other chair is open to you",
+          "tone": "milestone"
+        },
+        {
+          "body": "Mercer. Your lead says you've got the reads down. Want to see what you're actually defending against? Run one contract in the red seat — do that and the handoff desk opens: your own tradecraft, seen from the blue side.",
+          "from": "Mercer",
+          "id": "tip-redrun",
+          "role": "handler · red seat",
+          "subject": "Come sit in the other chair",
+          "tone": "tip"
+        }
+      ],
+      "messagesBlueOnly": [
+        {
+          "body": "Sharp reads all the way through. +40 standing. Keep them clean and you're 30 short of Tier-1 · Senior — then I open a harder queue for you.",
+          "from": "Vale",
+          "id": "ev-clean",
+          "role": "your shift lead",
+          "subject": "Clean shift — nice work",
+          "tone": "warm"
+        },
+        {
+          "body": "That's Tier-1 · Senior. I flagged you to the lead. This is the ladder, and you're climbing it the right way — by being right.",
+          "from": "Vale",
+          "id": "ev-rankup",
+          "role": "your shift lead",
+          "subject": "You made Tier-1 · Senior",
+          "tone": "milestone"
+        },
+        {
+          "body": "Mercer. Your lead says you're ready to see the runs I sent you from the blue side. That's Shift 4 — the same board, the other chair. Go find out what your own tradecraft looks like to a defender.",
+          "from": "Mercer",
+          "id": "ev-unlock-handoff-shift",
+          "role": "handler · red seat",
+          "subject": "The other chair is open to you",
+          "tone": "milestone"
+        }
+      ],
+      "name": "cap-four"
+    },
+    {
+      "career": {
+        "cash": 0,
+        "gear": [],
+        "redRunsDone": 0,
+        "shiftsCleaned": 0,
+        "standing": 0
+      },
+      "event": {
+        "rankUp": {
+          "id": "t1",
+          "label": "Tier-1 Analyst",
+          "min": 40
+        },
+        "type": null,
+        "unlocked": []
+      },
+      "messagesAll": [
+        {
+          "body": "That's Tier-1 Analyst. I flagged you to the lead. This is the ladder, and you're climbing it the right way — by being right.",
+          "from": "Vale",
+          "id": "ev-rankup",
+          "role": "your shift lead",
+          "subject": "You made Tier-1 Analyst",
+          "tone": "milestone"
+        }
+      ],
+      "messagesBlueOnly": [
+        {
+          "body": "That's Tier-1 Analyst. I flagged you to the lead. This is the ladder, and you're climbing it the right way — by being right.",
+          "from": "Vale",
+          "id": "ev-rankup",
+          "role": "your shift lead",
+          "subject": "You made Tier-1 Analyst",
+          "tone": "milestone"
+        }
+      ],
+      "name": "fresh-rankup"
+    }
+  ],
+  "schemaVersion": 1
+}

@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "soc:export": "tsx --tsconfig tsconfig.json scripts/export-soc-content.ts --out ios/SentryCore/Sources/SentryContent/Resources --fixtures ios/SentryCore/Sources/SentryFixtures/Resources",
+    "soc:check": "tsx --tsconfig tsconfig.json scripts/export-soc-content.ts --check --out ios/SentryCore/Sources/SentryContent/Resources --fixtures ios/SentryCore/Sources/SentryFixtures/Resources",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "cf-typegen": "wrangler types"
@@ -34,6 +36,7 @@
     "eslint": "^9",
     "eslint-config-next": "^16.2.10",
     "tailwindcss": "^4",
+    "tsx": "4.23.13",
     "typescript": "^5",
     "vitest": "^4.1.9",
     "wrangler": "^4.107.1"
