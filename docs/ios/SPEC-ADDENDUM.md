@@ -206,3 +206,21 @@ implement → independent review → fix; the lead commits + pushes a checkpoint
   `idb screenshot --udid <UDID> <out.png>`; drive with `idb ui tap <x> <y> --udid <UDID>`,
   `idb ui swipe`, `idb ui text`, and read the accessibility tree with `idb ui describe-all --udid <UDID>`.
   Every screen ticket LOOKS at its screenshots (Read the PNG) before reporting.
+
+## 6. B7 amended (2026-09-05, after the founder's first device run)
+
+`project.yml` no longer sets `CODE_SIGNING_ALLOWED/REQUIRED: NO` on the app target — with signing
+disabled Xcode installs an UNSIGNED binary on a physical iPhone and the device rejects it
+(`LaunchExecutableValidationErrorDomain` / "No code signature found"). Signing is now `Automatic`
+with `DEVELOPMENT_TEAM: "${SENTRY_DEV_TEAM}"` (XcodeGen env substitution):
+- **Founder device run:** `SENTRY_DEV_TEAM=<TeamID> xcodegen generate --spec ios/project.yml`, open
+  `ios/SentrySOC.xcodeproj`, pick the iPhone, Run. Automatic signing registers the App ID
+  `pl.oumm.sentry.soc` and a development profile by itself — **no App Store Connect step is needed
+  to run on your own device**; ASC matters only for TestFlight / the store. First launch on the
+  phone: Settings → General → VPN & Device Management → trust the developer certificate.
+  (Picking the Team in Xcode's Signing & Capabilities also works, until the next `xcodegen generate`.)
+- **Agents / CI / simulator builds** (verified: both succeed): plain
+  `xcodebuild build … -destination 'platform=iOS Simulator,…'` works with an empty team; the release
+  guard and CI additionally pass `CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO` on the command
+  line. C11's `Makefile`, `verify.sh` and `ios.yml` MUST use those flags; SPEC §7 step 6 / §11 rule 3
+  are amended accordingly.
