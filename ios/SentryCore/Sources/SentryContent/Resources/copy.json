@@ -156,7 +156,7 @@
     {
       "advance": "button",
       "anchor": "evidence",
-      "body": "Findings land here — the evidence, not the tool's 'High' guess. Pull more logs from SOURCES; findings land under EVIDENCE. When you can justify a call, hit Got it.",
+      "body": "Findings land here — the evidence, not the tool's 'High' guess. Not sure yet? Pull more logs from SOURCES. When you can justify a call, hit Got it.",
       "button": "Got it ▸",
       "title": "Read what actually happened"
     },
@@ -168,7 +168,7 @@
       "title": "Now make the call"
     }
   ],
-  "contentHash": "sha256:6fdddac6430e0cf485f08e3c353aaebabec4db743612dc4cca6d3aa87893ffc4",
+  "contentHash": "sha256:371a99720baef85824672fd2fceed15250c3ab5c876b2f56b1c76336640eca78",
   "debriefHeadlines": {
     "good": "Good call",
     "verdictOnly": "Right verdict, off on the response",
@@ -554,7 +554,7 @@
       },
       "High": {
         "label": "HIGH",
-        "tone": "amber"
+        "tone": "orange"
       },
       "Low": {
         "label": "LOW",

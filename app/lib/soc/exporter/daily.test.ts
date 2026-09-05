@@ -48,6 +48,9 @@ describe("daily · the horizon", () => {
     expect(calendar.shiftTemplate.label).toContain("{date}");
     expect(calendar.shiftTemplate.kind).toBe("daily");
     expect(calendar.shiftTemplate.unlockStanding).toBe(40);
+    // R3 — carried in the template so `dailyShift(on:)` copies it rather than
+    // spelling the blue-only build's `false` a second time.
+    expect(calendar.shiftTemplate.requiresRedRun).toBe(false);
   });
 });
 
@@ -169,14 +172,18 @@ describe("daily · the fallback ladder and totality", () => {
   });
 
   it("never throws for any date from 2026 through 2030", () => {
+    // R5 — every day, not every seventh. The seeds are `fnv1a32(dateISO)`, so a
+    // weekly stride sampled one residue class of them and the five years it claimed
+    // to cover were 1/7 covered. 1826 dates, and the whole suite still runs in well
+    // under a second.
     const pool = dailyPool();
     let date = "2026-01-01";
     let n = 0;
     while (date < "2031-01-01") {
       expect(() => boardFor(date, pool, [])).not.toThrow();
-      date = addDays(date, 7);
+      date = addDays(date, 1);
       n++;
     }
-    expect(n).toBeGreaterThan(250);
+    expect(n).toBeGreaterThan(1800);
   });
 });

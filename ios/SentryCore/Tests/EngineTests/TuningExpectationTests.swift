@@ -3,101 +3,127 @@ import Testing
 
 @testable import SentryCore
 
-/// The hardcoded table D7 asks for: `Engine/` reads every number from
-/// `content.tuning`, so a designer retune is a re-export and zero Swift — and this
-/// suite is what makes a *silent* retune loud in review. It is deliberately a
-/// transcription: if a number here disagrees with the export, one of the two was
-/// changed without the other, and the diff says which.
+/// The hardcoded table D7 asks for: nothing in `SentryCore` spells a tuning number,
+/// so a designer retune is a re-export and zero Swift — and this suite is what makes
+/// a *silent* retune loud in review. It is deliberately a transcription: if a number
+/// here disagrees with the export, one of the two was changed without the other, and
+/// the diff says which.
 ///
-/// There are exactly **29** tuning numbers (S8): trace 5 · bpm 4 ·
-/// timeBudgetDefault 1 · grade 8 · shift 2 · career 6 · heartbeat 3. The second
-/// test walks the encoded tuning tree and asserts the set of leaves is exactly
-/// these 29 paths, so a thirtieth number cannot be added without a pin.
+/// There are exactly **31** tuning numbers (S8, amended by R6): trace 5 · bpm 4 ·
+/// timeBudgetDefault 1 · grade 8 · shift 2 · career 6 · heartbeat 3 · handler 2.
+///
+/// The structural half walks the EXPORTED `content.json` rather than a re-encode of
+/// the Swift `Tuning`, because a mirror can only ever show the leaves it declares:
+/// re-encoding could not see a number added to the export and dropped on decode,
+/// which is precisely the failure this test exists to catch. `swiftMirror` then
+/// checks the mirror against the same table, and names anything the mirror does not
+/// carry yet.
 @Suite("Tuning expectations")
 struct TuningExpectationTests {
 
-  /// One pinned number: where it lives in `content.json`, what the Swift property
-  /// says, and what the founder signed off. `Double` throughout — every value here
-  /// is exactly representable, so `==` is exact (D13).
+  /// One pinned number: where it lives in `content.json` and what the founder signed
+  /// off. `Double` throughout — every value here is exactly representable, so `==` is
+  /// exact (D13).
   struct Pin: Sendable, CustomTestStringConvertible {
     let path: String
-    let actual: Double
     let expected: Double
     var testDescription: String { path }
   }
 
-  static let pins: [Pin] = {
-    let t = ContentPack.bundled.tuning
-    func pin(_ path: String, _ actual: Int, _ expected: Double) -> Pin {
-      Pin(path: path, actual: Double(actual), expected: expected)
-    }
-    return [
-      // trace · 5
-      pin("trace.min", t.trace.min, 0),
-      pin("trace.max", t.trace.max, 100),
-      pin("trace.alert", t.trace.alert, 25),
-      pin("trace.hunt", t.trace.hunt, 50),
-      pin("trace.lockdown", t.trace.lockdown, 80),
-      // bpm · 4
-      pin("bpm.CALM", t.bpm.CALM, 50),
-      pin("bpm.ALERT", t.bpm.ALERT, 76),
-      pin("bpm.HUNT", t.bpm.HUNT, 112),
-      pin("bpm.LOCKDOWN", t.bpm.LOCKDOWN, 150),
-      // timeBudgetDefault · 1
-      pin("timeBudgetDefault", t.timeBudgetDefault, 90),
-      // grade · 8
-      pin("grade.tpMissedBreach", t.grade.tpMissedBreach, 30),
-      pin("grade.tpUnderContainBreach", t.grade.tpUnderContainBreach, 10),
-      pin("grade.tpOverContainNoise", t.grade.tpOverContainNoise, 12),
-      pin("grade.fpEscalateT2Noise", t.grade.fpEscalateT2Noise, 12),
-      pin("grade.fpEscalateIsolateNoise", t.grade.fpEscalateIsolateNoise, 20),
-      pin("grade.btpClosedAsFpNoise", t.grade.btpClosedAsFpNoise, 4),
-      pin("grade.btpEscalateT2Noise", t.grade.btpEscalateT2Noise, 14),
-      pin("grade.btpIsolateNoise", t.grade.btpIsolateNoise, 24),
-      // shift · 2
-      Pin(path: "shift.cleanAccuracy", actual: t.shift.cleanAccuracy, expected: 0.8),
-      pin("shift.breachedMissedDetections", t.shift.breachedMissedDetections, 2),
-      // career · 6
-      pin("career.cashPerCorrect", t.career.cashPerCorrect, 50),
-      pin("career.cleanBonus", t.career.cleanBonus, 150),
-      pin("career.standingClean", t.career.standingClean, 40),
-      pin("career.standingRough", t.career.standingRough, 15),
-      pin("career.standingBreached", t.career.standingBreached, 5),
-      pin("career.redRunCut", t.career.redRunCut, 150),
-      // heartbeat · 3
-      pin("heartbeat.minPeriodMs", t.heartbeat.minPeriodMs, 400),
-      pin("heartbeat.autoSuspendMs", t.heartbeat.autoSuspendMs, 40000),
-      pin("heartbeat.dubOffsetMs", t.heartbeat.dubOffsetMs, 120),
-    ]
-  }()
+  static let pins: [Pin] = [
+    // trace · 5
+    Pin(path: "trace.min", expected: 0),
+    Pin(path: "trace.max", expected: 100),
+    Pin(path: "trace.alert", expected: 25),
+    Pin(path: "trace.hunt", expected: 50),
+    Pin(path: "trace.lockdown", expected: 80),
+    // bpm · 4
+    Pin(path: "bpm.CALM", expected: 50),
+    Pin(path: "bpm.ALERT", expected: 76),
+    Pin(path: "bpm.HUNT", expected: 112),
+    Pin(path: "bpm.LOCKDOWN", expected: 150),
+    // timeBudgetDefault · 1
+    Pin(path: "timeBudgetDefault", expected: 90),
+    // grade · 8
+    Pin(path: "grade.tpMissedBreach", expected: 30),
+    Pin(path: "grade.tpUnderContainBreach", expected: 10),
+    Pin(path: "grade.tpOverContainNoise", expected: 12),
+    Pin(path: "grade.fpEscalateT2Noise", expected: 12),
+    Pin(path: "grade.fpEscalateIsolateNoise", expected: 20),
+    Pin(path: "grade.btpClosedAsFpNoise", expected: 4),
+    Pin(path: "grade.btpEscalateT2Noise", expected: 14),
+    Pin(path: "grade.btpIsolateNoise", expected: 24),
+    // shift · 2
+    Pin(path: "shift.cleanAccuracy", expected: 0.8),
+    Pin(path: "shift.breachedMissedDetections", expected: 2),
+    // career · 6
+    Pin(path: "career.cashPerCorrect", expected: 50),
+    Pin(path: "career.cleanBonus", expected: 150),
+    Pin(path: "career.standingClean", expected: 40),
+    Pin(path: "career.standingRough", expected: 15),
+    Pin(path: "career.standingBreached", expected: 5),
+    Pin(path: "career.redRunCut", expected: 150),
+    // heartbeat · 3
+    Pin(path: "heartbeat.minPeriodMs", expected: 400),
+    Pin(path: "heartbeat.autoSuspendMs", expected: 40000),
+    Pin(path: "heartbeat.dubOffsetMs", expected: 120),
+    // handler · 2 (R6) — the wall and the cross-seat nudge gate, read by `Inbox.swift`
+    Pin(path: "handler.inboxCapacity", expected: 4),
+    Pin(path: "handler.redRunNudgeStanding", expected: 90),
+  ]
 
   @Test(
     "the exported tuning still holds its pinned value",
     arguments: TuningExpectationTests.pins)
-  func pinnedValue(_ pin: Pin) {
-    #expect(pin.actual == pin.expected, "\(pin.path)")
+  func pinnedValue(_ pin: Pin) throws {
+    let leaves = try Self.exportedLeaves()
+    #expect(leaves[pin.path] == pin.expected, "\(pin.path)")
   }
 
-  @Test("there are exactly 29 pinned numbers")
+  @Test("there are exactly 31 pinned numbers")
   func pinCount() {
-    #expect(Self.pins.count == 29)
-    #expect(Set(Self.pins.map(\.path)).count == 29)
+    #expect(Self.pins.count == 31)
+    #expect(Set(Self.pins.map(\.path)).count == 31)
   }
 
-  /// The structural half: encode the tuning and walk it, so a number added to
-  /// `ExportedTuning` without a pin here fails rather than shipping unread.
-  @Test("the encoded tuning tree is exactly the pinned set")
-  func encodedLeavesMatchThePins() throws {
-    let data = try JSONEncoder().encode(ContentPack.bundled.tuning)
-    let root = try JSONSerialization.jsonObject(with: data)
-    var leaves: [String: Double] = [:]
-    Self.flatten(root, prefix: "", into: &leaves)
-
+  /// The structural half: walk the exported tuning tree, so a number added to
+  /// `tuning.ts` without a pin here fails rather than shipping unread.
+  @Test("the exported tuning tree is exactly the pinned set")
+  func exportedLeavesMatchThePins() throws {
+    let leaves = try Self.exportedLeaves()
     #expect(Set(leaves.keys) == Set(Self.pins.map(\.path)))
-    #expect(leaves.count == 29)
-    for pin in Self.pins {
-      #expect(leaves[pin.path] == pin.expected, "\(pin.path) as encoded")
+    #expect(leaves.count == 31)
+  }
+
+  /// The Swift mirror, against the same table. Every number `Tuning` declares must
+  /// hold its pinned value; anything the mirror does not carry is named, and may only
+  /// ever be the `handler` block — see the note on `HandlerVoice.tuning`, which reads
+  /// those two straight from the bundle until C2's `Tuning` gains them.
+  @Test("the Swift mirror agrees with every number it carries")
+  func swiftMirrorAgrees() throws {
+    let data = try JSONEncoder().encode(ContentPack.bundled.tuning)
+    var mirrored: [String: Double] = [:]
+    Self.flatten(try JSONSerialization.jsonObject(with: data), prefix: "", into: &mirrored)
+
+    let expected = Dictionary(uniqueKeysWithValues: Self.pins.map { ($0.path, $0.expected) })
+    for (path, value) in mirrored {
+      #expect(expected[path] != nil, "the mirror carries \(path), which is not pinned")
+      #expect(value == expected[path], "\(path) as the Swift mirror decodes it")
     }
+
+    let unmirrored = Set(expected.keys).subtracting(mirrored.keys).sorted()
+    #expect(
+      unmirrored.allSatisfy { $0.hasPrefix("handler.") },
+      "the Swift Tuning silently drops \(unmirrored.joined(separator: ", "))")
+  }
+
+  /// R6 — the two handler numbers are not decoration: `Inbox.swift` reads them, so
+  /// the wall and the nudge gate move with a re-export.
+  @Test("the handler numbers are the ones the inbox actually uses")
+  func theInboxReadsTheHandlerBlock() throws {
+    let leaves = try Self.exportedLeaves()
+    #expect(Double(HandlerVoice.capacity) == leaves["handler.inboxCapacity"])
+    #expect(Double(HandlerVoice.redRunNudgeStanding) == leaves["handler.redRunNudgeStanding"])
   }
 
   /// The one non-integer, called out on its own because it is the only tuning
@@ -110,6 +136,34 @@ struct TuningExpectationTests {
     #expect(threshold == 4.0 / 5.0)
     #expect(!(threshold < 4.0 / 5.0))
   }
+
+  // ── the exported artefact, read as JSON ────────────────────────────────────
+
+  /// `…/Sources/SentryContent/Resources/content.json`, located from this file rather
+  /// than from the working directory, so it survives being run from anywhere — the
+  /// same trick `TuningLiteralGuardTests` uses to find the engine sources.
+  static var contentJSON: URL {
+    URL(fileURLWithPath: #filePath)  // …/Tests/EngineTests/<this file>
+      .deletingLastPathComponent()  // …/Tests/EngineTests
+      .deletingLastPathComponent()  // …/Tests
+      .deletingLastPathComponent()  // …/SentryCore (package root)
+      .appendingPathComponent("Sources")
+      .appendingPathComponent("SentryContent")
+      .appendingPathComponent("Resources")
+      .appendingPathComponent("content.json")
+  }
+
+  static func exportedLeaves() throws -> [String: Double] {
+    let root = try JSONSerialization.jsonObject(with: try Data(contentsOf: contentJSON))
+    guard let object = root as? [String: Any], let tuning = object["tuning"] else {
+      throw ExportShape.noTuningBlock
+    }
+    var leaves: [String: Double] = [:]
+    flatten(tuning, prefix: "", into: &leaves)
+    return leaves
+  }
+
+  enum ExportShape: Error { case noTuningBlock }
 
   private static func flatten(_ node: Any, prefix: String, into out: inout [String: Double]) {
     if let object = node as? [String: Any] {

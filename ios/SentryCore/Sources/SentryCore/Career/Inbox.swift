@@ -1,4 +1,5 @@
 import Foundation
+import SentryContent
 
 /// `career/handler.ts`, ported message-for-message.
 ///
@@ -26,13 +27,20 @@ public struct HandlerVoice: Sendable {
   ///
   /// `features` picks the seat framing:
   /// - `.all` reproduces the web exactly, Mercer and all.
-  /// - `.iOS` has no red seat (B1), so the cross-seat nudge is dropped **after** the
-  ///   cap is applied — the iOS inbox is therefore sometimes SHORTER than four, which
-  ///   is the fixture's `cap-four` row — and the two lines that only make sense to a
-  ///   player who has sat in the red chair are voiced by Vale instead (DESIGN §3.2).
+  /// - `.iOS` has no red seat (B1), so the selection runs against a career that has
+  ///   already sat in the other chair — `redRunsDone` treated as at least 1 — and the
+  ///   cross-seat nudge is therefore never emitted at all, **before** the cap rather
+  ///   than after it. That matters: filtering afterwards left a hole where the nudge
+  ///   had been, and the player lost a message they had earned (R1, superseding S3).
+  ///   The two lines that only make sense to someone who has sat in the red chair are
+  ///   voiced by Vale instead (DESIGN §3.2), through the `*-blue-only` templates.
   public func inboxFor(
-    _ c: CareerState, _ ev: HandlerEvent = .init(), features: SocFeatures = .iOS
+    _ career: CareerState, _ ev: HandlerEvent = .init(), features: SocFeatures = .iOS
   ) -> [HandlerMessage] {
+    // R1 — one substitution, and every rule below reads the same career the web does.
+    var c = career
+    if !features.redSeat { c.redRunsDone = Swift.max(1, career.redRunsDone) }
+
     var out: [HandlerMessage] = []
 
     func emit(_ id: String, _ key: String, _ params: [Templating.Placeholder: String] = [:]) {
@@ -79,8 +87,9 @@ public struct HandlerVoice: Sendable {
     }
 
     // Cross-seat nudge: competent enough for the handoff desk, but has never sat in
-    // the red chair. Emitted in both feature sets so that it still occupies a slot
-    // under the cap, then filtered below — that asymmetry is the exported contract.
+    // the red chair. On the blue seat `c.redRunsDone` was raised above, so this rule
+    // simply never fires — no filter, no hole, and the cap is free to admit whatever
+    // was standing behind it.
     if c.standing >= Self.redRunNudgeStanding && c.redRunsDone < 1 {
       emit(ID.redRunTip, Key.redRunTip)
     }
@@ -97,9 +106,10 @@ public struct HandlerVoice: Sendable {
       emit(ID.welcome, Key.welcome)
     }
 
-    let capped = Array(out.prefix(Self.capacity))
-    guard !features.redSeat else { return capped }
-    return Array(capped.filter { $0.id != ID.redRunTip }.prefix(Self.capacity))
+    assert(
+      features.redSeat || !out.contains(where: { $0.id == ID.redRunTip }),
+      "the blue seat selected the cross-seat nudge — R1's redRunsDone substitution is broken")
+    return Array(out.prefix(Self.capacity))
   }
 
   // ── assembly ───────────────────────────────────────────────────────────────
@@ -129,13 +139,42 @@ public struct HandlerVoice: Sendable {
 
   // ── the numbers and addresses of `handler.ts` ───────────────────────────────
 
-  /// The wall. `handler.ts`'s `slice(0, 4)`, re-applied after the blue-only filter.
-  static let capacity = 4
+  /// `content.tuning.handler` (R6) — the two numbers `handler.ts` owns: the wall
+  /// (`out.slice(0, 4)`) and the standing at which the red seat starts pulling at you
+  /// (`c.standing >= 90`). They are not economy values, which is why they sat as
+  /// literals here until R6; they are content all the same, and a designer retune is
+  /// now a re-export.
+  struct HandlerTuning: Decodable, Sendable, Hashable {
+    let inboxCapacity: Int
+    let redRunNudgeStanding: Int
+  }
 
-  /// The standing at which the red seat starts pulling at you. Authored in
-  /// `handler.ts`, not in `tuning` — the exported tuning block carries the economy,
-  /// not this threshold.
-  static let redRunNudgeStanding = 90
+  /// **Request to the lead (F1).** R6 says "`Inbox.swift` reads both from the
+  /// bundle", and it does — but out of `content.json` directly, because `Tuning`
+  /// (C2's `Model/Tuning.swift`) does not mirror the `handler` block yet and F1 owns
+  /// neither that file nor `Content/ContentPack.swift`. Once `Tuning` gains
+  /// `handler: HandlerTuning`, delete this type and this property and read
+  /// `content.tuning.handler` off the pack: the two call sites below do not change.
+  static let tuning: HandlerTuning = {
+    struct Envelope: Decodable {
+      struct TuningBlock: Decodable { let handler: HandlerTuning }
+      let tuning: TuningBlock
+    }
+    guard let url = SentryContent.bundle.url(forResource: "content", withExtension: "json") else {
+      fatalError("SentryContent is missing content.json — run `npm run soc:export`")
+    }
+    do {
+      return try JSONDecoder().decode(Envelope.self, from: try Data(contentsOf: url)).tuning.handler
+    } catch {
+      fatalError("content.json carries no tuning.handler: \(error)")
+    }
+  }()
+
+  /// The wall. `handler.ts`'s `slice(0, 4)`.
+  static var capacity: Int { tuning.inboxCapacity }
+
+  /// The standing at which the red seat starts pulling at you.
+  static var redRunNudgeStanding: Int { tuning.redRunNudgeStanding }
 
   /// Message ids. The fixture's ids and the hub's identity — not copy.
   enum ID {

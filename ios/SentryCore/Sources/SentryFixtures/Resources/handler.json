@@ -1,5 +1,5 @@
 {
-  "contentHash": "sha256:6fdddac6430e0cf485f08e3c353aaebabec4db743612dc4cca6d3aa87893ffc4",
+  "contentHash": "sha256:371a99720baef85824672fd2fceed15250c3ab5c876b2f56b1c76336640eca78",
   "scenarios": [
     {
       "career": {
@@ -311,10 +311,10 @@
           "tone": "warm"
         },
         {
-          "body": "Mercer here. Your shift lead's been talking you up. You've got the read now — and the other chair's a lot easier once you've sat in this one. When you're ready.",
-          "from": "Mercer",
+          "body": "That's Tier-2 · candidate. The desk is yours to run now — and Tier-2 is earned, not given. You earned it.",
+          "from": "Vale",
           "id": "ev-rankup",
-          "role": "handler · red seat",
+          "role": "your shift lead",
           "subject": "You made Tier-2 · candidate",
           "tone": "milestone"
         }
@@ -371,10 +371,10 @@
           "tone": "milestone"
         },
         {
-          "body": "Mercer. Your lead says you're ready to see the runs I sent you from the blue side. That's Shift 4 — the same board, the other chair. Go find out what your own tradecraft looks like to a defender.",
-          "from": "Mercer",
+          "body": "A contracted red team ran three engagements against us this month. One of them was never sanctioned. Shift 4 is their board, from your chair — go find it.",
+          "from": "Vale",
           "id": "ev-unlock-handoff-shift",
-          "role": "handler · red seat",
+          "role": "your shift lead",
           "subject": "The other chair is open to you",
           "tone": "milestone"
         }
@@ -542,12 +542,20 @@
           "tone": "milestone"
         },
         {
-          "body": "Mercer. Your lead says you're ready to see the runs I sent you from the blue side. That's Shift 4 — the same board, the other chair. Go find out what your own tradecraft looks like to a defender.",
-          "from": "Mercer",
+          "body": "A contracted red team ran three engagements against us this month. One of them was never sanctioned. Shift 4 is their board, from your chair — go find it.",
+          "from": "Vale",
           "id": "ev-unlock-handoff-shift",
-          "role": "handler · red seat",
+          "role": "your shift lead",
           "subject": "The other chair is open to you",
           "tone": "milestone"
+        },
+        {
+          "body": "You're at 400¢ — enough for the Threat-intel feed subscription. Grab it before your next shift; it pre-pulls enrichment on every case and saves you shift-time. This is what the cash is for.",
+          "from": "Vale",
+          "id": "tip-kit",
+          "role": "your shift lead",
+          "subject": "You've banked enough for the intel feed",
+          "tone": "tip"
         }
       ],
       "name": "cap-four"

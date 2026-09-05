@@ -65,6 +65,9 @@ extension SOCEngine {
   /// kind of place in the whole package that can move them. Note that `index` still
   /// advances on a replacement, exactly as the TypeScript does — the pointer counts
   /// calls made, not distinct cases.
+  ///
+  /// **R8.** `gradeCall` runs twice on purpose — once here for the meters and once
+  /// inside `buildCaseResult` — because `engine.ts` does exactly that, and it is pure.
   public func applyCall(
     _ shift: ShiftState, _ c: SocCase, _ chosen: Disposition,
     queriedSourceIds: [String], timeSpent: Int

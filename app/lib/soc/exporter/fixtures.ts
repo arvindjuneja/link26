@@ -41,7 +41,9 @@ import {
   type SocCase,
 } from "@/app/lib/soc/types";
 import { exportCase } from "@/app/lib/soc/exporter/bundle";
+import { COPY } from "@/app/lib/soc/exporter/copy";
 import { deriveOutcomeKey } from "@/app/lib/soc/exporter/outcomes";
+import { TUNING } from "@/app/lib/soc/exporter/tuning";
 import {
   CONTENT_SCHEMA_VERSION,
   type ApplyRow,
@@ -50,6 +52,7 @@ import {
   type CaseResultJSON,
   type ExportedBundle,
   type ExportedRank,
+  type ExportedHandlerTemplate,
   type ExportedShift,
   type GradeFile,
   type GradeRow,
@@ -155,16 +158,138 @@ const messageJSON = (m: HandlerMessage): HandlerMessageJSON => ({
   tone: m.tone,
 });
 
-/** S3 — the exporter WRAPS `inboxFor`; it never re-implements the selection order. */
+// ── the inbox, in both seats (R1, superseding S3) ────────────────────────────
+
+const RED_RUN_NUDGE = "tip-redrun";
+const HANDOFF_UNLOCK = "ev-unlock-handoff-shift";
+const RANK_UP = "ev-rankup";
+const T2 = "t2";
+
+/** The exporter WRAPS `inboxFor`; it never re-implements the selection order. */
 export const messagesAll = (c: CareerState, ev: HandlerEvent): HandlerMessageJSON[] =>
   inboxFor(c, ev).map(messageJSON);
 
-/** S3 — iOS has no red seat, so the cross-seat nudge is dropped; the cap is re-applied. */
+/**
+ * R1 — the same engine, run against a career that has already sat in the other
+ * chair.
+ *
+ * S3 filtered `tip-redrun` out AFTER `inboxFor`'s own `slice(0, 4)`, which left the
+ * iOS inbox one message short whenever the nudge had occupied a capped slot — the
+ * player lost a message they were entitled to and got a hole instead. Bumping
+ * `redRunsDone` to at least 1 makes the engine skip the nudge at SELECTION time, so
+ * the cap admits whatever was standing behind it. Nothing else is filtered; the only
+ * post-processing is the two DESIGN §3.2 re-voicings.
+ */
 export const messagesBlueOnly = (c: CareerState, ev: HandlerEvent): HandlerMessageJSON[] =>
-  inboxFor(c, ev)
-    .filter((m) => m.id !== "tip-redrun")
-    .slice(0, 4)
-    .map(messageJSON);
+  inboxFor({ ...c, redRunsDone: Math.max(1, c.redRunsDone) }, ev).map((m) => revoice(messageJSON(m), ev));
+
+/** Which `copy.handler.templates` key re-voices this message, if any (DESIGN §3.2). */
+function revoiceKeyFor(m: HandlerMessageJSON, ev: HandlerEvent): string | null {
+  if (m.id === HANDOFF_UNLOCK) return "ev-unlock-handoff-blue-only";
+  if (m.id === RANK_UP && ev.rankUp?.id === T2) return "ev-rankup-t2-blue-only";
+  return null;
+}
+
+/** `{name}` runs, filled the way Swift's `Templating` fills them. */
+function fill(text: string, params: Record<string, string>): string {
+  const out = text.replace(/\{(\w+)\}/g, (whole, name: string) => params[name] ?? whole);
+  const unfilled = /\{(\w+)\}/.exec(out);
+  if (unfilled) {
+    throw new Error(`blue-only template leaves {${unfilled[1]}} unfilled: ${JSON.stringify(text)}`);
+  }
+  return out;
+}
+
+/**
+ * Swap Mercer's two cross-seat lines for the `*-blue-only` templates. Sender
+ * included — the exported template carries `sender` (S2) precisely so the caller
+ * never has to pick a name.
+ */
+function revoice(m: HandlerMessageJSON, ev: HandlerEvent): HandlerMessageJSON {
+  const key = revoiceKeyFor(m, ev);
+  if (key === null) return m;
+
+  const template: ExportedHandlerTemplate | undefined = COPY.handler.templates[key];
+  if (!template) throw new Error(`copy.handler.templates has no ${key}`);
+  const sender = COPY.handler.senders[template.sender];
+
+  const params: Record<string, string> = {};
+  if (ev.rankUp) params.rank = ev.rankUp.label;
+  const queue = (ev.unlocked ?? []).find((u) => `ev-unlock-${u.id}` === m.id);
+  if (queue) params.queue = queue.label;
+
+  return {
+    id: m.id,
+    from: sender.from,
+    role: sender.role,
+    subject: fill(template.subject, params),
+    body: fill(template.body, params),
+    tone: template.tone,
+  };
+}
+
+/**
+ * R1's report — the export asserts, per scenario, that the two lists differ ONLY by
+ * the absence of `tip-redrun` and the two re-voicings, and aborts naming anything
+ * else. Removing one message can free exactly one capped slot, so the blue list may
+ * carry one message the web list never showed; it may never be shorter, reordered,
+ * or differently worded.
+ */
+export function assertBlueOnlyDiff(
+  name: string,
+  all: HandlerMessageJSON[],
+  blue: HandlerMessageJSON[],
+  ev: HandlerEvent
+): void {
+  const abort = (why: string): never => {
+    throw new Error(
+      `blue-only inbox diff: ${name} — ${why}\n` +
+        `  web  : ${JSON.stringify(all.map((m) => m.id))}\n` +
+        `  blue : ${JSON.stringify(blue.map((m) => m.id))}`
+    );
+  };
+
+  if (blue.some((m) => m.id === RED_RUN_NUDGE)) abort("the cross-seat nudge is still in the blue list");
+
+  const kept = all.filter((m) => m.id !== RED_RUN_NUDGE);
+  const promoted = blue.length - kept.length;
+  if (promoted < 0) abort("the blue list dropped a message that is not the nudge");
+  if (promoted > 1) abort(`${promoted} messages appeared that the web list never had`);
+  if (promoted === 1 && !(all.length === TUNING.handler.inboxCapacity && all.length > kept.length)) {
+    abort("a message appeared without the nudge having freed a capped slot");
+  }
+
+  const FIELDS = ["id", "from", "role", "subject", "body", "tone"] as const;
+
+  kept.forEach((web, i) => {
+    const got = blue[i];
+    if (got.id !== web.id) abort(`position ${i} is ${got.id}, expected ${web.id}`);
+    // Everything but the two §3.2 lines must survive untouched; those two must equal
+    // the exported blue-only template, field by field, so the abort names the field.
+    const expected = revoice(web, ev);
+    for (const field of FIELDS) {
+      if (got[field] !== expected[field]) {
+        abort(
+          `${web.id}.${field} changed beyond the §3.2 re-voicing\n` +
+            `  expected: ${JSON.stringify(expected[field])}\n` +
+            `  actual  : ${JSON.stringify(got[field])}`
+        );
+      }
+    }
+  });
+}
+
+/** Both seats for one `(career, event)`, with R1's diff assertion already run. */
+function inboxPair(
+  name: string,
+  c: CareerState,
+  ev: HandlerEvent
+): { all: HandlerMessageJSON[]; blueOnly: HandlerMessageJSON[] } {
+  const all = messagesAll(c, ev);
+  const blueOnly = messagesBlueOnly(c, ev);
+  assertBlueOnlyDiff(name, all, blueOnly, ev);
+  return { all, blueOnly };
+}
 
 const eventJSON = (ev: HandlerEvent): HandlerEventJSON => ({
   type: ev.type ?? null,
@@ -469,6 +594,8 @@ function buildRun(spec: RunSpec, shifts: ExportedShift[]): ShiftRun {
     unlocked,
   };
 
+  const pair = inboxPair(`run ${spec.name}`, reward.state, ev);
+
   return {
     name: spec.name,
     shiftId: def.id,
@@ -485,8 +612,8 @@ function buildRun(spec: RunSpec, shifts: ExportedShift[]): ShiftRun {
     unlockedBefore: [...wasUnlocked],
     unlockedAfter: unlockedIds(reward.state, shifts),
     event: eventJSON(ev),
-    inbox: messagesBlueOnly(reward.state, ev),
-    inboxAll: messagesAll(reward.state, ev),
+    inbox: pair.blueOnly,
+    inboxAll: pair.all,
   };
 }
 
@@ -629,7 +756,7 @@ function buildCareer(contentHash: string, shifts: ExportedShift[]): CareerFile {
   return { schemaVersion: CONTENT_SCHEMA_VERSION, contentHash, awards, redRuns, buys };
 }
 
-// ── handler.json — 14 scenarios (S3) ─────────────────────────────────────────
+// ── handler.json — 14 scenarios (S3, rendered per R1) ────────────────────────
 
 const HANDOFF_LABEL = "Shift 4 · the other chair (a red team's runs)";
 const LOCKOUT_LABEL = "Shift 3 · the lockout queue (mostly not a threat)";
@@ -665,8 +792,10 @@ const HANDLER_SCENARIOS: { name: string; c: CareerState; ev: HandlerEvent }[] = 
   { name: "tip-redrun", c: career(100, 120, 1, 0), ev: {} },
   { name: "standing-90-nudge", c: career(0, 90, 1, 0), ev: {} },
   {
-    // 5 messages → the cap keeps 4; the blue-only filter then drops tip-redrun, so the
-    // iOS inbox is SHORTER than the cap. That asymmetry is the point of this row.
+    // 5 messages qualify. On the web the cap keeps 4 and the kit tip is the one cut.
+    // On the blue seat the nudge is never selected, so the cap admits the kit tip in
+    // its place: same length, different tail. That promotion is the point of this row
+    // and the reason R1 moved the suppression ahead of the cap.
     name: "cap-four",
     c: career(400, 120, 2, 0),
     ev: { type: "shift-clean", rankUp: RANKS[2], unlocked: [{ id: "handoff-shift", label: HANDOFF_LABEL }] },
@@ -675,13 +804,16 @@ const HANDLER_SCENARIOS: { name: string; c: CareerState; ev: HandlerEvent }[] = 
 ];
 
 function buildHandler(contentHash: string): HandlerFile {
-  const scenarios: HandlerScenario[] = HANDLER_SCENARIOS.map(({ name, c, ev }) => ({
-    name,
-    career: careerJSON(c),
-    event: eventJSON(ev),
-    messagesAll: messagesAll(c, ev),
-    messagesBlueOnly: messagesBlueOnly(c, ev),
-  }));
+  const scenarios: HandlerScenario[] = HANDLER_SCENARIOS.map(({ name, c, ev }) => {
+    const pair = inboxPair(`scenario ${name}`, c, ev);
+    return {
+      name,
+      career: careerJSON(c),
+      event: eventJSON(ev),
+      messagesAll: pair.all,
+      messagesBlueOnly: pair.blueOnly,
+    };
+  });
   return { schemaVersion: CONTENT_SCHEMA_VERSION, contentHash, scenarios };
 }
 

@@ -19,7 +19,13 @@ import { DISPOSITIONS } from "@/app/lib/soc/types";
 import { ALL_FILE_NAMES, buildAll, isContentFile, renderAll, type FileName } from "@/app/lib/soc/exporter/build";
 import { COPY } from "@/app/lib/soc/exporter/copy";
 import { deriveOutcomeKey } from "@/app/lib/soc/exporter/outcomes";
-import { OUTCOME_KEYS, type ExportedCase, type OutcomeKey } from "@/app/lib/soc/exporter/schema";
+import {
+  OUTCOME_KEYS,
+  type ExportedCase,
+  type HandlerEventJSON,
+  type HandlerMessageJSON,
+  type OutcomeKey,
+} from "@/app/lib/soc/exporter/schema";
 import { SOURCE_PINS, sliceFor, verifyPins } from "@/app/lib/soc/exporter/sourcePins";
 import { sha256Hex } from "@/app/lib/soc/exporter/canonical";
 import { TUNING_NUMBER_COUNT, tuningNumbers } from "@/app/lib/soc/exporter/tuning";
@@ -197,6 +203,8 @@ describe("drift guard · #6 referential integrity", () => {
     const ladder = files["content.json"].shifts.map((s) => s.unlockStanding);
     expect(ladder).toEqual([0, 40, 80, 120, 160]);
     for (const s of files["content.json"].shifts) expect(s.requiresRedRun).toBe(false);
+    // R3 — the daily template too, so `dailyShift(on:)` is a pure field copy.
+    expect(files["daily.json"].shiftTemplate.requiresRedRun).toBe(false);
   });
 });
 
@@ -328,7 +336,10 @@ describe("drift guard · copy invariants (S11)", () => {
     expect(steps.map((s) => s.anchor)).toEqual(["sources", "evidence", "call"]);
     expect(steps.map((s) => s.advance)).toEqual(["on-first-source-pulled", "button", "terminal"]);
     expect(steps[0].body).toContain("tap it");
-    expect(steps[1].body).toContain("SOURCES");
+    // R4 — the phone has tabs, not a left-hand column, and the bubble is already
+    // anchored to EVIDENCE, so it names the tab once and keeps the offer.
+    expect(steps[1].body).toContain("Pull more logs from SOURCES");
+    expect(steps[1].body).not.toContain("on the left");
   });
 
   it("gives every severity and every handler tone a fallback (S5)", () => {
@@ -339,6 +350,9 @@ describe("drift guard · copy invariants (S11)", () => {
       "Medium",
     ]);
     expect(files["copy.json"].severityMeta.fallback).toBeTruthy();
+    // R2 — HIGH is the status ramp's orange, not amber; amber already means
+    // "escalate to Tier-2" on the call sheet.
+    expect(files["copy.json"].severityMeta.entries.High.tone).toBe("orange");
     expect(Object.keys(files["copy.json"].handlerToneMeta.entries).sort()).toEqual([
       "milestone",
       "tip",
@@ -363,10 +377,10 @@ describe("drift guard · copy invariants (S11)", () => {
   });
 });
 
-describe("drift guard · tuning (D7, S8)", () => {
-  it("holds exactly 29 numbers", () => {
+describe("drift guard · tuning (D7, S8, R6)", () => {
+  it("holds exactly 31 numbers", () => {
     expect(tuningNumbers()).toHaveLength(TUNING_NUMBER_COUNT);
-    expect(TUNING_NUMBER_COUNT).toBe(29);
+    expect(TUNING_NUMBER_COUNT).toBe(31);
   });
 
   it("matches the thresholds the web engine actually branches on", () => {
@@ -375,6 +389,12 @@ describe("drift guard · tuning (D7, S8)", () => {
     expect(t.bpm).toEqual({ CALM: 50, ALERT: 76, HUNT: 112, LOCKDOWN: 150 });
     expect(t.shift.cleanAccuracy).toBe(0.8);
     expect(t.shift.breachedMissedDetections).toBe(2);
+  });
+
+  it("carries the two numbers handler.ts owns (R6)", () => {
+    // The literals `out.slice(0, 4)` and `c.standing >= 90` in the read-only
+    // `app/lib/career/handler.ts`. `Inbox.swift` reads both from here.
+    expect(files["content.json"].tuning.handler).toEqual({ inboxCapacity: 4, redRunNudgeStanding: 90 });
   });
 });
 
@@ -417,13 +437,56 @@ describe("drift guard · the D13 golden run", () => {
   });
 });
 
-describe("drift guard · the blue-only inbox (S3)", () => {
-  it("suppresses tip-redrun and re-applies the cap", () => {
+describe("drift guard · the blue-only inbox (R1)", () => {
+  const CAP = files["content.json"].tuning.handler.inboxCapacity;
+  const templates = files["copy.json"].handler.templates;
+  const senders = files["copy.json"].handler.senders;
+
+  /** The `copy.handler.templates` key that re-voices this id, if any (DESIGN §3.2). */
+  const blueKeyFor = (id: string, ev: HandlerEventJSON): string | null => {
+    if (id === "ev-unlock-handoff-shift") return "ev-unlock-handoff-blue-only";
+    if (id === "ev-rankup" && ev.rankUp?.id === "t2") return "ev-rankup-t2-blue-only";
+    return null;
+  };
+
+  it("never emits the cross-seat nudge on the blue seat", () => {
     for (const s of files["handler.json"].scenarios) {
-      expect(s.messagesAll.length, s.name).toBeLessThanOrEqual(4);
-      expect(s.messagesBlueOnly.length, s.name).toBeLessThanOrEqual(4);
-      expect(s.messagesBlueOnly.some((m) => m.id === "tip-redrun"), s.name).toBe(false);
-      expect(s.messagesBlueOnly).toEqual(s.messagesAll.filter((m) => m.id !== "tip-redrun"));
+      expect(s.messagesAll.length, s.name).toBeLessThanOrEqual(CAP);
+      expect(s.messagesBlueOnly.length, s.name).toBeLessThanOrEqual(CAP);
+      expect(
+        s.messagesBlueOnly.some((m) => m.id === "tip-redrun"),
+        s.name
+      ).toBe(false);
+    }
+  });
+
+  it("differs from the web inbox only by the nudge and the two §3.2 re-voicings", () => {
+    for (const s of files["handler.json"].scenarios) {
+      const kept = s.messagesAll.filter((m) => m.id !== "tip-redrun");
+      // Dropping the nudge can free at most one capped slot, so the blue list is
+      // never shorter and never longer by more than one.
+      expect(s.messagesBlueOnly.length, s.name).toBeGreaterThanOrEqual(kept.length);
+      expect(s.messagesBlueOnly.length - kept.length, s.name).toBeLessThanOrEqual(1);
+
+      kept.forEach((web: HandlerMessageJSON, i: number) => {
+        const blue = s.messagesBlueOnly[i];
+        expect(blue.id, `${s.name} position ${i}`).toBe(web.id);
+
+        const key = blueKeyFor(web.id, s.event);
+        if (key === null) {
+          expect(blue, `${s.name}/${web.id}`).toEqual(web);
+          return;
+        }
+        // The re-voiced pair: Vale's name, the blue-only body and tone, the same
+        // beat and the same rendered subject.
+        const template = templates[key];
+        expect(blue.from, `${s.name}/${web.id}`).toBe(senders[template.sender].from);
+        expect(blue.role, `${s.name}/${web.id}`).toBe(senders[template.sender].role);
+        expect(blue.tone, `${s.name}/${web.id}`).toBe(template.tone);
+        expect(blue.body, `${s.name}/${web.id}`).toBe(template.body);
+        expect(blue.subject, `${s.name}/${web.id}`).toBe(web.subject);
+        expect(blue.body, `${s.name}/${web.id} still carries a run`).not.toMatch(/\{\w+\}/);
+      });
     }
   });
 
@@ -432,9 +495,39 @@ describe("drift guard · the blue-only inbox (S3)", () => {
     expect(new Set(files["handler.json"].scenarios.map((s) => s.name)).size).toBe(14);
   });
 
-  it("exercises the cap AND the suppression together", () => {
+  it("lets the cap admit the message the nudge was standing in front of", () => {
+    // Five messages qualify. The web cap cuts the kit tip; the blue seat never
+    // selects the nudge, so the kit tip takes its slot. Under S3 the player got a
+    // three-message inbox and a hole — this row is why R1 moved the suppression
+    // ahead of the cap.
     const cap = files["handler.json"].scenarios.find((s) => s.name === "cap-four");
-    expect(cap?.messagesAll).toHaveLength(4);
-    expect(cap?.messagesBlueOnly).toHaveLength(3);
+    expect(cap?.messagesAll.map((m) => m.id)).toEqual([
+      "ev-clean",
+      "ev-rankup",
+      "ev-unlock-handoff-shift",
+      "tip-redrun",
+    ]);
+    expect(cap?.messagesBlueOnly.map((m) => m.id)).toEqual([
+      "ev-clean",
+      "ev-rankup",
+      "ev-unlock-handoff-shift",
+      "tip-kit",
+    ]);
+  });
+
+  it("re-voices Shift 4 and the Tier-2 rung, and nobody else", () => {
+    const revoiced = new Set<string>();
+    for (const s of files["handler.json"].scenarios) {
+      for (const blue of s.messagesBlueOnly) {
+        const web = s.messagesAll.find((m) => m.id === blue.id);
+        if (web && web.from !== blue.from) revoiced.add(`${s.name}/${blue.id}`);
+        expect(blue.from, `${s.name}/${blue.id} is signed by the red handler`).not.toBe("Mercer");
+      }
+    }
+    expect([...revoiced].sort()).toEqual([
+      "cap-four/ev-unlock-handoff-shift",
+      "rankup-t2-clean/ev-rankup",
+      "unlock-queues/ev-unlock-handoff-shift",
+    ]);
   });
 });

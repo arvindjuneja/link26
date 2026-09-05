@@ -14,8 +14,24 @@
 
 export const CONTENT_SCHEMA_VERSION = 1;
 
-/** Colour-run text. Rendered as AttributedString in SwiftUI. (D5) */
-export type Tone = "cyan" | "emerald" | "rose" | "amber" | "fuchsia" | "strong" | "em" | "muted";
+/**
+ * Colour-run text. Rendered as AttributedString in SwiftUI. (D5)
+ *
+ * R2 — `orange` is the HUNT hue of the status ramp, added because the web's HIGH
+ * severity chip is orange and amber was the wrong nearest neighbour: amber already
+ * means "escalate to Tier-2" on the call sheet, so a HIGH chip in amber read as a
+ * recommendation. Swift's `Tone` is a lenient raw value, so no model change (R2).
+ */
+export type Tone =
+  | "cyan"
+  | "emerald"
+  | "rose"
+  | "amber"
+  | "orange"
+  | "fuchsia"
+  | "strong"
+  | "em"
+  | "muted";
 export interface RichSegment {
   text: string;
   tone?: Tone;
@@ -116,9 +132,9 @@ export interface ExportedKitItem {
 }
 
 /**
- * The 29 tuning numbers (S8): trace 5 · bpm 4 · timeBudgetDefault 1 · grade 8 ·
- * shift 2 · career 6 · heartbeat 3. Typed `number`, NOT literals, so a designer
- * retune is a zero-Swift-change operation (D7).
+ * The 31 tuning numbers (S8, amended by R6): trace 5 · bpm 4 · timeBudgetDefault 1 ·
+ * grade 8 · shift 2 · career 6 · heartbeat 3 · handler 2. Typed `number`, NOT
+ * literals, so a designer retune is a zero-Swift-change operation (D7).
  */
 export interface ExportedTuning {
   trace: { min: number; max: number; alert: number; hunt: number; lockdown: number };
@@ -144,6 +160,13 @@ export interface ExportedTuning {
     redRunCut: number;
   };
   heartbeat: { minPeriodMs: number; autoSuspendMs: number; dubOffsetMs: number };
+  /**
+   * R6 — the two numbers `career/handler.ts` owns: the inbox wall and the standing
+   * at which the red seat starts pulling at you. They are not economy values, which
+   * is why they sat as literals in the handler until now; they are tuning all the
+   * same, and `Inbox.swift` reads both from here rather than spelling them twice.
+   */
+  handler: { inboxCapacity: number; redRunNudgeStanding: number };
 }
 
 export interface ExportedBundle {
@@ -234,15 +257,18 @@ export interface ExportedCopy {
  * The daily shift's ShiftDef, minus the board (S9). `{date}` interpolates the
  * player-facing date in `label`; `id` is `idPrefix + <ISO date>`.
  *
- * `unlockStanding` and `kind` are carried here (beyond S9's three fields) because
- * `ContentPack.dailyShift(on:)` builds a whole `ExportedShift` and D7 forbids a
- * numeric literal in Swift.
+ * `unlockStanding`, `requiresRedRun` and `kind` are carried here (beyond S9's three
+ * fields) because `ContentPack.dailyShift(on:)` builds a whole `ExportedShift` and
+ * D7 forbids a numeric literal in Swift. R3 adds `requiresRedRun` so that build is a
+ * pure field copy rather than a hardcoded `false` sitting next to the copied fields.
  */
 export interface ExportedDailyTemplate {
   idPrefix: string;
   label: string;
   note: string | null;
   unlockStanding: number;
+  /** Always `false` — this build is blue-only (B1), daily-kind shifts included. */
+  requiresRedRun: boolean;
   kind: "daily";
 }
 
@@ -387,9 +413,9 @@ export interface ShiftRun {
   unlockedBefore: string[];
   unlockedAfter: string[];
   event: HandlerEventJSON;
-  /** What the iOS hub shows — the blue-only inbox (S3). */
+  /** What the iOS hub shows — the blue-only inbox (R1). */
   inbox: HandlerMessageJSON[];
-  /** The unfiltered web inbox, for the `.all` feature set (S3). */
+  /** The unfiltered web inbox, for the `.all` feature set (R1). */
   inboxAll: HandlerMessageJSON[];
 }
 
@@ -447,7 +473,13 @@ export interface HandlerScenario {
   name: string;
   career: CareerJSON;
   event: HandlerEventJSON;
+  /** `features: .all` — the raw `inboxFor(c, ev)`, Mercer and the nudge and all. */
   messagesAll: HandlerMessageJSON[];
+  /**
+   * `features: .iOS` (R1) — the same engine run against a career that has already
+   * sat in the other chair, so `tip-redrun` is never emitted and the cap is free to
+   * admit the message behind it, plus the two DESIGN §3.2 re-voicings.
+   */
   messagesBlueOnly: HandlerMessageJSON[];
 }
 export interface HandlerFile {

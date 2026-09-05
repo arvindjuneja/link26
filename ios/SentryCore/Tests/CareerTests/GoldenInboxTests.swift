@@ -20,14 +20,15 @@ struct GoldenInboxTests {
 
   // ── the iOS inbox ──────────────────────────────────────────────────────────
 
-  /// `.iOS` is the same selection with the red seat taken out of it: `tip-redrun`
-  /// dropped after the cap, and the two lines that only make sense to a player who
-  /// has sat in the other chair voiced by Vale (DV-7 below).
-  @Test("the iOS inbox drops the cross-seat nudge", arguments: try Golden.handler().scenarios)
+  /// `.iOS` is the same selection run against a career that has already sat in the
+  /// other chair (R1): the nudge is never emitted, and the two lines that only make
+  /// sense to someone who HAS sat there are voiced by Vale. The fixture carries the
+  /// re-voiced bodies, so this is a straight comparison — nothing is transformed on
+  /// the way in, which is the point of R1 regenerating `handler.json`.
+  @Test("the iOS inbox is the fixture, message for message", arguments: try Golden.handler().scenarios)
   func iOSInbox(_ scenario: HandlerScenario) {
     let inbox = Golden.voice.inboxFor(scenario.career, scenario.event, features: .iOS)
-    let expected = scenario.messagesBlueOnly.map { revoiced($0, event: scenario.event) }
-    Golden.expectEqual(inbox, expected, scenario.name)
+    Golden.expectEqual(inbox, scenario.messagesBlueOnly, scenario.name)
   }
 
   /// `.iOS` is the default: the app never has to remember which seat it is.
@@ -55,27 +56,72 @@ struct GoldenInboxTests {
       ])
   }
 
-  /// The cap is four in both seats, and the blue-only filter runs AFTER it — so the
-  /// iOS inbox is sometimes three. That asymmetry is the point of `cap-four`.
-  @Test("the inbox is capped at four, and the filter runs after the cap")
+  /// The cap is four in both seats, and on the blue seat the nudge never takes one of
+  /// the four slots — so the message behind it is admitted instead of leaving a hole.
+  /// That promotion is the point of `cap-four`, and the whole of R1's behaviour change.
+  @Test("the cap is four, and the nudge never occupies one of them")
   func capIsFour() throws {
+    #expect(HandlerVoice.capacity == 4)
     for scenario in try Golden.handler().scenarios {
-      #expect(Golden.voice.inboxFor(scenario.career, scenario.event, features: .all).count <= 4)
-      #expect(Golden.voice.inboxFor(scenario.career, scenario.event, features: .iOS).count <= 4)
+      #expect(
+        Golden.voice.inboxFor(scenario.career, scenario.event, features: .all).count
+          <= HandlerVoice.capacity)
+      #expect(
+        Golden.voice.inboxFor(scenario.career, scenario.event, features: .iOS).count
+          <= HandlerVoice.capacity)
     }
 
     let capped = try #require(try Golden.handler().scenarios.first { $0.name == "cap-four" })
     let web = Golden.voice.inboxFor(capped.career, capped.event, features: .all)
     let blue = Golden.voice.inboxFor(capped.career, capped.event, features: .iOS)
 
-    // Five messages qualify; the cap keeps four, the filter then drops one.
-    #expect(web.count == 4)
+    // Five messages qualify. The web cap cuts the kit tip; the blue seat never
+    // selects the nudge, so the kit tip takes its slot — same length, different tail.
     #expect(web.map(\.id) == ["ev-clean", "ev-rankup", "ev-unlock-handoff-shift", "tip-redrun"])
-    #expect(blue.count == 3)
-    #expect(blue.map(\.id) == ["ev-clean", "ev-rankup", "ev-unlock-handoff-shift"])
-    // The kit tip qualified too and was cut by the cap — never re-admitted by the
-    // filter, which is what "re-applied after" has to mean.
-    #expect(!blue.contains { $0.id == "tip-kit" })
+    #expect(blue.map(\.id) == ["ev-clean", "ev-rankup", "ev-unlock-handoff-shift", "tip-kit"])
+  }
+
+  /// R1's property, asserted the way the exporter asserts it: removing the nudge can
+  /// promote at most one message, and nothing else about the list may move.
+  @Test(
+    "the blue seat differs only by the nudge and the two re-voicings",
+    arguments: try Golden.handler().scenarios)
+  func blueOnlyDiff(_ scenario: HandlerScenario) throws {
+    let web = Golden.voice.inboxFor(scenario.career, scenario.event, features: .all)
+    let blue = Golden.voice.inboxFor(scenario.career, scenario.event, features: .iOS)
+    let kept = web.filter { $0.id != "tip-redrun" }
+
+    #expect(!blue.contains { $0.id == "tip-redrun" }, "\(scenario.name)")
+    #expect(blue.count >= kept.count, "\(scenario.name): the blue seat lost a message")
+    #expect(blue.count - kept.count <= 1, "\(scenario.name): more than one message appeared")
+
+    for (i, webMessage) in kept.enumerated() where i < blue.count {
+      let blueMessage = blue[i]
+      #expect(blueMessage.id == webMessage.id, "\(scenario.name) position \(i)")
+
+      guard let key = Self.blueOnlyKey(for: webMessage, event: scenario.event) else {
+        #expect(blueMessage == webMessage, "\(scenario.name)/\(webMessage.id)")
+        continue
+      }
+      // The re-voiced pair: Vale's name, the blue-only body and tone, the same beat
+      // and the same rendered subject.
+      let template = try #require(Golden.copy.handler.templates[key])
+      let sender = try #require(Golden.copy.handler.senders[template.sender])
+      #expect(blueMessage.from == sender.from, "\(scenario.name)/\(webMessage.id)")
+      #expect(blueMessage.role == sender.role, "\(scenario.name)/\(webMessage.id)")
+      #expect(blueMessage.body == template.body, "\(scenario.name)/\(webMessage.id)")
+      #expect(blueMessage.tone == template.tone, "\(scenario.name)/\(webMessage.id)")
+      #expect(blueMessage.subject == webMessage.subject, "\(scenario.name)/\(webMessage.id)")
+    }
+  }
+
+  /// The two ids DESIGN §3.2 hands to Vale on a build with no red seat.
+  private static func blueOnlyKey(for message: HandlerMessage, event: HandlerEvent) -> String? {
+    switch message.id {
+    case "ev-unlock-handoff-shift": "ev-unlock-handoff-blue-only"
+    case "ev-rankup" where event.rankUp?.id == "t2": "ev-rankup-t2-blue-only"
+    default: nil
+    }
   }
 
   /// The cross-seat nudge never reaches this build, in any scenario.
@@ -86,7 +132,9 @@ struct GoldenInboxTests {
       #expect(!blue.contains { $0.id == "tip-redrun" })
     }
 
-    // …and it is the standing-90 rule that emits it on the web, unchanged.
+    // …and it is the standing-90 rule that emits it on the web, unchanged — the
+    // threshold now read from `content.tuning.handler` (R6).
+    #expect(HandlerVoice.redRunNudgeStanding == 90)
     let nudge = CareerState(standing: HandlerVoice.redRunNudgeStanding, redRunsDone: 0)
     #expect(Golden.voice.inboxFor(nudge, features: .all).map(\.id) == ["tip-redrun"])
     #expect(Golden.voice.inboxFor(nudge, features: .iOS).isEmpty)
@@ -102,30 +150,14 @@ struct GoldenInboxTests {
 
   // ── DV-7: the two re-voiced lines ──────────────────────────────────────────
 
-  /// **DV-7.** `handler.json`'s `messagesBlueOnly` is a pure filter of the web inbox
-  /// (S3), so Mercer still signs the Shift 4 unlock and the Tier-2 rank-up there.
-  /// This build has no red seat, so C4 §10.3 and DESIGN §3.2 hand both beats to
-  /// Vale, and `copy.json` ships the replacement templates for exactly that. The transform
-  /// below is the whole of the divergence; every other field of every other message
-  /// is compared byte-for-byte against the fixture.
-  private func revoiced(_ message: HandlerMessage, event: HandlerEvent) -> HandlerMessage {
-    let key: String
-    switch message.id {
-    case "ev-unlock-handoff-shift": key = "ev-unlock-handoff-blue-only"
-    case "ev-rankup" where event.rankUp?.id == "t2": key = "ev-rankup-t2-blue-only"
-    default: return message
-    }
-    guard let template = Golden.copy.handler.templates[key],
-      let sender = Golden.copy.handler.senders[template.sender]
-    else { return message }
-
-    return HandlerMessage(
-      id: message.id, from: sender.from, role: sender.role,
-      subject: message.subject, body: template.body, tone: template.tone)
-  }
-
+  /// **DV-7.** `handler.json` now carries the re-voicing in `messagesBlueOnly`
+  /// itself (R1), so there is no transform on the way into the comparison above:
+  /// Mercer signs the Shift 4 unlock and the Tier-2 rank-up in `messagesAll` only.
+  /// The tests below pin the shape of that divergence — one template swap deep,
+  /// sender included, and nothing else about either message moves.
+  ///
   /// The re-voiced pair changes the sender and the body and nothing else — which is
-  /// what lets the transform above keep the fixture's rendered subject.
+  /// what lets the fixture keep the rendered subject.
   @Test("the blue-only templates are the same beat in Vale's voice")
   func revoicedPair() throws {
     let templates = Golden.copy.handler.templates

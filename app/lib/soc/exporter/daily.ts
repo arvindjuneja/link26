@@ -38,12 +38,18 @@ export const RECENCY_DAYS = 3;
 export const MIN_CANDIDATES = 8;
 export const MAX_ATTEMPTS = 200;
 
-/** The daily shift's ShiftDef, minus the board (S9). */
+/**
+ * The daily shift's ShiftDef, minus the board (S9). R3 carries `requiresRedRun`
+ * here too, so `ContentPack.dailyShift(on:)` is a pure field copy rather than a
+ * hardcoded `false` sitting beside the copied fields — this build is blue-only on
+ * every shift kind (B1), and that fact belongs in the data with the rest of them.
+ */
 export const DAILY_TEMPLATE: ExportedDailyTemplate = {
   idPrefix: "daily-",
   label: "Daily shift · {date}",
   note: "A fresh board every day — five alerts off the live queue.",
   unlockStanding: 40,
+  requiresRedRun: false,
   kind: "daily",
 };
 

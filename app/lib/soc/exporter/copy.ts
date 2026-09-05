@@ -204,14 +204,16 @@ export const COPY: ExportedCopy = {
     },
   },
 
-  // S5 — SEVERITY_TONE (SocConsole.tsx:69-74). The web's HIGH is orange, which is a
-  // STATUS-ramp colour, not one of the eight semantic tones; amber is the nearest
-  // accent and the chip carries the severity word anyway.
+  // S5 — SEVERITY_TONE (SocConsole.tsx:69-74), amended by R2. The web's HIGH is
+  // orange; folding it into amber was wrong, because amber already carries "escalate
+  // to Tier-2" on the call sheet, so a HIGH chip in amber read as a recommendation
+  // rather than as the tool's guess. `Tone` therefore gains `orange` — the HUNT hue
+  // of the status ramp — and C7's `Theme` maps it.
   severityMeta: {
     entries: {
       Low: { label: "LOW", tone: "muted" },
       Medium: { label: "MEDIUM", tone: "amber" },
-      High: { label: "HIGH", tone: "amber" },
+      High: { label: "HIGH", tone: "orange" },
       Critical: { label: "CRITICAL", tone: "rose" },
     },
     fallback: "muted",
@@ -243,13 +245,11 @@ export const COPY: ExportedCopy = {
   // SocOnboarding.tsx STEPS (pin: SocOnboarding.tsx#coach-steps) with the two S4
   // overrides applied:
   //   step 1  "click it" → "tap it"
-  //   step 2  "Pull more logs on the left" → "Pull more logs from SOURCES; findings
-  //           land under EVIDENCE" — the phone has tabs, not a left-hand column.
-  // The second override replaces the WHOLE sentence ("…on the left if you're not
-  // sure."), not just the pinned fragment: the addendum's replacement text is used
-  // verbatim, but the trailing "if you're not sure" would attach to the wrong clause
-  // and say something untrue (findings land under EVIDENCE either way). Flagged to the
-  // lead in C1's report.
+  //   step 2  "Pull more logs on the left …" → the R4 body, approved by the lead.
+  // C1 flagged that S4's literal replacement said the same thing twice ("findings
+  // land under EVIDENCE" in a bubble already anchored to EVIDENCE) and dropped the
+  // "if you're not sure" that made the sentence an offer rather than an order. R4
+  // is the ruling: keep the offer, name the tab the phone actually has, say it once.
   coachSteps: [
     {
       anchor: "sources",
@@ -261,7 +261,7 @@ export const COPY: ExportedCopy = {
     {
       anchor: "evidence",
       title: "Read what actually happened",
-      body: "Findings land here — the evidence, not the tool's 'High' guess. Pull more logs from SOURCES; findings land under EVIDENCE. When you can justify a call, hit Got it.",
+      body: "Findings land here — the evidence, not the tool's 'High' guess. Not sure yet? Pull more logs from SOURCES. When you can justify a call, hit Got it.",
       button: "Got it ▸",
       advance: "button",
     },
