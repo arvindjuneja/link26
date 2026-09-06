@@ -38,6 +38,9 @@ import SentryCore
   private let flags: Flags
   private let registry: ScreenRegistry
   private let context: Context
+  /// The ear (F2a). Injectable for the same reason `registry` is: a test builds its
+  /// own runner and must not be able to reach the app's audio session by accident.
+  private let sound: SoundService
   /// §4.3: session writes coalesce to ≤1 per 250 ms. Injectable so a test does not
   /// have to sleep a quarter of a second to see a file.
   private let coalesceWindow: Duration
@@ -70,12 +73,14 @@ import SentryCore
     save: SaveStore,
     flags: Flags = Flags(),
     registry: ScreenRegistry = .shared,
+    sound: SoundService = .shared,
     context: Context = .noop,
     coalesceWindow: Duration = .milliseconds(250)
   ) {
     self.save = save
     self.flags = flags
     self.registry = registry
+    self.sound = sound
     self.context = context
     self.coalesceWindow = coalesceWindow
   }
@@ -95,6 +100,18 @@ import SentryCore
 
     switch effect {
     case .haptic(let cue):
+      // **One call site, two channels** (F2a, `FEEL.md` §9): the cue reaches the ear
+      // and the hand from here, and `SoundBank` is the only place that knows a cue
+      // has a sound at all.
+      //
+      // The sound is fired **before** the haptics gate and not behind it, which is
+      // the whole reason these are two lines and not one. `hapticsEnabled()` is
+      // `GameModel.cuesAreLive` — the *Haptics* switch — and a player who turned
+      // haptics off did not ask for silence. `SoundService` carries its own three
+      // gates (`Feel.replayMuted`, Sound, Heartbeat sound), so the QA-replay mute the
+      // haptics side gets for free is honoured on the sound side too.
+      sound.play(cue)
+      if cue == .file { sound.duckRoomTone(for: .milliseconds(Sequences.fileDuckMs)) }
       guard context.hapticsEnabled() else { return }
       registry.haptics.play(cue)
 

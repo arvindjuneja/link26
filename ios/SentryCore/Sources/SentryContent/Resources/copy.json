@@ -92,6 +92,14 @@
     "licencesTitle": "Licences",
     "makeTheCall": "Make the call",
     "minutes": "{n}m",
+    "queryHeader": "QUERYING · {source}",
+    "queryLine1": "connecting {source}://{asset} …",
+    "queryLine2": "process tree · {window} window",
+    "queryLine3": "matching lineage for pid {n}",
+    "queryLine4": "reading index shard {n}",
+    "queryLine5": "correlating {asset} over {window}",
+    "queryLine6": "{n} events",
+    "queryWindow": "3 h",
     "queueCount": "{n}/{m}",
     "queueLabel": "QUEUE",
     "rangeArrow": "{from} → {to}",
@@ -106,6 +114,7 @@
     "settingsDeskLine": "{rank} · ⬢ {standing} · ¢ {cash} · {clean} clean",
     "settingsFeel": "Feel",
     "settingsHaptics": "Haptics · heartbeat + feedback",
+    "settingsHeartbeatSound": "Heartbeat sound · a low thump",
     "settingsHoldToFile": "Hold to file · off = tap twice",
     "settingsMotion": "Motion",
     "settingsMotionValue": "follows system",
@@ -114,6 +123,7 @@
     "settingsResetConfirm": "Reset",
     "settingsResetTitle": "Reset career",
     "settingsSaveNotice": "Your last save couldn't be read, so the desk started fresh. The old file is kept on the device.",
+    "settingsSound": "Sound · cues and room tone",
     "settingsTitle": "Settings",
     "sourceCost": "COST  {n} shift-min",
     "sourcePull": "Pull the log ▸",
@@ -122,6 +132,7 @@
     "sourceSheetEyebrow": "Pull a data source",
     "sourceToBoard": "To the board ▸",
     "sourceUsed": "USED  {n} / {m}",
+    "sourceWorthALook": "worth a look",
     "standingHint": "standing — earned by clean shifts; it opens harder queues",
     "standingUnit": "⬢",
     "statAccuracy": "Accuracy",
@@ -137,6 +148,8 @@
     "summaryStanding": "+{n} ⬢ standing",
     "summaryUnlocked": "UNLOCKED",
     "summaryUnlockedLine": "New queue unlocked — {queue}",
+    "valeFirstPull": "Good — now read what it says, not what the tool guessed.",
+    "valeThinCall": "You're calling on one card. Your call — but I'd pull one more.",
     "wordmark": "SENTRY · SOC"
   },
   "chromePlurals": {
@@ -160,6 +173,10 @@
       "one": "{n} alert",
       "other": "{n} alerts"
     },
+    "queryResults": {
+      "one": "RESULTS · {n} finding",
+      "other": "RESULTS · {n} findings"
+    },
     "sourceFindings": {
       "one": "{n} FINDING SURFACED",
       "other": "{n} FINDINGS SURFACED"
@@ -173,26 +190,26 @@
     {
       "advance": "on-first-source-pulled",
       "anchor": "sources",
-      "body": "Each source shows the question it answers — that's the skill. Start with the process tree: tap it.",
+      "body": "Each source shows the question it answers — start with the process tree and tap it.",
       "button": null,
       "title": "Pull the log that answers the question"
     },
     {
       "advance": "button",
       "anchor": "evidence",
-      "body": "Findings land here — the evidence, not the tool's 'High' guess. Not sure yet? Pull more logs from SOURCES. When you can justify a call, hit Got it.",
+      "body": "Pull more logs from SOURCES until you can justify the call — the evidence decides it, not the tool's 'High' guess.",
       "button": "Got it ▸",
       "title": "Read what actually happened"
     },
     {
       "advance": "terminal",
       "anchor": "call",
-      "body": "True Positive, False Positive, or Benign (authorized)? Pick one — full debrief either way.\nDidn't happen → False Positive. Happened + sanctioned → Benign-TP. Happened + unsanctioned → True Positive.\nFP means the rule's logic is wrong — change what it fires on. Benign-TP means the rule is right — scope an exception and leave the logic alone.",
+      "body": "True Positive, False Positive, or Benign (authorized)? Pick one — full debrief either way.",
       "button": null,
       "title": "Now make the call"
     }
   ],
-  "contentHash": "sha256:e4f99102f2bb3a340a3e1f38a0b7a214a191339d2db23aa4fe707e96ae9315c7",
+  "contentHash": "sha256:f09e899b13553d3da9307e80f09b368c4445ef82cac530d7dcf31dd7dc8629bc",
   "debriefHeadlines": {
     "good": "Good call",
     "verdictOnly": "Right verdict, off on the response",

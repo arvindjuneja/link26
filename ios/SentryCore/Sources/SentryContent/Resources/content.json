@@ -1778,7 +1778,7 @@
       "why": "The same tradecraft a sanctioned run leaves (Source chains through proxies; Password spray → 4624 success; New session, unfamiliar host; Scoped files read, then egress; Audit log cleared (Event ID 1102)) — but nothing authorizes this one: no RoE, no change ticket, no engagement. They also cleared the audit log (a 1102) on the way out — anti-forensics layered on top. Correct detection of REAL, unauthorized attack activity → a True Positive. Contain and escalate to IR. The ONLY thing separating this from a Benign-TP is the missing authorization — not who ran it."
     }
   ],
-  "contentHash": "sha256:e4f99102f2bb3a340a3e1f38a0b7a214a191339d2db23aa4fe707e96ae9315c7",
+  "contentHash": "sha256:f09e899b13553d3da9307e80f09b368c4445ef82cac530d7dcf31dd7dc8629bc",
   "dispositions": [
     "close-false-positive",
     "close-benign",

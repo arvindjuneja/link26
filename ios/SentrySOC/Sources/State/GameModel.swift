@@ -57,6 +57,12 @@ import SentryCore
 
   private let save: SaveStore
   private let flags: Flags
+  /// The ear (F2a). Its three gates — the replay mute and the two Settings switches
+  /// — are `Feel`'s; this model only says *when*.
+  let sound: SoundService
+  /// The two sound switches, and the replay mute (F2a, `FEEL.md` §9). Exposed so
+  /// `SettingsView` binds to the same instance the service reads.
+  let feelSettings: Feel
   /// Where the screens and the haptics sink are bound (B6). Exposed because
   /// `PhaseHost` resolves screens through *this model's* registry rather than
   /// reaching for the singleton — which is what lets a test or a preview install its
@@ -76,7 +82,9 @@ import SentryCore
     content: ContentPack = .bundled,
     save: SaveStore = SaveStore(),
     flags: Flags = Flags(),
-    registry: ScreenRegistry = .shared
+    registry: ScreenRegistry = .shared,
+    sound: SoundService = .shared,
+    feelSettings: Feel = .shared
   ) {
     self.content = content
     self.engine = SOCEngine(content: content)
@@ -85,6 +93,8 @@ import SentryCore
     self.save = save
     self.flags = flags
     self.registry = registry
+    self.sound = sound
+    self.feelSettings = feelSettings
 
     let hydration = save.hydrate()            // synchronous, nonisolated, ~4 KB
     self.career = hydration.career
@@ -102,7 +112,7 @@ import SentryCore
     self.session = start
 
     self.runner = EffectRunner(
-      save: save, flags: flags, registry: registry,
+      save: save, flags: flags, registry: registry, sound: sound,
       context: EffectRunner.Context(
         snapshot: { [weak self] in self.flatMap { SessionSnapshot($0.session) } },
         career: { [weak self] in self?.career ?? .initial },
@@ -125,8 +135,14 @@ import SentryCore
   /// for, and never the one before it.
   func send(_ action: SocAction) {
     let (next, effects) = reduce(session, action, content: content, career: career)
+    let wasOpen = session.phase != .hub
     withAnimation(Motion.gated(Motion.screenPush)) { session = next }
     applyCareerMutation(for: action)
+    // The room tone is a **state**, not a cue (`FEEL.md` §9): it runs while a shift
+    // is open and stops at the desk. Driven from here rather than from a screen
+    // because a sheet, a debrief and a summary are all "the shift is still open" and
+    // no one of them owns the answer.
+    if wasOpen != (next.phase != .hub) { sound.setShiftOpen(next.phase != .hub) }
     runner.run(effects)
   }
 
@@ -239,7 +255,16 @@ import SentryCore
   /// It is still not the view firing a haptic: the gate and the sink are here, so
   /// "haptics off" is honoured in one place and Core Haptics is never imported by a
   /// screen.
-  func feel(_ cue: SocCue) {
+  /// `variant` picks the pitch for the cues that have several — the card's index,
+  /// the alert's slot (`FEEL.md` §1, §4). It reaches the ear only; a haptic has no
+  /// pitch.
+  func feel(_ cue: SocCue, variant: Int = 0) {
+    // The ear first, and **not** behind `cuesAreLive` — that gate is the *Haptics*
+    // switch, and Sound is a switch of its own (F2a). `SoundService` carries the
+    // replay mute and both sound toggles itself, so the two channels are silenced by
+    // the two things a player actually asked to silence.
+    sound.play(cue, variant: variant)
+    if cue == .file { sound.duckRoomTone(for: .milliseconds(Sequences.fileDuckMs)) }
     guard cuesAreLive else { return }
     registry.haptics.play(cue)
   }
@@ -271,9 +296,16 @@ import SentryCore
   /// `scenePhase` moved. Backgrounding flushes the coalesced session write, because
   /// "in 250 ms" assumes the app is still alive in 250 ms.
   func scenePhaseChanged(to phase: ScenePhase) {
-    guard phase != .active else { return }
+    guard phase != .active else {
+      // Back on the glass: the `.ambient` session was deactivated on the way out and
+      // took the engine with it, so the tone has to be asked for again — and only if
+      // the shift it belongs to is still open (F2a).
+      sound.setForeground(true)
+      return
+    }
     runner.flushPendingWrites()
     registry.haptics.setHeartbeat(nil)          // never beat in the background (§4.4)
+    sound.setForeground(false)                  // and never a room tone either
   }
 
   // MARK: - Settlement
@@ -345,7 +377,14 @@ import SentryCore
       // reset at the bottom: `send(_:)` can trap in DEBUG on a corrupt bundle, and a
       // jump that fails must not leave the app permanently silent.
       isReplaying = true
-      defer { isReplaying = false }
+      // The same mute on the sound side (F2a): `SoundService` reads `Feel`, not this
+      // model, so the flag has to be set where the replay is — otherwise a jump
+      // fires a dozen ticks, a file thud and a verdict chord into a screenshot run.
+      feelSettings.replayMuted = true
+      defer {
+        isReplaying = false
+        feelSettings.replayMuted = false
+      }
       for action in destination.actions { send(action) }
       if session.phase != destination.phase || session.view != destination.view {
         // Not an assertion failure: `milestone` legitimately lands on the hub when

@@ -162,3 +162,138 @@ files: generated procedurally (a small Swift/`AVAudioEngine` synth script commit
 2. Leads-to by rule (default) or authored `leadsTo` straight away?
 3. Any hard timer? (default: none — the time pulse is felt, not scored)
 4. Room tone on by default, or off (SFX only)? (default: on, −30 dB)
+
+---
+
+## 13. F2a implementation notes (2026-09-06)
+
+**What F2a was:** the *spine* of the feel pass — the pure timelines, the cue vocabulary,
+the sound bank, the settings and the verification tooling. The screens that play the
+sequences (§1/§2/§4/§8's pixels, §3's collapsed source rows, §6's message cards, §7's
+pulse) are a separate ticket; everything below is in the tree and green today.
+
+### Landed
+
+| Deliverable | Where |
+|---|---|
+| §1/§2/§4/§8 as pure `[Beat]` generators, §5's `timeStatus` / `feltStatus` / live-board schedule | `ios/SentryCore/Sources/SentryCore/Feel/Sequences.swift` |
+| Six new cues — `arrive` `queryStart` `tick` `stamp` `ping` `landCard` | `Feel/SocCue.swift` (the original 16 untouched) |
+| Chrome key roster for the new copy (so no screen writes `"queryLine\(i)"`) | `Feel/FeelCopyKeys.swift` |
+| Every FEEL.md number asserted, 24 tests | `Tests/SessionTests/SequenceTests.swift` |
+| `chrome.queryHeader` · `queryLine1…6` · `queryWindow` · `queryResults` (plural) · `valeFirstPull` · `valeThinCall` · `sourceWorthALook` · `settingsSound` · `settingsHeartbeatSound`; coach bodies cut to one sentence each | `app/lib/soc/exporter/chrome.ts`, `copy.ts` |
+| 27 procedurally-synthesised assets, deterministic, RMS −16 dBFS with a −1 dBFS ceiling | `ios/scripts/render-sfx.swift` → `ios/SentrySOC/Resources/Sounds/*.wav` |
+| `SocCue` → file, incl. pitch variants and the documented reuse | `ios/SentrySOC/Sources/Sound/SoundBank.swift` |
+| `AVAudioEngine` service: `.ambient`, 6-voice pool, room-tone loop at −30 dB with a −12 dB / 600 ms duck on `file` | `Sources/Sound/SoundService.swift` |
+| Sound + Heartbeat-sound switches, `replayMuted` | `Sources/State/Feel.swift`, `Screens/Meta/SettingsView.swift` |
+| The **audible heartbeat** — the loop as a schedule of thumps, bounded by the same 40 s wall | `SentryCore/Feel/Heartbeat.swift` (`heartbeatSoundSchedule`), `Sound/SoundService.swift`, fanned out by `Haptics/HapticsEngine.setHeartbeat(_:)` |
+| One call site → haptic **and** sound | `Sources/State/EffectRunner.swift` (`.haptic` arm), `GameModel.feel(_:variant:)` |
+| Recorder: 100 ms frames at 1x + a `strip.png` contact sheet + a manifest, ffmpeg optional | `ios/scripts/record.sh` → `docs/screenshots/ios/feel/<sequence>/` |
+
+`project.yml` needed **no edit**: `SentrySOC/Resources` is a whole-tree resource path and
+the copy phase flattens, so `Resources/Sounds/select.wav` reaches the bundle as
+`select.wav` — verified in the build log and by `SoundService` decoding all 27 at launch.
+
+### Decisions and deviations (each one a place the document and the tree differ)
+
+1. **The two switches are not `SettingKey`s.** §4.3 pins `UserDefaults` at *exactly
+   five* launch-critical flags and `Flags.set(rawKey:)` trips an assertion on a sixth.
+   Sound lives in its own observable, `State/Feel.swift`, with its own keys
+   (`sentry.sound`, `sentry.heartbeatSound`). The reducer decides what the game does;
+   whether the desk makes a noise is not that.
+2. **Sound is fired *before* the haptics gate, not behind it.** `hapticsEnabled()` is the
+   *Haptics* switch, and a player who turned haptics off did not ask for silence. The two
+   channels therefore have two gates — verified on the simulator: with Sound off the
+   trace reads `sound select muted (replay=false sound=false)` while `cue select via
+   sensoryFeedback` still fires.
+3. **Three cues are sound-only** (`SocCue.soundOnly` = `tick`, `stamp`, `landCard`).
+   §9 gives them an audio row and a `—` in the haptic column. `HapticsEngine` traces them
+   as `route: soundOnly` rather than asserting on a missing route.
+4. **§4's `resolve` chord is `commitSoft`.** §4's sound column names a `resolve`; §9's
+   asset table — the authoritative list — has no such row. The results header therefore
+   takes `commit-soft`. If a distinct chord is wanted, it is one `Asset` in the synth.
+5. **§4's jitter is scaled onto the cost window.** "One per 280–420 ms" and "duration
+   scales with cost" cannot both be literally true of the same pane, so the *shape* of
+   the stream is the jitter (n+1 seeded gaps, ratios preserved) and its *length* is the
+   cost. A 1125 ms repeat pull still streams 4–6 lines.
+6. **§1 chains its `+400` / `+300` from the previous row's end**, and the message row's
+   end is its 500 ms of typing dots. Seven alerts ⇒ dock at 3920 ms, end state at
+   4180 ms — the "≈ 4.5 s" of §1, and the only number in the document written with a `≈`.
+7. **`rankup` is 700 ms**, past §9's own "≤ 600 ms" headline — because §9's own table
+   gives that row 700 ms. The cap is enforced per asset and this is the one exception
+   besides the room tone, which is a loop and not a cue (4.0 s, equal-power wrap so the
+   seam is inaudible).
+8. **−16 LUFS-ish is RMS, not BS.1770.** Each asset is normalised to −16 dBFS RMS then
+   ceilinged at −1 dBFS. Short clicks (`tick`, `select`) land nearer −22 dBFS RMS because
+   the ceiling wins — correct, and what stops a 20 ms transient clipping.
+9. **Coach step 2 keeps R4's exact phrase.** The one-sentence rewrite still contains
+   "Pull more logs from SOURCES" and still offers rather than orders, because the drift
+   guard asserts both — a shortening is not a licence to replace a ruling.
+10. **The taxonomy paragraph was not deleted.** It is `copy.intro.taxonomy`, with its
+    colour runs, and `ShiftIntroView` already prints it before the first alert — so
+    cutting coach step 3 to one sentence loses no teaching. §6's "reachable later from
+    Settings" row is F2b's.
+11. **`arrivalSequence(withCoach:)`, `pullSequence(…findingCount:hasDecisive:)` and
+    `callSequence(breachDelta:verdict:)`** carry defaulted extra parameters, so the
+    signatures the ticket names remain legal calls while the sequences can still emit
+    the beats §2/§4/§8 describe.
+12. **`record.sh` falls back to a burst when the capture is static.** `simctl
+    recordVideo` is variable-frame-rate: a screen that never changes writes ONE frame
+    with a 0.07 s duration, and `fps=10` over 0.07 s is one frame however long the wall
+    clock ran. A real sequence produces frames and keeps the accurate video path.
+13. **Frames are written at 1x (440 px), not at the @3x capture**, and the artefact a
+    reviewer opens is `strip.png` — every frame six to a row, left to right at 100 ms a
+    step. A strip answers "which beat landed on which frame", and that question does not
+    need 500 KB a frame. The QA relaunch also happens *inside* the recording, so frame 1
+    is the launch rather than its aftermath.
+14. **The audible heartbeat is a schedule, not a loop, and it is armed by
+    `HapticsEngine.setHeartbeat(_:)`.** The hand hands one pattern to a
+    `CHHapticAdvancedPatternPlayer` with `loopEnabled` and the OS beats it forever;
+    an `AVAudioPlayerNode` schedules *buffers*, so the ear has to be told when each
+    thump is. `heartbeatSoundSchedule(plan)` in `SentryCore` writes the whole armed
+    run out as a value — 150 hits for HUNT's 536 ms period inside the 40 s wall — and
+    `SoundService` walks it with **one** task, sleeping to an absolute instant on the
+    continuous clock rather than a relative gap. Both channels are armed from the one
+    call that knows which band is beating, so the thump and the buzz can never be on
+    different bands, and the wall suspends them together.
+15. **The Heartbeat-sound switch therefore rides on the Haptics switch.** §9 makes
+    the thump an option *under* a beat ("haptic only by default; optional low thump"),
+    and the plan the ear follows is `HeartbeatDirector`'s — which is `nil` when
+    `cuesAreLive` is false. With Haptics off there is no heartbeat to make audible.
+    Haptics defaults on, and this is the one place where the two-gates rule of #2
+    does not apply, because the heartbeat is a *state* and not a cue. What is
+    **not** gated on the actuator: the Simulator and every device without a Taptic
+    Engine still play the thump, which is how the run below was verified.
+
+### Two bugs the runtime passes caught
+
+`SoundService.play(named:)` looked the buffer up **before** taking a voice — and taking a
+voice is what starts the engine, which is what decodes the buffers. The first sound of
+every launch was therefore dropped. Found with `-hapticTrace` on
+`-SentryQAScreen debrief`, where the verdict chord is the first sound the process ever
+asks for (`sound verdict-good dropped (engine unavailable or not decoded)`). The guard
+order is now load-bearing and says so.
+
+**The Settings switch was a promise nothing kept** (F2a review, major). `playHeartbeat()`
+was reachable only from `play(_ cue:)`'s `if case .heartbeat` arm, and nothing in the app
+fires a one-shot `SocCue.heartbeat` — the heartbeat is a *loop*, owned by
+`HeartbeatDriver` / `HeartbeatPlayer`. `beat-lub.wav` and `beat-dub.wav` shipped, decoded
+at every launch, and were never scheduled: the row drew, the switch moved, and the desk
+stayed silent. Fixed by deviation #14. Verified on the Simulator at HUNT with
+`-hapticTrace`: `heartbeat sound start HUNT period=536ms 150 beats over 40000ms`, 75
+lub/dub pairs at a measured 536.3 ms period, `heartbeat sound suspend` 39.8 s later, and
+`heartbeat sound rearm …` on the next pull — while the hand's own line in the same trace
+reads `heartbeat start skipped — no haptics engine`. With the switch off: `heartbeat
+sound start muted (replay=false sound=true heartbeatSound=false)` and zero beats. The
+first cut of the walk slept *relative* gaps and drifted to a 565 ms period — 5 % slow,
+two seconds of lag across a run — which is why it sleeps to a deadline.
+
+### What F2b inherits
+
+The generators, the cues, the sounds and the copy are all in place and unit-tested; what
+is missing is the *drawing*. `Sequences.handoverSequence(alertCount:)` has no view yet, so
+`ShiftIntroView` still renders the static briefing; `arrivalSequence` has no view, so
+`CaseView` still shows everything at once; `pullSequence` has no view, so `SourceSheet`
+still runs its 600 ms progress bar; `callSequence` has no view, so `DebriefView` still
+mounts whole. §3 (collapsed source rows), §5's live board and fear text, §6's message
+cards and §7's pulse are likewise unbuilt. Every one of them now has its numbers, its
+cues, its sounds and its strings waiting.

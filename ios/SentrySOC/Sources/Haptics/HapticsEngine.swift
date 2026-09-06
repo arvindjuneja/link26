@@ -45,6 +45,17 @@ import SentryCore
   /// module with something worth saying under `-hapticTrace`.
   let trace: HapticTrace
 
+  /// The ear's half of the **heartbeat** (F2a). Not the ear's half of everything:
+  /// individual cues reach the sound service from `GameModel.feel(_:)` and
+  /// `EffectRunner`, one call site each, and this class never sees them.
+  ///
+  /// The loop is the exception, and it has to be: it is a *state*, not a cue, and
+  /// `setHeartbeat(_:)` below is the only place in the app that knows which band is
+  /// beating and when it stops. Injected the way `EffectRunner` and `GameModel`
+  /// inject it, so the fan-out is a dependency rather than a singleton reached for
+  /// from inside a method.
+  private let ear: SoundService
+
   /// Lazy on purpose: constructing a `CHHapticEngine` opens an audio session, and a
   /// player who never reaches HUNT and never files a call should never pay for one.
   private var engine: CHHapticEngine?
@@ -70,11 +81,13 @@ import SentryCore
 
   init(
     tuning: Tuning = ContentPack.bundled.tuning,
-    arguments: [String] = ProcessInfo.processInfo.arguments
+    arguments: [String] = ProcessInfo.processInfo.arguments,
+    ear: SoundService = .shared
   ) {
     self.tuning = tuning
     self.trace = HapticTrace(arguments: arguments)
     self.sensory = SensoryRelay(trace: trace)
+    self.ear = ear
   }
 
   var isTracing: Bool { trace.isEnabled }
@@ -106,6 +119,11 @@ import SentryCore
       if let pattern = CHPatternSpec.pattern(for: cue) {
         trace.cue(cue, route: "pattern")
         play(pattern)
+      } else if cue.isSoundOnly {
+        // Heard, never felt (F2a, `FEEL.md` §9's `—` rows). It still traces: "did
+        // that cue fire, once, at the right moment?" is the question `-hapticTrace`
+        // answers, and a cue the hand skips is one the ear did not.
+        trace.cue(cue, route: "soundOnly")
       } else {
         trace.cue(cue, route: sensory.isHosted ? "sensoryFeedback" : "feedbackGenerator")
         let expressed = sensory.fire(cue)
@@ -119,8 +137,13 @@ import SentryCore
   /// `SentryCore`'s pure `heartbeatPlan` / `HeartbeatDirector`, and the 40 s
   /// auto-suspend lives in `HeartbeatPlayer`. `GameModel.scenePhaseChanged` sends
   /// `nil` here when the app leaves the foreground (§4.4: never beat backgrounded).
+  /// Both channels, from one plan (F2a). The hand gets a looping advanced player the
+  /// OS schedules; the ear gets the same plan as a list of thumps it walks, gated by
+  /// the **Heartbeat sound** switch of §9. Armed here rather than anywhere else so
+  /// the buzz and the thump can never be beating different bands.
   func setHeartbeat(_ plan: HeartbeatPlan?) {
     heartbeatPlayer.set(plan)
+    ear.setHeartbeat(plan)
   }
 
   /// A `PULL_SOURCE` re-arms the 40-second wall (§2.15 guard 2). Not part of
@@ -128,6 +151,7 @@ import SentryCore
   /// extra a driver can reach for through the concrete type.
   func rearmHeartbeat() {
     heartbeatPlayer.rearm()
+    ear.rearmHeartbeat()
   }
 
   // MARK: - Patterns
@@ -163,8 +187,11 @@ import SentryCore
         noteFailure("engine could not be created: \(error.localizedDescription)")
         return nil
       }
-      // Haptics only: no audio in v1 (§2.15), and telling the engine so keeps it out
-      // of the audio session's way entirely.
+      // Haptics only. This used to read "no audio in v1"; F2a gave the game a sound
+      // bank, and the flag matters MORE now rather than less — the audio belongs to
+      // `SoundService`'s `AVAudioEngine` on an `.ambient` session, and a Core
+      // Haptics engine that also claims audio would be a second client fighting it
+      // for the same session.
       engine.playsHapticsOnly = true
       engine.isAutoShutdownEnabled = true
       engine.resetHandler = { [weak self] in

@@ -251,28 +251,37 @@ export const COPY: ExportedCopy = {
   // land under EVIDENCE" in a bubble already anchored to EVIDENCE) and dropped the
   // "if you're not sure" that made the sentence an offer rather than an order. R4
   // is the ruling: keep the offer, name the tab the phone actually has, say it once.
+  //
+  // **FEEL.md §6 / §10 (F2a).** Each body is now ONE sentence, delivered as a
+  // message card rather than a three-paragraph panel. Nothing was deleted: the
+  // DEF-A taxonomy that used to be step 3's second and third lines is
+  // `copy.intro.taxonomy` — its own copy entry, with its colour runs — and the
+  // briefing already prints it before the first alert arrives. The `anchor`,
+  // `button` and `advance` machinery (S4) is untouched.
   coachSteps: [
     {
       anchor: "sources",
       title: "Pull the log that answers the question",
-      body: "Each source shows the question it answers — that's the skill. Start with the process tree: tap it.",
+      body: "Each source shows the question it answers — start with the process tree and tap it.",
       button: null,
       advance: "on-first-source-pulled",
     },
     {
       anchor: "evidence",
       title: "Read what actually happened",
-      body: "Findings land here — the evidence, not the tool's 'High' guess. Not sure yet? Pull more logs from SOURCES. When you can justify a call, hit Got it.",
+      // R4's exact phrase — "Pull more logs from SOURCES" — survives the shortening,
+      // and so does the offer: the player decides when they can justify the call, and
+      // the sentence names the tab the phone actually has, once. The drift guard
+      // asserts both halves, which is how a one-sentence rewrite stays inside a
+      // ruling instead of quietly replacing it.
+      body: "Pull more logs from SOURCES until you can justify the call — the evidence decides it, not the tool's 'High' guess.",
       button: "Got it ▸",
       advance: "button",
     },
     {
       anchor: "call",
       title: "Now make the call",
-      body:
-        "True Positive, False Positive, or Benign (authorized)? Pick one — full debrief either way.\n" +
-        "Didn't happen → False Positive. Happened + sanctioned → Benign-TP. Happened + unsanctioned → True Positive.\n" +
-        "FP means the rule's logic is wrong — change what it fires on. Benign-TP means the rule is right — scope an exception and leave the logic alone.",
+      body: "True Positive, False Positive, or Benign (authorized)? Pick one — full debrief either way.",
       button: null,
       advance: "terminal",
     },

@@ -22,11 +22,12 @@ enum SensoryCue: Hashable, Sendable {
 
 extension SocCue {
 
-  /// The `.sensoryFeedback` route, or `nil` for the four cues Core Haptics owns:
-  /// `file`, `breachThud` and `rankup` are bespoke patterns (`CHPatternSpec`), and
-  /// `heartbeat` is a loop rather than a play.
+  /// The `.sensoryFeedback` route, or `nil` for the cues that do not take one:
+  /// `file`, `breachThud` and `rankup` are bespoke patterns (`CHPatternSpec`),
+  /// `heartbeat` is a loop rather than a play, and F2a's three sound-only cues are
+  /// heard and never felt (`SocCue.soundOnly`).
   ///
-  /// Written as a total switch on purpose — a sixteenth cue added to `SentryCore`
+  /// Written as a total switch on purpose — a twenty-third cue added to `SentryCore`
   /// stops the build here instead of silently going quiet.
   var sensory: SensoryCue? {
     switch self {
@@ -37,6 +38,17 @@ extension SocCue {
     case .verdictOff, .shiftRough, .denied: .warning
     case .verdictWrong, .shiftBreached, .destructive: .error
     case .file, .breachThud, .rankup, .heartbeat: nil
+
+    // ── F2a · the sequence cues (`FEEL.md` §1/§2/§4/§5/§8) ─────────────────
+    // `arrive` and `ping` take `select`, which is what §1 and §2 file them under:
+    // an alert landing on the rail is the same nudge as touching a row, and one
+    // call site then buys both the sound and the tap the document asks for.
+    case .arrive, .ping: .selection
+    // The pull opening is a `select` too (§4, t=0).
+    case .queryStart: .selection
+    // Heard, never felt — §9 gives these a `—` in the haptic column, and the
+    // reason is in each cue's own doc comment on `SocCue`.
+    case .tick, .stamp, .landCard: nil
     }
   }
 }

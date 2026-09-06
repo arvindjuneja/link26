@@ -42,6 +42,13 @@ export const CHROME_PLURALS: Record<string, { one: string; other: string }> = {
   sourceFindings: { one: "{n} FINDING SURFACED", other: "{n} FINDINGS SURFACED" },
   /** The summary's blind-call clause. Was `summaryBlindOne`/`Many`. */
   summaryBlind: { one: "{n} call made blind", other: "{n} calls made blind" },
+  /**
+   * The results header the pull sequence lands on (FEEL.md §4, end row). The
+   * sheet grows to `.large` under it, so it is the first thing a player reads
+   * after the log pane stops — and `"RESULTS · 1 findings"` would be the first
+   * thing they notice.
+   */
+  queryResults: { one: "RESULTS · {n} finding", other: "RESULTS · {n} findings" },
 };
 
 export const CHROME: Record<string, string> = {
@@ -122,6 +129,20 @@ export const CHROME: Record<string, string> = {
   coachStepCount: "{n}/{m}",
   coachSkip: "skip coaching",
 
+  // ── Vale's interjections (FEEL.md §6) ─────────────────────────────────────
+  // Rule-based, no new content: each fires at most once per shift, from a
+  // condition the session already knows. They are the difference between a coach
+  // panel and a voice in your ear.
+  valeFirstPull: "Good — now read what it says, not what the tool guessed.",
+  valeThinCall: "You're calling on one card. Your call — but I'd pull one more.",
+  /**
+   * The leads-to nudge (FEEL.md §7): a mono caption under a key source that has
+   * not been pulled yet, once, after a decisive or supporting finding lands. It
+   * points without answering — the rule fires on any key source, including the
+   * ones that would refute the player's hunch.
+   */
+  sourceWorthALook: "worth a look",
+
   // ── source sheet (§2.7) ───────────────────────────────────────────────────
   sourceSheetEyebrow: "Pull a data source",
   sourceCost: "COST  {n} shift-min",
@@ -130,6 +151,23 @@ export const CHROME: Record<string, string> = {
   sourceQuerying: "querying {source}…",
   sourceToBoard: "To the board ▸",
   sourcePullAnother: "Pull another",
+
+  // ── the pull, as a moment (FEEL.md §4) ────────────────────────────────────
+  // The 600 ms progress bar becomes a log pane that streams. `queryHeader` is the
+  // sheet's eyebrow while it runs; `queryLine1…6` are the fake log lines, four to
+  // six of them picked and timed by `Sequences.pullSequence` (seeded by the case,
+  // so a replay of the same pull reads the same). Placeholders are the four
+  // §4 names and no others — {asset} {source} {n} {window} — because the sheet
+  // fills them from the case and the source it already has in hand.
+  queryHeader: "QUERYING · {source}",
+  queryLine1: "connecting {source}://{asset} …",
+  queryLine2: "process tree · {window} window",
+  queryLine3: "matching lineage for pid {n}",
+  queryLine4: "reading index shard {n}",
+  queryLine5: "correlating {asset} over {window}",
+  queryLine6: "{n} events",
+  /** The window every log line quotes. One value, so the pane stays coherent. */
+  queryWindow: "3 h",
 
   // ── call sheet (§2.9) ─────────────────────────────────────────────────────
   callSheetTitle: "MAKE THE CALL",
@@ -177,6 +215,11 @@ export const CHROME: Record<string, string> = {
   settingsTitle: "Settings",
   settingsFeel: "Feel",
   settingsHaptics: "Haptics · heartbeat + feedback",
+  // FEEL.md §9. Sound is on by default and mixes with whatever the player is
+  // already listening to; the heartbeat is a haptic channel first, so its sound
+  // is opt-in and says so.
+  settingsSound: "Sound · cues and room tone",
+  settingsHeartbeatSound: "Heartbeat sound · a low thump",
   settingsHoldToFile: "Hold to file · off = tap twice",
   settingsCoaching: "Coaching on the first alert",
   settingsMotion: "Motion",

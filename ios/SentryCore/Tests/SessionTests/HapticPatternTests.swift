@@ -16,17 +16,25 @@ struct HapticPatternTests {
 
   // MARK: - The cue vocabulary
 
-  @Test("SocCue covers the 15 rows of the §2.15 cue table")
+  @Test("SocCue covers the 15 rows of the §2.15 cue table, plus F2a's six")
   func cueVocabulary() {
     // The §2.15 table has 15 rows. Two of them (`beat-lub`, `beat-dub`) are one
     // Swift case, because natively they are one looping pattern with the dub at
     // +120 ms; one of them (`shift-*`) is three, because the caller has a
     // `ShiftGrade` and not a string. 15 − 2 − 1 + 1 + 3 = **16 cases**.
+    //
+    // `FEEL.md` §9 (F2a) adds six more for the sequences — `arrive`, `queryStart`,
+    // `tick`, `stamp`, `ping`, `landCard` — so the roster is **22**. The original
+    // sixteen are asserted separately below: the feel pass was not allowed to
+    // renumber the cue table, only to extend it.
     let withoutHeartbeat = SocCue.allCases.filter {
       if case .heartbeat = $0 { false } else { true }
     }
-    #expect(withoutHeartbeat.count == 15, "the 12 single-row cues plus the three shift grades")
-    #expect(withoutHeartbeat.count + 1 == 16, "…and `heartbeat(_:)` is the sixteenth case")
+    #expect(SocCue.sequenceCues.count == 6, "FEEL.md §9's six sequence cues")
+    let original = withoutHeartbeat.filter { !SocCue.sequenceCues.contains($0) }
+    #expect(original.count == 15, "the 12 single-row cues plus the three shift grades")
+    #expect(original.count + 1 == 16, "…and `heartbeat(_:)` is the sixteenth case")
+    #expect(withoutHeartbeat.count + 1 == 22, "…and the six sequence cues make 22")
     // `allCases` instantiates the heartbeat at every band, so it is longer than the
     // case count by three.
     #expect(SocCue.allCases.count == withoutHeartbeat.count + TraceStatus.allCases.count)
@@ -42,6 +50,13 @@ struct HapticPatternTests {
     }
     let routed = SocCue.allCases.filter { CHPatternSpec.pattern(for: $0) != nil }
     #expect(Set(routed) == Set(SocCue.bespoke))
+
+    // The three sound-only cues are the three `FEEL.md` gives a `—` in the haptic
+    // column, and none of them is one of the bespoke patterns.
+    #expect(Set(SocCue.soundOnly) == Set<SocCue>([.tick, .stamp, .landCard]))
+    #expect(Set(SocCue.soundOnly).isDisjoint(with: Set(SocCue.bespoke)))
+    #expect(SocCue.soundOnly.allSatisfy { $0.isSoundOnly })
+    #expect(SocCue.allCases.filter(\.isSoundOnly).count == SocCue.soundOnly.count)
   }
 
   @Test("the debrief cue follows the grade, not the verdict alone")

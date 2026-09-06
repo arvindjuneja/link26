@@ -65,6 +65,59 @@ public func heartbeatPlan(status: TraceStatus, tuning: Tuning) -> HeartbeatPlan?
     autoSuspendMs: tuning.heartbeat.autoSuspendMs)
 }
 
+/// One **audible** beat of the loop: when it lands inside the armed run, and which
+/// of `HeartbeatPlan.beats` it is (`0` the lub, `1` the dub).
+public struct HeartbeatSoundHit: Sendable, Hashable, Codable {
+  /// Milliseconds from the moment the run was armed — not from the top of a loop,
+  /// because the ear walks one flat list rather than repeating a pattern.
+  public let atMs: Int
+  /// Index into `HeartbeatPlan.beats`, which is also the variant `SoundBank` maps to
+  /// `beat-lub` / `beat-dub`.
+  public let beatIndex: Int
+
+  public init(atMs: Int, beatIndex: Int) {
+    self.atMs = atMs
+    self.beatIndex = beatIndex
+  }
+}
+
+/// **The heartbeat's optional sound, written out as a value** (`FEEL.md` §9's
+/// `beat-lub` / `beat-dub` row, behind the "Heartbeat sound" switch).
+///
+/// The hand never needs this: `HeartbeatPlayer` hands one looping pattern to
+/// `CHHapticAdvancedPatternPlayer` and the OS schedules every beat after that, with
+/// no per-beat wake-up and no drift. The ear has no equivalent — an
+/// `AVAudioPlayerNode` schedules *buffers*, so somebody has to say when each thump
+/// is. This is that somebody, and it is deliberately a **value**: one list per armed
+/// run, generated once and walked by a single task, so the audible heartbeat takes
+/// no decision at runtime and its timing is asserted by `swift test` on a machine
+/// with neither a speaker nor an actuator.
+///
+/// **Bounded by `plan.autoSuspendMs`** — the same 40-second wall `HeartbeatPlayer`
+/// arms (§2.15 guard 2). The ear therefore goes quiet exactly when the hand does; a
+/// thump that outlived the buzz would be the loudest bug in the game. A run that
+/// ends here is *suspended*, not stopped: the next `PULL_SOURCE` re-arms both
+/// channels with the same plan.
+public func heartbeatSoundSchedule(_ plan: HeartbeatPlan) -> [HeartbeatSoundHit] {
+  guard plan.periodMs > 0, plan.autoSuspendMs > 0, !plan.beats.isEmpty else { return [] }
+  var hits: [HeartbeatSoundHit] = []
+  var cycleStart = 0
+  while cycleStart < plan.autoSuspendMs {
+    for (index, beat) in plan.beats.enumerated() {
+      let at = cycleStart + max(0, beat.atMs)
+      // A dub whose offset pushes it past the wall is simply not played — the run
+      // stops mid-loop for the ear exactly as the loop is torn down mid-beat for
+      // the hand.
+      guard at < plan.autoSuspendMs else { continue }
+      hits.append(HeartbeatSoundHit(atMs: at, beatIndex: index))
+    }
+    cycleStart += plan.periodMs
+  }
+  // Sorted because `beats` is an offset list and nothing promises it is ordered;
+  // the task below walks forward in time and cannot sleep backwards.
+  return hits.sorted { ($0.atMs, $0.beatIndex) < ($1.atMs, $1.beatIndex) }
+}
+
 /// The four numbers the §4.4 table holds that `tuning` does not: how hard the two
 /// beating bands hit, and how the dub relates to the lub.
 ///

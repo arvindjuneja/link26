@@ -160,4 +160,79 @@ struct HeartbeatTests {
     var director = HeartbeatDirector(tuning: retuned, nowMs: 0, status: .hunt, phase: .investigating)
     #expect(director.update(status: .hunt, phase: .investigating, hapticsEnabled: true, nowMs: 5_000) == nil)
   }
+
+  // MARK: - The audible heartbeat (F2a)
+
+  /// The ear's schedule is what makes `FEEL.md` §9's "Heartbeat sound" switch do
+  /// something, so its numbers are asserted here rather than trusted: the hand's
+  /// loop is scheduled by the OS and the ear's is scheduled by us.
+
+  @Test("the sound schedule is the same loop, flattened — lub, dub, one per period")
+  func soundScheduleShape() throws {
+    let plan = try #require(heartbeatPlan(status: .hunt, tuning: tuning))
+    let hits = heartbeatSoundSchedule(plan)
+
+    // 536 ms period over a 40 s wall = 75 cycles, two beats each.
+    #expect(plan.periodMs == 536)
+    #expect(hits.count == 150)
+    #expect(hits[0] == HeartbeatSoundHit(atMs: 0, beatIndex: 0))
+    #expect(hits[1] == HeartbeatSoundHit(atMs: 120, beatIndex: 1))
+    #expect(hits[2] == HeartbeatSoundHit(atMs: 536, beatIndex: 0))
+    #expect(hits[3] == HeartbeatSoundHit(atMs: 656, beatIndex: 1))
+
+    // Monotonic, and every lub exactly one period after the last one.
+    let lubs = hits.filter { $0.beatIndex == 0 }.map(\.atMs)
+    #expect(lubs == (0..<lubs.count).map { $0 * plan.periodMs })
+    #expect(zip(hits, hits.dropFirst()).allSatisfy { $0.atMs <= $1.atMs })
+  }
+
+  @Test("the ear stops at the same 40 s wall the hand does")
+  func soundScheduleStopsAtTheWall() throws {
+    for status in [TraceStatus.hunt, .lockdown] {
+      let plan = try #require(heartbeatPlan(status: status, tuning: tuning))
+      let hits = heartbeatSoundSchedule(plan)
+      #expect(hits.allSatisfy { $0.atMs < plan.autoSuspendMs })
+      // And it really does run to the wall rather than stopping early.
+      #expect(try #require(hits.last).atMs >= plan.autoSuspendMs - plan.periodMs)
+    }
+  }
+
+  @Test("LOCKDOWN is audibly faster than HUNT — more thumps in the same window")
+  func soundScheduleFollowsTheBand() throws {
+    let hunt = heartbeatSoundSchedule(try #require(heartbeatPlan(status: .hunt, tuning: tuning)))
+    let lockdown = heartbeatSoundSchedule(
+      try #require(heartbeatPlan(status: .lockdown, tuning: tuning)))
+    #expect(lockdown.count > hunt.count)
+  }
+
+  @Test("a plan with nothing to play schedules nothing")
+  func soundScheduleDegenerates() {
+    let empty = HeartbeatPlan(status: .hunt, periodMs: 536, beats: [], autoSuspendMs: 40_000)
+    #expect(heartbeatSoundSchedule(empty).isEmpty)
+    let beat = HeartbeatPlan.Beat(atMs: 0, intensity: 1, sharpness: 1)
+    #expect(
+      heartbeatSoundSchedule(
+        HeartbeatPlan(status: .hunt, periodMs: 0, beats: [beat], autoSuspendMs: 40_000)
+      ).isEmpty)
+    #expect(
+      heartbeatSoundSchedule(
+        HeartbeatPlan(status: .hunt, periodMs: 536, beats: [beat], autoSuspendMs: 0)
+      ).isEmpty)
+  }
+
+  @Test("the schedule is tuned, not hard-coded")
+  func soundScheduleIsTuned() throws {
+    let retuned = Tuning(
+      trace: tuning.trace,
+      bpm: Tuning.BPMTuning(CALM: 50, ALERT: 76, HUNT: 60, LOCKDOWN: 90),
+      timeBudgetDefault: tuning.timeBudgetDefault, grade: tuning.grade, shift: tuning.shift,
+      career: tuning.career,
+      heartbeat: Tuning.HeartbeatTuning(minPeriodMs: 100, autoSuspendMs: 5_000, dubOffsetMs: 240),
+      handler: tuning.handler)
+    let plan = try #require(heartbeatPlan(status: .hunt, tuning: retuned))
+    let hits = heartbeatSoundSchedule(plan)
+    // 1000 ms period, 5 s wall: five lubs and five dubs, the last dub at 4240 ms.
+    #expect(hits.count == 10)
+    #expect(hits.last == HeartbeatSoundHit(atMs: 4_240, beatIndex: 1))
+  }
 }

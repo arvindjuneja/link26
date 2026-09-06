@@ -110,6 +110,14 @@ struct SettingsView: View {
       MetaPanel {
         toggleRow(copy.chromeText("settingsHaptics"), .haptics)
         MetaDivider()
+        // FEEL.md §9's two switches. They bind to `Feel` rather than to a
+        // `SettingKey`, because §4.3 pins `UserDefaults` at exactly five
+        // launch-critical flags and the reducer has no opinion about whether the
+        // desk makes a noise — see `State/Feel.swift` for the whole reasoning.
+        soundToggleRow(copy.chromeText(FeelCopyKey.settingsSound), .sound)
+        MetaDivider()
+        soundToggleRow(copy.chromeText(FeelCopyKey.settingsHeartbeatSound), .heartbeatSound)
+        MetaDivider()
         toggleRow(copy.chromeText("settingsHoldToFile"), .holdToFile)
         MetaDivider()
         toggleRow(copy.chromeText("settingsCoaching"), .coaching)
@@ -129,6 +137,16 @@ struct SettingsView: View {
   private func toggleRow(_ title: String, _ key: SettingKey) -> some View {
     MetaRow(title: title) {
       Toggle(title, isOn: model.settingBinding(key))
+        .labelsHidden()
+        .tint(Theme.benign)
+        .accessibilityIdentifier("settings.toggle")
+    }
+  }
+
+  /// The same row, bound to `Feel` instead of to the reducer's five (F2a).
+  private func soundToggleRow(_ title: String, _ key: Feel.Key) -> some View {
+    MetaRow(title: title) {
+      Toggle(title, isOn: model.feelSettings.binding(key))
         .labelsHidden()
         .tint(Theme.benign)
         .accessibilityIdentifier("settings.toggle")
