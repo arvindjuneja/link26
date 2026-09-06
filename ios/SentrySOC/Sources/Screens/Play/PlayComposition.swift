@@ -43,7 +43,8 @@ struct PlayScreens: PlayScreenFactory {
   func sheet(for view: ViewID, model: GameModel) -> AnyView? {
     switch view {
     case .board: AnyView(BoardSheet(model: model))
-    case .source(let sourceID): AnyView(SourceSheet(model: model, sourceID: sourceID).id(sourceID))
+    case .source(let sourceID, let autoPull):
+      AnyView(SourceSheet(model: model, sourceID: sourceID, autoPull: autoPull).id(sourceID))
     case .call: AnyView(CallSheet(model: model))
     case .abandon: AnyView(AbandonSheet(model: model))
     case .kit, .settings, .firstRun: nil

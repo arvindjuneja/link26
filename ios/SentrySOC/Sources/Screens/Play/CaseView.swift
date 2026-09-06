@@ -239,7 +239,12 @@ struct CaseView: View {
             ["label": source.label, "question": source.question]),
           spokenHint: copy.chromeText("caseSourceHint"),
           onTap: { peek(source.id, proxy: proxy) },
-          onPull: { model.send(.openView(.source(source.id))) })
+          // **§3: the pull is one tap.** The chip and the 350 ms long-press are the
+          // commit — the cost is printed on the row, so an offer sheet would ask for
+          // a decision the player has already made and made knowingly. A **spent**
+          // row uses the same closure and opens read-only: `autoPull` is off, and
+          // §4's sheet shows what it surfaced without querying again.
+          onPull: { model.send(.openView(.source(source.id, autoPull: !pulled))) })
         .id(source.id)
       }
     }

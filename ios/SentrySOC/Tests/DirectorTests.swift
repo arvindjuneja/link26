@@ -190,6 +190,31 @@ struct DirectorTests {
     #expect(director.shows(.results, of: "pull:c1/s1"))
   }
 
+  @Test("a sequence pre-empted mid-flight still files the end state it reached")
+  func preemptionFilesItsEndState() {
+    // The third way a run can end, and the one that had no answer: not played out,
+    // not skipped — **replaced**. One sequence runs at a time, so a player who pulls
+    // 300 ms into an alert makes `play(…)` cancel the arrival, and a cancelled run
+    // that files nothing answers `false` to `shows(_:of:)` for the rest of the shift.
+    // That is exactly the shape of §14.3 #1: `CaseView` draws its SOURCES list off
+    // `shows(.sources, of: "arrival:…")`, so the list would vanish under the sheet
+    // the pull just opened and never come back.
+    let (director, _) = Self.recording()
+    let arrival = Director.arrivalID(case: "c1")
+    director.play(Sequences.arrivalSequence(withCoach: false), id: arrival, reduceMotion: false)
+    #expect(director.isPlaying, "the alert is still assembling itself")
+    #expect(director.shows(.sources, of: arrival) == false, "1800 ms have not passed")
+
+    director.play(
+      Sequences.pullSequence(cost: 10, isRepeat: false, seed: 1, findingCount: 1),
+      id: Director.pullID(case: "c1", source: "s1"), reduceMotion: false)
+
+    #expect(director.shows(.sources, of: arrival), "the case screen keeps its list")
+    #expect(director.shows(.trigger, of: arrival))
+    // …and it files the *set*, not a blanket yes: §14.3 #2's half of the same bug.
+    #expect(director.shows(.coach, of: arrival) == false, "this arrival had no coach beat")
+  }
+
   @Test("skip arrives the running sequence's own beats")
   func skipArrivesTheSequence() {
     let (director, _) = Self.recording()
@@ -199,6 +224,44 @@ struct DirectorTests {
     for beat in beats { #expect(director.shows(beat.kind, of: "s")) }
     #expect(director.shows(.coach, of: "s") == false, "a skip does not invent a beat")
     #expect(director.isFinished("s"))
+  }
+
+  @Test("a sequence stopped by a dismissal never speaks again")
+  func dismissalStopsThePerformance() async {
+    // `SourceSheet.onDisappear`: the player swiped the query away mid-stream. The
+    // minutes are spent — `PULL_SOURCE` is dispatched before the first log line and
+    // the session has to be truthful — but the *performance* is over. What shipped
+    // let the sequence keep its deadlines, so a pane nobody could see went on
+    // ticking, chorded its `RESULTS`, and landed its cards into the ear of a player
+    // already back on the case screen.
+    let (director, box) = Self.recording()
+    let beats = Sequences.pullSequence(
+      cost: 10, isRepeat: false, seed: 1, findingCount: 2, hasDecisive: true)
+    let id = Director.pullID(case: "c", source: "s")
+    director.play(beats, id: id, reduceMotion: false)
+    director.countUpClock(cost: 10, overMs: 2000, reduceMotion: false)
+
+    // Far enough in that the pane is really streaming: `queryOpen` at 0 and at least
+    // one `tick` behind us, with `results` still 1.5 s away.
+    try? await Task.sleep(for: .milliseconds(400), tolerance: .zero)
+    #expect(director.isRunning(id), "the query is mid-stream")
+    let heardBefore = box.names.count
+    #expect(heardBefore > 0, "…and had already made some noise")
+
+    // The dismissal, exactly as the sheet performs it.
+    director.settleClock()
+    if director.isRunning(id) { director.skip() }
+
+    // Everything the sequence had left to say, in wall-clock terms, and then some.
+    try? await Task.sleep(for: .milliseconds(beats.endStateMs + 400), tolerance: .zero)
+
+    #expect(box.names.count == heardBefore, "not one further cue after the dismissal")
+    #expect(director.isPlaying == false)
+    #expect(director.clockHeld == 0, "the clock settled with it")
+    // The screen is still whole: a dismissal is a skip, so the end state stands and
+    // the spent row can be re-opened to read what it surfaced.
+    #expect(director.shows(.results, of: id))
+    #expect(director.shows(.card(1), of: id))
   }
 
   @Test("skip drops the cues it passed")
@@ -301,6 +364,30 @@ struct DirectorTests {
 
     director.noteMeters(breach: 55, noise: 12)
     #expect(director.fearRevealed == [Director.breachKey, Director.noiseKey])
+  }
+
+  @Test("a caption types itself once — the later debriefs of a shift draw it finished")
+  func fearTypesOnceAShift() {
+    // `fearRevealed` is the shift-long ledger, so a screen that types on *it* types
+    // on every debrief after the first: the second call of the shift re-tapped out
+    // "a real threat you closed is dwelling undetected" as if it had just happened.
+    // §5 says the caption arrives with the first delta and then **stays**.
+    let (director, _) = Self.recording()
+    director.noteMeters(breach: 0, noise: 0)
+    #expect(director.fearArrivedNow.isEmpty, "the baseline reveals nothing")
+
+    director.noteMeters(breach: 30, noise: 0)          // the call that moved it
+    #expect(director.fearArrivedNow == [Director.breachKey], "typed here, and only here")
+
+    director.noteMeters(breach: 30, noise: 0)          // the next `send` of the shift
+    #expect(director.fearArrivedNow.isEmpty)
+    #expect(director.fearRevealed == [Director.breachKey], "…and the caption is still shown")
+
+    director.noteMeters(breach: 55, noise: 0)          // a second, larger delta
+    #expect(director.fearArrivedNow.isEmpty, "a caption arrives once a shift, not once a call")
+
+    director.resetForShift()
+    #expect(director.fearArrivedNow.isEmpty)
   }
 
   @Test("the felt band is the worse of the meters and the clock")

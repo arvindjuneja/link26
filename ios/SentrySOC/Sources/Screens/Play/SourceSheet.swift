@@ -11,6 +11,14 @@ import SentryCore
 /// while the shift clock in the strip above counts the cost out one minute at a time.
 /// Then `RESULTS`, the sheet grows, and the findings land one at a time.
 ///
+/// **And it is one tap.** SPEC §5.5 made this sheet an *offer* — question, cost, a
+/// `Pull the log ▸` dock — and §3 overrules it: "Tap `Pull` (or long-press the row,
+/// 350 ms) = the pull. **No confirm dialog**", with §4's timeline starting at
+/// `QUERYING`. So a sheet opened from the row's chip arrives already querying
+/// (`autoPull` → `start()`); the offer arm survives only for a sheet nobody's finger
+/// asked for. A *spent* row re-opens read-only and shows what it surfaced without
+/// spending a second time.
+///
 /// Three properties make the pane trustworthy rather than decorative:
 ///
 /// 1. **Seeded.** The lines, their jitter and their numbers come from
@@ -29,6 +37,10 @@ import SentryCore
 struct SourceSheet: View {
   let model: GameModel
   let sourceID: String
+  /// **The touch that opened this sheet was the commit** (§3, §4). Set by the row's
+  /// `Pull · 10m` chip and by its 350 ms long-press; unset when a spent row re-opens
+  /// to be read. See `start()`.
+  var autoPull = false
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   /// **Not `send(.closeView)`.** `PhaseHost` binds `.sheet(item:)` to `session.view`
@@ -41,6 +53,12 @@ struct SourceSheet: View {
   /// The pane this pull is writing, resolved once when the pull starts so the copy is
   /// rendered rather than re-rendered on every beat.
   @State private var lines: [String] = []
+  /// **This sheet has started a pull.** Set synchronously by `pull()`, because
+  /// `Director.play` delivers even its `t = 0` beat from a `Task` — one runloop turn
+  /// later. Without it the frame between `PULL_SOURCE` and `.queryOpen` reads
+  /// `isPulled && !hasRun`, which draws the *findings* and the "To the board" dock:
+  /// the answer, flashed before the query that buys it.
+  @State private var started = false
 
   private static let sheetShortDetent = PresentationDetent.height(320)
 
@@ -58,15 +76,21 @@ struct SourceSheet: View {
   private var runID: String { Director.pullID(case: socCase?.id ?? "", source: sourceID) }
   /// Whether this pull has started at all — the sheet is showing a query rather than
   /// an offer. `shows(_:of:)` and not `runID ==`, so it stays true after another
-  /// sequence takes the clock.
-  private var hasRun: Bool { director.shows(.queryOpen, of: runID) }
+  /// sequence takes the clock, and `started` covers the turn before the Director's
+  /// first beat lands.
+  private var hasRun: Bool { started || director.shows(.queryOpen, of: runID) }
   /// True from the sheet opening until the `RESULTS` header lands.
   private var querying: Bool { hasRun && !director.shows(.results, of: runID) }
 
   var body: some View {
     SheetChrome(eyebrow: eyebrow, tone: querying ? Theme.falsePositive : Theme.benign) {
       VStack(alignment: .leading, spacing: 18) {
-        if let source, !isPulled {
+        // The question belongs to the **offer**, and §4's t = 0 has no room for it:
+        // the eyebrow already names the source and the pane is about to fill. A
+        // one-tap pull therefore never draws it — which also removes the cross-fade
+        // it left behind, where a question on its way out overlapped the cost row
+        // rising to meet the clock.
+        if let source, !isPulled, !hasRun {
           question(source)
         }
         // The cost block stays up **through** the query (§4): the count-up is the
@@ -76,7 +100,10 @@ struct SourceSheet: View {
         if let source, !isPulled || querying {
           cost(source)
         }
-        if hasRun { logPane }
+        // The pane belongs to a pull this sheet is *performing*. A spent row
+        // re-opened to be read has an end state (so `hasRun` is true all shift) and
+        // no lines to put in it — an empty bordered box is not a record of anything.
+        if !lines.isEmpty { logPane }
         if landed > 0 { surfaced }
       }
     } footer: {
@@ -89,7 +116,17 @@ struct SourceSheet: View {
     // are. Measured on the simulator — see the P1 note in git history.
     .presentationDetents([Self.sheetShortDetent, .large], selection: $detent)
     .onAppear(perform: start)
-    .onDisappear { director.settleClock() }
+    // **A dismissal stops the performance; it does not finish it into the player's
+    // ear.** §14.2 #7 already ruled that for a tap — "a skip is a request to stop
+    // being performed at" — and swiping the sheet away mid-query is the same request
+    // made with a bigger gesture. Without the skip the sequence kept its deadlines
+    // and went on ticking, chording and landing cards behind a case screen with no
+    // sheet on it: the minutes were spent (they are, at `PULL_SOURCE`) but the noise
+    // arrived at a desk the player had already walked away from.
+    .onDisappear {
+      director.settleClock()
+      if director.isRunning(runID) { director.skip() }
+    }
     .accessibilityIdentifier("sheet.source")
   }
 
@@ -181,7 +218,9 @@ struct SourceSheet: View {
       director.settleClock()
       detent = .large
     }
-    .accessibilityIdentifier("source.querying")
+    // Hidden from VoiceOver — the pane is scenery, and the findings under it are the
+    // content. No identifier: an element that is not in the tree cannot be found by
+    // one, and a name nothing can reach is a name that will be wrong later.
     .accessibilityHidden(true)
   }
 
@@ -243,11 +282,27 @@ struct SourceSheet: View {
 
   // MARK: - The commit
 
-  /// The sheet opened. A source that has already been pulled shows its findings at
-  /// rest — the ceremony belongs to the commit, and a re-read is not one.
+  /// The sheet opened.
+  ///
+  /// **One tap, and `t = 0` is already `QUERYING`** (§3, §4). The row's `Pull · 10m`
+  /// chip and its 350 ms long-press are the commit — §3 says so in as many words,
+  /// *"No confirm dialog"* — so a sheet opened by either of them starts the query on
+  /// the frame it appears rather than printing SPEC §5.5's offer and waiting for the
+  /// same decision a second time. The cost was on the row before the finger landed,
+  /// and it is on this sheet while the clock counts it out; an offer step buys the
+  /// player nothing and costs them a tap fifteen times a shift, which is precisely
+  /// the friction the feel pass exists to remove.
+  ///
+  /// A source that has already been pulled shows its findings at rest instead: the
+  /// ceremony belongs to the commit, and a re-read is not one. That branch is first,
+  /// so no combination of flags can charge for the same log twice.
   private func start() {
-    guard isPulled else { return }
-    detent = .large
+    guard !isPulled else {
+      detent = .large
+      return
+    }
+    guard autoPull else { return }
+    pull()
   }
 
   /// One action, then the performance.
@@ -264,6 +319,7 @@ struct SourceSheet: View {
     let seed = Director.pullSeed(caseID: socCase.id, sourceID: sourceID)
     let duration = Sequences.pullDurationMs(cost: source.cost, isRepeat: already > 0)
 
+    started = true
     model.send(.pullSource(sourceID))
     model.play.caseTab = .evidence
 

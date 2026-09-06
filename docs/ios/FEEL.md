@@ -415,6 +415,22 @@ just by eye), and a full Shift 1 played through the UI produces the
     stays 0, the call is still blind by the grader's definition, and every scored
     number is unchanged. This is a pre-existing property of the UI, not an F2b change.
 
+18. **The pull is ONE tap, and SPEC §5.5's commit sheet loses** (F2c review, finding 1,
+    lead ruling). What shipped in F2b opened the source sheet on an *offer* — the
+    question, the cost, and a `Pull the log ▸` dock — and only then queried. Two
+    documents disagreed and the shipped screen followed the older one: §3 says "Tap
+    `Pull` (or long-press the row, 350 ms) = the pull. **No confirm dialog**", and §4's
+    timeline has `QUERYING` at t = 0. The founder's complaint was friction and
+    staticness; the cost is printed on the row before the finger lands, so the offer
+    step buys the player nothing they did not already know and costs them a tap fifteen
+    times a shift. `ViewID.source` therefore carries **why** the sheet was asked for —
+    `autoPull`, set by the chip and by the long-press, unset when a *spent* row
+    re-opens — and `SourceSheet.start()` queries on the frame it appears. The offer arm
+    survives for a sheet nobody's finger asked for (a QA jump, a placeholder) and for
+    nothing else; a re-read still shows its findings without spending a second time.
+    Measured on the glass at 351 ms after one tap: `QUERYING`, `USED 1 / 90`, first log
+    line in (`states/05-pull-one-tap`).
+
 ### 14.3 Eight bugs the runtime passes caught
 
 1. **The case screen went blank the moment a pull started.** Only one sequence runs at
@@ -476,17 +492,20 @@ with a `manifest.txt` beside each.
 | §4 | log lines (seeded 310 · 602 · 989 · 1300 · 1705) | that list | each inside a frame of it | `pull/` |
 | §4 | the clock counts the cost | 0m → 10m over 2000 | 1m at 271, 5m at 1071, 9m at 1871 | `pull/` |
 | §4 | `RESULTS · 1 finding`, sheet grows | 2000 | (2014, 2147] | `pull/` |
-| §8 | stamp slams | 450 | (442, 534] | `call/`, `breach/` |
+| §8 | stamp slams | 450 | (442, 509] | `breach/` |
 | §8 | ground + `WRONG CALL` | 900 | (934, 1034] | `breach/` |
 | §8 | `TRUTH:` flips | 1200 | (1234, 1334] | `breach/` |
-| §8 | meters + breach flash | 1500 | (1409, 1511] | `breach/` |
-| §8 | `WHY` + findings, dock last | 2100 | (2132, 2233] | `call/` |
+| §8 | meters + breach flash | 1500 | (1511, 1609] | `breach/` |
+| §8 | `WHY` + findings, dock last | 2100 | (2139, 2239] | `call/` |
 
 Everything else, checked on the glass and kept as an end state under
 `docs/screenshots/ios/feel/states/`:
 
 - `03-arrival-end` — §2's end state and §3's collapsed rows: name and cost, no questions.
 - `04-source-peek` — §3's peek, one row open, `Pull the log 10m`, and §6's coach as a card.
+- `05-pull-one-tap` — §3's ruling, on the glass: 453 ms after **one** tap on that chip, the
+  sheet reads `QUERYING`, the cost block is counting (`USED 2 / 90`, strip at `2m`) and the
+  first log line is in. There is no offer step to photograph (§14.2 #18).
 - `06-pull-querying` / `07-pull-results` — §4 mid-stream (clock at 6m, `USED 6 / 90`) and at rest.
 - `08-leads-to-and-vale` — §7's `worth a look` on two unpulled key sources, §6's first-pull line, §3's spent row as `✓ … 1 finding`.
 - `10-board-sheet` — §5's `TIME 20 / 90 shift-min`, no fear captions yet.
@@ -510,3 +529,133 @@ made blind** · **+300 ¢** · **+15 ⬢** · standing `0 → 15`. Every one of 
 -only-testing:SentrySOCTests` (109 tests, 9 suites) · `swift test --package-path
 ios/SentryCore` (215 tests, 18 suites) · `bash ios/scripts/verify.sh` (9 checks, 0
 failures, no new allowlist entries).
+
+---
+
+## 15. F2c — the independent review's findings, applied (2026-09-06)
+
+F2b shipped the drawing; a review read it against this document and found nine things.
+All nine are fixed. The one that changed a *rule* rather than a line of code is
+§14.2 #18 — **the pull is one tap** — and the lead ruled it before the work started.
+The other eight are below, each with what it broke and what a test or a trace now says.
+
+### 15.1 The eight
+
+1. **A dismissal mid-query finished the performance into the player's ear.**
+   `SourceSheet.onDisappear` settled the clock and nothing else, so a query swiped away
+   at 750 ms kept its deadlines: log ticks, the `RESULTS` chord and every card's
+   `land` arrived at a desk the player had already walked away from. §14.2 #7 had
+   already ruled this for a *tap* ("a skip is a request to stop being performed at");
+   a swipe is the same request with a bigger gesture. It now calls `director.skip()`.
+   Traced on the simulator with `-hapticTrace`: `sound query-start` at 5.644 s, four
+   `sound tick`s to 6.916, `sensory host unmounted` at 7.175 — and then **nothing**,
+   through the `RESULTS` beat's own 7.644 and four seconds past it.
+   `DirectorTests.dismissalStopsThePerformance` pins it; without the fix the same test
+   hears nine cues where it should hear two.
+
+2. **The fear caption re-typed on every later debrief of the shift.**
+   `DebriefView` drove `MeterView.fearArriving` from `director.fearRevealed`, which is
+   the shift-long *ledger* — true from the first delta to the end of the board. §5 says
+   the caption arrives with the first delta and then **stays**. `Director` now also
+   publishes `fearArrivedNow`, assigned from `noteMeters`'s return and cleared by the
+   next call, so the typewriter runs on the delta that revealed it and nowhere else.
+   Measured across two debriefs of one shift: at 1544 ms the first shows `a r`
+   mid-type; at 1577 ms the second shows the whole line, drawn.
+
+3. **Backgrounding queued a volley.** §5's live board and every running sequence sleep
+   to absolute instants on a `ContinuousClock`, and a suspended app does not stop the
+   clock — so returning from the background fired every reveal and every beat it had
+   slept through in one frame. `scenePhaseChanged(to:)`'s non-active branch now stops
+   the live board, skips the running sequence and settles the count-up, alongside the
+   heartbeat and room tone it already hushed. The live board re-arms from
+   `directorFollow` on the next `send` after `.active`: `startLiveBoard` restarts
+   whenever there is no task, which is exactly the state this leaves it in.
+
+4. **A pre-empted sequence forgot what it had reached.** `Director.play` cancelled the
+   running run without filing its end state, so a player who pulled 300 ms into an
+   alert made `shows(.sources, of: "arrival:…")` answer `false` for the rest of the
+   shift — the shape of §14.3 #1, from the third direction. It now files
+   `endStates[runID] = currentKinds` before the cancel.
+   `DirectorTests.preemptionFilesItsEndState` fails without it.
+
+5. **The row's accessibility identifier swallowed the chip's.** SwiftUI applies an
+   identifier to every element in the subtree, so `case.source` on `SourceRow`'s outer
+   `Group` renamed the peek's `Pull the log` button as well — measured with an `idb`
+   dump, which showed the chip reporting `case.source`. The identifier moved onto the
+   `live` and `spent` **buttons**, beside the labels §14.3 #5 had to move there for the
+   same reason. The dump now reads `case.source` on the row and `source.pull` on the
+   chip. The dead `source.querying` identifier on the log pane — which is
+   `accessibilityHidden(true)` and therefore not in the tree at all — is gone.
+
+6. **Reduce Motion had a second implementation of `collapsed()`.** The arm walked the
+   beats itself instead of the documented `[Beat].collapsed()` helper. It routes
+   through the helper now (sorted first, so the cues are still spent in timeline
+   order). No behaviour changed; there is simply one implementation of one documented
+   rule. `isFinished(_:)` and `upTo(_:)` stay: they are `SentryCore`'s assertion
+   surface, exercised by `SequenceTests` and `DirectorTests`.
+
+7. **The first cue of a board paid for the whole sound stack.** `SoundService.play`
+   brought the engine up lazily, and bringing it up is what decodes 27 WAVs — so the
+   first beat that wanted a noise paid ~200 ms of main-actor work. It is visible in the
+   *old* `call/` strip as two consecutive 100 ms frames stamped `434`, with the stamp
+   arriving at 700 against a specified 450. `setShiftOpen(true)` now warms both halves:
+   the decode unconditionally (a muted player is one toggle away from needing it) and
+   the graph behind the **Sound switch** — deliberately not behind `isAudible`, because
+   `replayMuted` is a QA fast-forward and the QA jump is what records a strip. Traced
+   before and after on `-SentryQAScreen debrief`: `sound stamp` and `sound engine
+   started` on the same millisecond with the verdict 351 ms later, against `sound
+   warmed` at 0.053 s, `sound engine started` at 0.108 s and stamp→verdict of **450 ms**
+   after. `call/` was re-recorded on the warm build and now brackets §8's stamp at
+   (420, 519] — clean, and the clock steps 120·220·320·420·519 with no repeat.
+
+8. **Two measured rows in §14.4 were one frame out.** Re-read off the committed frames:
+   the stamp is `(442, 509]` in `breach/` (f-021 at 442 black, f-022 at 509 mid-slam)
+   and the meters are `(1511, 1609]` (f-032 at 1511 bare, f-033 at 1609 with both bars
+   and the caption starting). The stamp row cited `call/` as well; `call/` was the
+   recording with the cold-start stall in it, so the citation is now `breach/` alone.
+
+### 15.2 What F2c did not change
+
+`SentryCore`'s grading, the content, the fixtures and the TS↔Swift parity contract are
+untouched — `content.json`, `copy.json` and the eight fixtures are byte-identical to
+`HEAD`, `contentHash` included, because F2c authored no new copy: two runs of
+`npm run soc:export` write the same bytes that are committed. No player-facing string
+was authored in Swift, and `ViewID.source`'s new `autoPull` never reaches disk —
+`SessionSnapshot` does not carry `view` at all and `.resume` nulls it, so no save and
+no restore can auto-spend a player's minutes.
+
+**`docs/screenshots/ios/gate/source-*.png` still shows the offer, and that is correct.**
+`QAJump`'s `source` destination opens `.source(id)` with `autoPull` off — it is a jump,
+not a finger — so the gate keeps one photograph of the arm that survives for sheets
+nobody touched. The *shipped* path is `states/05-pull-one-tap`, and the two are
+different screens on purpose.
+
+### 15.3 Check set
+
+`swift test --package-path ios/SentryCore` (215 tests, 18 suites) · `xcodegen generate`
+· `xcodebuild build test` on the 17 Pro Max (**112** tests, 9 suites — the three new
+`DirectorTests` cases) · `bash ios/scripts/verify.sh` (9 checks, 0 failures, **no new
+allowlist entries** — `case.source` stays spelled inline in each branch, because S1's
+exemption is for the argument of `accessibilityIdentifier` and a hoisted constant is
+not one) · `npm test` (236 tests, 11 files) · `npm run soc:export` twice, idempotent
+and byte-identical to what is committed.
+
+Runtime, on a fresh install (`C2136147-…`):
+
+- **One tap.** The row's `Pull · 10m` chip, tapped once, and the glass at **351 ms**:
+  `QUERYING · EDR — PROCESS TREE & LINEAGE`, `COST 10 SHIFT-MIN`, `USED 1 / 90`, the
+  strip counting `1m`, the first log line fading in. No offer, no second tap. §3's
+  other way in — the 350 ms long-press, with no peek at all — reaches the same state
+  (measured at 619 ms on case 2's auth logs). A **spent** row re-opened shows
+  `RESULTS · 1 FINDING` and its card, with the shift clock unmoved.
+- **A dismissal is silent.** `-hapticTrace`, swiping a 10-minute query away at ~1.5 s
+  of its 2.0: `sound query-start` 5.644 · `sound tick` ×4 to 6.916 · `sensory host
+  unmounted` 7.175 · **nothing after it**, through the `RESULTS` beat's own 7.644 and
+  four seconds beyond.
+- **A caption types once.** Two debriefs in one shift after `BREACH RISK` moved: the
+  first at 1544 ms shows `a r` mid-type; the second at 1577 ms — 33 ms *later* in its
+  own sequence — shows the whole line, drawn.
+- **A backgrounding drops what it slept through.** `-SentryQAScreen intro`, HOME at
+  1.47 s of §1's 4.2 s handover, back at 5.56 s: the trace has `ping-1` and `ping-2`,
+  `room tone off`, then silence — no volley of `ping-3…7` on resume — and the screen
+  comes back at its complete end state, seven alerts on the rail and the dock up.

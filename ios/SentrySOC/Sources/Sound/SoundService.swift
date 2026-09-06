@@ -258,8 +258,40 @@ import SentryCore
   // MARK: - Room tone
 
   /// A shift opened or closed (§9: "while a shift is open").
+  ///
+  /// **This is also where the ear warms up** (F2c). Decoding 27 WAVs is ~200 ms of
+  /// main-actor work, and it used to be paid by whichever cue asked first: the
+  /// engine comes up inside `takeVoice()`, and bringing it up is what fills
+  /// `buffers`. So the first beat of a screen carried the whole cold start — §8's
+  /// stamp landed ~200 ms behind its own 450 ms mark in the committed `call/` strip,
+  /// because the QA jump that recorded it ran the board **muted** (`replayMuted`),
+  /// which meant the room tone never started the engine and the verdict chord was
+  /// the first thing to touch a file.
+  ///
+  /// A board opening is the right moment to pay it: it is a screen push, so a hitch
+  /// there is inside a transition rather than inside a timeline, and it happens once.
+  ///
+  /// Two warms, with two different gates, because they cost two different things:
+  ///
+  /// 1. **The decode** is not behind any gate. A muted player is one Settings toggle
+  ///    away from needing the buffers, and preparing to make a noise is not making
+  ///    one.
+  /// 2. **The graph** is behind the *Sound switch* and deliberately **not** behind
+  ///    `isAudible`. `replayMuted` is a QA fast-forward, not a preference — a jump
+  ///    that plays a board silently is exactly the run that then records a strip, and
+  ///    leaving the session and the engine for the first beat to start cost §8's
+  ///    stamp 99 ms of its 450 (measured: `sound engine started` and `sound stamp` on
+  ///    the same millisecond, with the verdict 351 ms later instead of 450). A player
+  ///    who turned Sound *off*, by contrast, gets no audio session at all.
   func setShiftOpen(_ isOpen: Bool) {
     wantsRoomTone = isOpen
+    if isOpen {
+      if buffers.isEmpty {
+        loadBuffers()
+        trace.note("sound warmed · \(buffers.count) buffers decoded")
+      }
+      if feel.sound { start() }
+    }
     isOpen ? startRoomTone() : stopRoomTone()
   }
 

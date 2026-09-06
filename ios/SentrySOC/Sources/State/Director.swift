@@ -64,12 +64,16 @@ import SentryCore
   /// 2. Remembering only the *id* was worse: `shows(_:of:)` then answered `true` for
   ///    every kind, including beats the sequence never had. The debrief of a **good**
   ///    call therefore drew §8's rose breach edge — a `breachDelta` of 0 emits no
-  ///    `.breach` beat, but a finished run claimed one. Visible in
-  ///    `docs/screenshots/ios/feel/call`, frames 37–40, as a rose border that should
-  ///    not exist.
+  ///    `.breach` beat, but a finished run claimed one. Visible in the **first**
+  ///    `call/` recording, frames 37–40, as a rose border that should not exist; the
+  ///    strip committed under `docs/screenshots/ios/feel/call` is a later, clean one.
+  /// 3. And a run *pre-empted* by the next one filed nothing at all, which is bug 1
+  ///    from a third direction — a pull starting 300 ms into an arrival took the
+  ///    SOURCES list out from under the sheet it had just opened. `play(_:id:…)`
+  ///    therefore files the end state it had reached **before** it cancels.
   ///
-  /// So the memory is the *set*: a finished sequence shows exactly what it contained,
-  /// for as long as the shift lasts.
+  /// So the memory is the *set*: a finished sequence — played out, skipped, or
+  /// replaced — shows exactly what it contained, for as long as the shift lasts.
   private var endStates: [String: Set<BeatKind>] = [:]
   /// The kinds of the sequence currently on the clock — what a skip arrives, and what
   /// gets filed in `endStates` when it finishes.
@@ -103,6 +107,14 @@ import SentryCore
   ) {
     guard !played.contains(id) else { return }
     played.insert(id)
+    // **A pre-empted sequence keeps what it had reached.** One sequence runs at a
+    // time, so starting this one ends whatever was on the clock — and a run that is
+    // cancelled without filing its end state answers `false` to `shows(_:of:)` for
+    // the rest of the shift, which is bug §14.3 #1 all over again: the case screen's
+    // SOURCES list is drawn off `shows(.sources, of: "arrival:…")`, and a player who
+    // pulls 300 ms into an alert would have taken the list out from under the sheet.
+    // Filing it here rather than in `skip()` covers the third way a run can end.
+    if isPlaying { endStates[runID] = currentKinds }
     task?.cancel()
     silenced = silencing
 
@@ -124,8 +136,12 @@ import SentryCore
       // §1 asks for, and the six-voice pool would drop most of them anyway.
       isPlaying = false
       arrived = Set(beats.map(\.kind))
+      // Through `[Beat].collapsed()` — the helper `Sequences` documents as D18's
+      // visual half — and not a second implementation of it beside the first. Sorted
+      // before collapsing, because collapsing puts every beat at zero and the cues
+      // must still be spent in the order the timeline wrote them.
       var heard: Set<String> = []
-      for beat in beats.sorted(by: { $0.at < $1.at }) {
+      for beat in beats.sorted(by: { $0.at < $1.at }).collapsed() {
         guard let sound = beat.cue ?? beat.sound, heard.insert(sound.name).inserted else {
           continue
         }
@@ -455,6 +471,18 @@ import SentryCore
   /// than a label (§5, §10).
   private(set) var fearRevealed: Set<String> = []
 
+  /// The captions that arrived on the **last** `noteMeters` — the ones a screen may
+  /// type in rather than draw finished.
+  ///
+  /// `fearRevealed` is a ledger for the whole shift, so a screen reading it alone
+  /// re-typed the caption on every later debrief: the second call of a shift, the
+  /// third, and every read-only re-open, each one tapping out `a real threat you
+  /// closed is dwelling undetected` again as if it had just happened. §5 says the
+  /// caption *arrives with the first delta* and then **stays**. This set is that
+  /// arrival, and it lasts exactly until the next `noteMeters` — which is the next
+  /// `send`, so it spans the one render the delta produced and nothing after it.
+  private(set) var fearArrivedNow: Set<String> = []
+
   /// Record the meter levels a screen is about to draw and reveal the caption of any
   /// that moved since the last look. Returns the keys that arrived *now*, so a screen
   /// can type them in rather than fading them.
@@ -469,6 +497,8 @@ import SentryCore
     }
     lastBreach = breach
     lastNoise = noise
+    // Assigned, not merged: the previous arrival is over by definition.
+    fearArrivedNow = arrivedNow
     return arrivedNow
   }
 
@@ -499,6 +529,7 @@ import SentryCore
     nudgeTask?.cancel()
     nudgeTask = nil
     fearRevealed = []
+    fearArrivedNow = []
     lastBreach = nil
     lastNoise = nil
   }

@@ -128,7 +128,7 @@ struct PhaseHost: View {
   private func label(for view: ViewID) -> String {
     switch view {
     case .board: "Board — queue and pressure"
-    case .source(let id): "Source — \(id)"
+    case .source(let id, _): "Source — \(id)"
     case .call: "Call sheet — hold to file"
     case .kit: "Kit"
     case .settings: "Settings"

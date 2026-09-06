@@ -415,6 +415,17 @@ import SentryCore
 
   /// `scenePhase` moved. Backgrounding flushes the coalesced session write, because
   /// "in 250 ms" assumes the app is still alive in 250 ms.
+  ///
+  /// **And it stops the desk performing at a screen nobody is looking at** (F2c).
+  /// The heartbeat and the room tone were already hushed here; the feel pass added
+  /// two more things that keep their own deadlines — §5's live board, which pings
+  /// every 25–40 s, and whatever sequence is on the clock. Neither is a timer that
+  /// pauses: both sleep to absolute instants on a `ContinuousClock`, so an app put
+  /// away 30 s into an arrival came back and blurted every reveal and every beat it
+  /// had slept through, in one frame, into the player's ear. The live board is
+  /// re-armed by `directorFollow` on the next `send` after `.active` —
+  /// `startLiveBoard` restarts whenever there is no task, which is exactly the state
+  /// this leaves it in.
   func scenePhaseChanged(to phase: ScenePhase) {
     guard phase != .active else {
       // Back on the glass: the `.ambient` session was deactivated on the way out and
@@ -426,6 +437,13 @@ import SentryCore
     runner.flushPendingWrites()
     registry.haptics.setHeartbeat(nil)          // never beat in the background (§4.4)
     sound.setForeground(false)                  // and never a room tone either
+    director.stopLiveBoard()                    // no §5 pings into a pocket
+    // A backgrounding is a bigger version of §14.2 #7's tap: the running sequence
+    // arrives at its end state and drops the cues it had not reached, so the screen
+    // is whole on the way back and silent on the way out. The clock settles with it,
+    // because a count-up nobody can see is just a number owing.
+    director.skip()
+    director.settleClock()
   }
 
   // MARK: - Settlement

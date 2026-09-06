@@ -48,17 +48,22 @@ struct SourceRow: View {
   /// the peek behind the sheet that is already opening.
   @State private var longPressed = false
 
+  //  `case.source` is spelled inline in each branch below rather than hoisted into a
+  //  constant, because S1's exemption is for the *argument of
+  //  `accessibilityIdentifier`* — a constant would read as an unexplained Swift
+  //  literal to the release guard, and the guard is right to ask.
+
   var body: some View {
+    // **No `.accessibilityElement(children:)` and no identifier here.** A `.ignore`
+    // on the group threw away the labels its two branches carry and shipped a row
+    // VoiceOver reads as nothing at all — caught by the Shift-1 replay, whose
+    // accessibility dump showed two `case.source` elements with an empty label. Each
+    // branch owns its own element: the resting row is one button, and a peeked row is
+    // two, which is correct — the question and the commit are different things to
+    // touch, and only one of them is `case.source`.
     Group {
       if isPulled { spent } else { live }
     }
-    // **No `.accessibilityElement(children:)` here.** A `.ignore` on the group threw
-    // away the labels its two branches carry and shipped a row VoiceOver reads as
-    // nothing at all — caught by the Shift-1 replay, whose accessibility dump showed
-    // two `case.source` elements with an empty label. Each branch owns its own
-    // element: the resting row is one button, and a peeked row is two, which is
-    // correct — the question and the commit are different things to touch.
-    .accessibilityIdentifier("case.source")
   }
 
   // MARK: - Before the pull
@@ -112,6 +117,12 @@ struct SourceRow: View {
           })
       .accessibilityLabel(spokenLabel)
       .accessibilityHint(spokenHint ?? "")
+      // **On the button, not on the wrapper.** SwiftUI hands an identifier to every
+      // element under the modifier, so `case.source` on the outer `Group` renamed the
+      // peek's `Pull the log` chip too — measured with an accessibility dump, where
+      // the chip reported `case.source` and `source.pull` could not be found at all.
+      // The label had to move here for the same reason (§14.3 #5); the name follows it.
+      .accessibilityIdentifier("case.source")
 
       if isPeeked {
         peek
@@ -217,6 +228,7 @@ struct SourceRow: View {
     .accessibilityLabel(
       pulledLabel.map { "\(spokenLabel) \($0)" } ?? spokenLabel)
     .accessibilityAddTraits([.isButton, .isSelected])
+    .accessibilityIdentifier("case.source")
   }
 }
 

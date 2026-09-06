@@ -224,7 +224,12 @@ struct DebriefView: View {
           fraction: Play.meterFraction(level: level, tuning: tuning),
           status: status,
           fear: revealed ? meter.fear : nil,
-          fearArriving: revealed && !readOnly,
+          // **Typed on the delta that revealed it, drawn finished ever after.**
+          // `fearRevealed` is the shift-long ledger — reading it here re-typed the
+          // caption on every later debrief of the shift, which is a tic and not a
+          // consequence. `fearArrivedNow` is the arrival itself: the keys the last
+          // `noteMeters` turned over, and empty again on the next one.
+          fearArriving: director.fearArrivedNow.contains(meter.key.rawValue) && !readOnly,
           spokenValue: "\(value), \(Play.statusLabel(status, copy))",
           numericKey: Double(level))
       }
