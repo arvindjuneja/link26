@@ -107,7 +107,10 @@ struct PlayBar: View {
       trace: trace.map {
         .init(
           status: $0, label: Play.statusLabel($0, copy),
-          bpm: model.content.tuning.bpm[$0], paused: tracePaused)
+          bpm: model.content.tuning.bpm[$0], paused: tracePaused,
+          // §2's arrival spike, §4's decisive beat and §5's live-board ping all reach
+          // the strip through one counter the Director owns.
+          pulse: model.director.pulse)
       },
       wallet: readout.map { [$0] } ?? [],
       settingsLabel: copy.chromeText("settingsTitle"),

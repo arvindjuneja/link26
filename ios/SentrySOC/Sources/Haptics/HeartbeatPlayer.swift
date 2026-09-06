@@ -322,6 +322,13 @@ import SentryCore
   /// Everything that can change what should be beating. A pull is in here as a count
   /// rather than a flag because `queried` growing *is* the `PULL_SOURCE` the re-arm
   /// rule refers to (§2.15 guard 2).
+  ///
+  /// **`status` is `GameModel.feltStatus`, not `session.status`** (F2b, `FEEL.md`
+  /// §5). The band the hand feels is `max(engine, time)`: the desk starts to thump
+  /// when the player is burning the shift, not only when the meters have already
+  /// moved. It is presentation, exactly like the ECG the same value drives —
+  /// `scoreShift` never sees it, so the founder's "no hard timer" ruling holds and
+  /// the pressure is felt rather than scored.
   private struct Signal: Equatable {
     let status: TraceStatus
     let phase: Phase
@@ -400,7 +407,7 @@ import SentryCore
     guard let model else { return setPlan(nil) }
     let signal = withObservationTracking {
       Signal(
-        status: model.session.status, phase: model.session.phase,
+        status: model.feltStatus, phase: model.session.phase,
         pulls: model.session.queried.count, hapticsEnabled: model.cuesAreLive)
     } onChange: {
       Task { @MainActor [weak self] in
@@ -423,7 +430,7 @@ import SentryCore
         guard let self, let model = self.model else { return }
         self.apply(
           Signal(
-            status: model.session.status, phase: model.session.phase,
+            status: model.feltStatus, phase: model.session.phase,
             pulls: model.session.queried.count, hapticsEnabled: model.cuesAreLive),
           force: true)
       }

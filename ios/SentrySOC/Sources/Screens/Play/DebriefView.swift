@@ -1,49 +1,71 @@
 import SwiftUI
 import SentryCore
 
-/// The debrief — the hero screen (`DESIGN.md` §2.10, `SPEC.md` §5.8).
+/// The debrief — the hero screen (`DESIGN.md` §2.10, `SPEC.md` §5.8), rebuilt to
+/// `FEEL.md` §8.
 ///
-/// **There is no back control.** A debrief is completed, not browsed: the only way
-/// out is forward, which is what makes the call feel filed. It is re-openable
-/// read-only from the board's done rows and the summary's glyph strip
-/// (`VIEW_RESULT`, Appendix A G5), and in that mode the ~1.1 s entry sequence and
-/// the verdict cue are both skipped — a re-read is a reference, not a verdict.
+/// **The call is a cut, not a transition.** The hold completes, the room tone ducks,
+/// and the screen goes black with the file thud. Nothing is on it for 450 ms. Then
+/// the stamp slams; at 900 the ground comes back with the headline; at 1200 the truth
+/// flips; at 1500 the meters sweep and a bad breach thuds with a rose edge; at 2100
+/// the reasoning arrives and the Dock rises last.
+///
+/// That silence between 0 and 450 is the whole design. It is the only place in the
+/// app where nothing at all happens, and it is what makes a filed call feel filed.
+///
+/// **There is no back control.** A debrief is completed, not browsed. It is
+/// re-openable read-only from the board's done rows and the summary's glyph strip
+/// (`VIEW_RESULT`, Appendix A G5), and in that mode the sequence and the verdict cue
+/// are both skipped — a re-read is a reference, not a verdict.
 ///
 /// `grade.outcome` is `engine.outcomeText(grade.outcomeKey)`: **Swift decides, the
 /// bundle speaks** (D2). Nothing here compares prose.
-///
-/// `why` (≤566 characters) and `learn.concept` (≤435) are never clamped — they are
-/// the lesson, and the screen scrolls.
 struct DebriefView: View {
   let model: GameModel
   let readOnly: Bool
 
-  /// The entry sequence, as one ordered state (§5.8): stamp lands → outcome fades →
-  /// meters sweep. A tap anywhere jumps straight to `.done`.
-  private enum Stage: Int, Comparable {
-    case stamp, outcome, meters, done
-    static func < (a: Stage, b: Stage) -> Bool { a.rawValue < b.rawValue }
-  }
-
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @State private var stage: Stage = .stamp
+  /// §8's rose edge, live for one flash. A `Bool` the screen owns rather than a read
+  /// of the beat: a beat that has landed stays landed, and an edge drawn from
+  /// `shows(.breach)` therefore stayed lit for the whole debrief. Measured in
+  /// `docs/screenshots/ios/feel/breach`, where frame 65 — four and a half seconds
+  /// after the cut — still had a rose border on both sides.
+  @State private var breachFlashing = false
 
   private var copy: CopyPack { model.content.copy }
   private var session: SessionState { model.session }
+  private var director: Director { model.director }
   private var outcome: CallOutcome? { session.last }
   private var socCase: SocCase? { outcome?.socCase(model.content) }
   private var result: CaseResult? {
     outcome.flatMap { session.shift?.result(for: $0.caseId) }
   }
 
+  /// §8's sequence, addressed by the call it is about.
+  private var runID: String { Director.callID(case: outcome?.caseId ?? "") }
+
+  /// Whether a beat has landed. A read-only re-read has no sequence at all, so every
+  /// part is simply there — which is what "a reference, not a verdict" means in code.
+  private func shows(_ kind: BeatKind) -> Bool {
+    readOnly || director.shows(kind, of: runID)
+  }
+
+  /// True while the screen is still black (§8, rows 2–3).
+  private var inCut: Bool { !shows(.verdict) }
+
   var body: some View {
     ZStack {
       Theme.ground.ignoresSafeArea()
-      // The full-bleed 6 % verdict tint (§2.10) — the one moment the deck floods.
-      tone.opacity(0.06).ignoresSafeArea()
+      // The full-bleed 6 % verdict tint (§2.10) — the one moment the deck floods. It
+      // arrives with the ground at 900 ms, not before: during the cut there is no
+      // verdict on screen to tint.
+      tone.opacity(shows(.verdict) ? 0.06 : 0).ignoresSafeArea()
 
       VStack(spacing: 0) {
         PlayBar(model: model, leading: .wordmark, trace: session.status, readout: queuePosition)
+          // §8 row 2: the SystemBar hides for the cut. Held in the layout rather than
+          // removed, so the stamp does not jump 44 pt when the strip comes back.
+          .opacity(shows(.verdict) ? 1 : 0)
 
         ScrollView {
           VStack(alignment: .leading, spacing: 20) {
@@ -51,12 +73,14 @@ struct DebriefView: View {
               headline
               stampCard(outcome, socCase)
               outcomeLine(outcome)
-              meters(outcome)
-              why(socCase)
-              decisiveFindings(socCase)
-              coverage(socCase)
-              learn(socCase)
-              yourCall(outcome)
+              if shows(.meters) { meters(outcome) }
+              if shows(.why) {
+                why(socCase)
+                decisiveFindings(socCase)
+                coverage(socCase)
+                learn(socCase)
+                yourCall(outcome)
+              }
             }
           }
           .padding(.horizontal, 20)
@@ -66,13 +90,30 @@ struct DebriefView: View {
         .scrollBounceBehavior(.basedOnSize)
         .playScrollTopFade()
       }
+
+      // **The cut.** `Theme.scrim` is the deck's black and is spelled in `Design/`
+      // and nowhere else. It covers everything except the stamp, which is drawn over
+      // it — so from 450 ms there is a stamp on black and nothing else at all.
+      if inCut {
+        Theme.scrim
+          .ignoresSafeArea()
+          .transition(.opacity)
+          .allowsHitTesting(false)
+          .accessibilityHidden(true)
+      }
+      if inCut, shows(.stamp), let outcome {
+        cutStamp(outcome)
+      }
+      breachEdge
     }
     .contentShape(Rectangle())
-    .onTapGesture { skip() }
-    .safeAreaInset(edge: .bottom) {
-      PlayDock {
-        Dock(title: dockTitle, tone: tone, action: { model.send(.nextCase) })
-      }
+    // §8: "tap anywhere from 450 ms onward → end state". Before the stamp there is
+    // nothing to skip to — a tap in the first 450 ms is a tap on a black screen, and
+    // letting it through would make the cut skippable before it has said anything.
+    .onTapGesture { if shows(.stamp) { director.skip() } }
+    .safeAreaInset(edge: .bottom) { dock }
+    .onChange(of: shows(.breach)) { _, landed in
+      if landed { flashBreachEdge() }
     }
     .onAppear(perform: playEntry)
     .accessibilityIdentifier("screen.debrief")
@@ -86,6 +127,20 @@ struct DebriefView: View {
       Text(headlineText).trackedLabel(tone)
       Spacer(minLength: 0)
     }
+    .opacity(shows(.verdict) ? 1 : 0)
+  }
+
+  /// The stamp as it lands during the cut: centred, on black, with nothing to read
+  /// but the disposition.
+  private func cutStamp(_ outcome: CallOutcome) -> some View {
+    StampView(
+      text: copy.dispositionMeta[outcome.chosen]?.label ?? outcome.chosen.rawValue,
+      tone: Theme.disposition(outcome.chosen),
+      spokenLabel: copy.render(
+        copy.chromeText("debriefFiled"),
+        ["disposition": copy.dispositionMeta[outcome.chosen]?.label ?? ""]),
+      animates: true)
+    .transition(.opacity)
   }
 
   private func stampCard(_ outcome: CallOutcome, _ socCase: SocCase) -> some View {
@@ -98,7 +153,9 @@ struct DebriefView: View {
           spokenLabel: copy.render(
             copy.chromeText("debriefFiled"),
             ["disposition": copy.dispositionMeta[outcome.chosen]?.label ?? ""]),
-          animates: !readOnly)
+          // The card's copy never re-runs the slam: the stamp the player watched land
+          // was `cutStamp`, and this one is where it comes to rest.
+          animates: false)
         Spacer(minLength: 0)
       }
       .padding(.vertical, 6)
@@ -108,17 +165,24 @@ struct DebriefView: View {
         .foregroundStyle(Theme.textTertiary)
         .fixedSize(horizontal: false, vertical: true)
 
+      // §8 row 5: the truth flips in at 1200 ms, 200 ms of rotation — the one card in
+      // the app that turns over.
       HStack(spacing: 10) {
         Text(copy.chromeText("debriefTruth")).trackedLabel(Theme.textDisabled)
         Chip(
           text: copy.verdictLabels[socCase.truth] ?? socCase.truth.rawValue,
           tone: Theme.verdict(socCase.truth), style: .filled, tracked: false)
+          .rotation3DEffect(
+            .degrees(shows(.truth) ? 0 : 90), axis: (x: 1, y: 0, z: 0), perspective: 0.4)
+          .opacity(shows(.truth) ? 1 : 0)
+          .gatedAnimation(Motion.truthFlip, value: shows(.truth))
         Spacer(minLength: 0)
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(16)
     .panelCard()
+    .opacity(inCut ? 0 : 1)
   }
 
   private func outcomeLine(_ outcome: CallOutcome) -> some View {
@@ -127,21 +191,24 @@ struct DebriefView: View {
       .foregroundStyle(Theme.textPrimary)
       .fixedSize(horizontal: false, vertical: true)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .opacity(stage >= .outcome ? 1 : 0)
-      .gatedAnimation(Motion.screenPush, value: stage >= .outcome)
+      .opacity(shows(.verdict) ? 1 : 0)
+      .gatedAnimation(Motion.screenPush, value: shows(.verdict))
   }
 
   // MARK: - The meters
 
-  /// The two pressure meters, swept once the stamp has landed.
+  /// The two pressure meters, swept at 1500 ms.
   ///
   /// They sweep **from empty**, not from the value before the call: the delta is
-  /// stated as a number beside the level, so the bar does not have to encode it —
-  /// and no screen in this app ever subtracts one metered value from another (D8).
+  /// stated as a number beside the level, so the bar does not have to encode it — and
+  /// no screen in this app ever subtracts one metered value from another (D8).
+  ///
+  /// The `fear` caption is §5's: it arrives the first time this meter moves, typed in,
+  /// and stays for the rest of the career. Before that the meter is a label and a bar,
+  /// because a consequence stated before anything has happened is a lecture (§10).
   private func meters(_ outcome: CallOutcome) -> some View {
     let shift = session.shift
     let tuning = model.content.tuning
-    let swept = stage >= .meters
 
     return VStack(alignment: .leading, spacing: 16) {
       ForEach(copy.intro.meters.filter { $0.key != .time }, id: \.key) { meter in
@@ -149,32 +216,62 @@ struct DebriefView: View {
         let delta = meter.key == .breach ? outcome.grade.breachDelta : outcome.grade.noiseDelta
         let status = Trace.status(level, tuning)
         let value = copy.render(copy.chromeText("boardMeterValue"), ["n": String(level)])
+        let revealed = director.fearRevealed.contains(meter.key.rawValue)
 
         MeterView(
           label: meter.label,
           valueText: "\(value)  \(deltaText(delta))",
-          fraction: swept ? Play.meterFraction(level: level, tuning: tuning) : 0,
+          fraction: Play.meterFraction(level: level, tuning: tuning),
           status: status,
-          fear: meter.fear,
+          fear: revealed ? meter.fear : nil,
+          fearArriving: revealed && !readOnly,
           spokenValue: "\(value), \(Play.statusLabel(status, copy))",
-          numericKey: swept ? Double(level) : 0)
+          numericKey: Double(level))
       }
     }
+    .transition(.opacity)
   }
 
   /// The meter delta, exactly as §2.10's wireframe draws it — **from the bundle**
-  /// (P1-6).
-  ///
-  /// These two forms used to be assembled here. They survived the S1 grep because
-  /// they contain no letter, which is a limit of that grep rather than a licence:
-  /// `+` and `±` are glyphs the deck spends deliberately, and a re-voiced delta
-  /// (`up 30`, `no change`) would have been invisible to the copy pipeline. Now the
-  /// format is `chrome.deltaFormat` / `chrome.deltaZero`, so the rule "no screen
-  /// authors what the player reads" is true of the numerals too.
+  /// (P1-6): `+` and `±` are glyphs the deck spends deliberately, and a re-voiced
+  /// delta would have been invisible to the copy pipeline.
   private func deltaText(_ delta: Int) -> String {
     delta > 0
       ? copy.render(copy.chromeText("deltaFormat"), ["n": String(delta)])
       : copy.chromeText("deltaZero")
+  }
+
+  /// §8 row 6: the screen edge flashes rose **once** behind the breach thud. One
+  /// pulse, out slower than in — a wince, not a strobe.
+  ///
+  /// **Reduce Motion draws no flash at all.** A full-bleed rose border appearing and
+  /// vanishing is exactly the class of thing the setting exists to remove, and it is
+  /// the one beat of §8 whose information is already carried on two other channels:
+  /// the sub thud, the heavy haptic, and — permanently — `BREACH RISK +30` on the
+  /// meter under it. Nothing is lost by not flashing it.
+  @ViewBuilder private var breachEdge: some View {
+    if breachFlashing {
+      RoundedRectangle(cornerRadius: 0)
+        .strokeBorder(Theme.truePositive.opacity(0.55), lineWidth: 6)
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+        .transition(.opacity)
+        .accessibilityHidden(true)
+    }
+  }
+
+  /// One flash, then gone.
+  private func flashBreachEdge() {
+    guard !readOnly, !reduceMotion, !breachFlashing else { return }
+    withAnimation(Motion.gated(Motion.breachFlash, reduceMotion: reduceMotion)) {
+      breachFlashing = true
+    }
+    Task { @MainActor in
+      try? await Task.sleep(for: .milliseconds(320), tolerance: .zero)
+      withAnimation(Motion.gated(Motion.breachFlash, reduceMotion: reduceMotion)) {
+        breachFlashing = false
+      }
+    }
   }
 
   // MARK: - The lesson
@@ -184,13 +281,14 @@ struct DebriefView: View {
       PlayEyebrow(text: copy.chromeText("debriefWhy"))
       Text(socCase.why).prose()
     }
+    .transition(.opacity)
   }
 
   /// The findings that decide this case, marked ✓ pulled / ○ missed (§2.10).
   ///
   /// This is the one place weight is ever revealed: during play `decisive`,
-  /// `supporting`, `neutral` and `noise` are indistinguishable (§5.6), which is why
-  /// a remembered verdict still has to be proved.
+  /// `supporting`, `neutral` and `noise` are indistinguishable (§5.6), which is why a
+  /// remembered verdict still has to be proved.
   @ViewBuilder private func decisiveFindings(_ socCase: SocCase) -> some View {
     let decisive = socCase.evidence.filter { $0.weight == .decisive }
     if !decisive.isEmpty {
@@ -204,6 +302,7 @@ struct DebriefView: View {
               ? (Glyph.correct, Theme.benign) : (Glyph.missed, Theme.textDisabled))
         }
       }
+      .transition(.opacity)
     }
   }
 
@@ -242,9 +341,9 @@ struct DebriefView: View {
     }
   }
 
-  /// R22: the pointer stays **plain text**. An affiliate link inside the game loop
-  /// is an App Store risk and a design-doc violation; the only outbound link in the
-  /// app is the privacy policy.
+  /// R22: the pointer stays **plain text**. An affiliate link inside the game loop is
+  /// an App Store risk and a design-doc violation; the only outbound link in the app
+  /// is the privacy policy.
   private func learn(_ socCase: SocCase) -> some View {
     DisclosureGroup {
       VStack(alignment: .leading, spacing: 10) {
@@ -285,59 +384,34 @@ struct DebriefView: View {
     .accessibilityElement(children: .combine)
   }
 
+  /// §8's last row: the Dock rises last, after the reasoning.
+  @ViewBuilder private var dock: some View {
+    if shows(.why) {
+      PlayDock {
+        Dock(title: dockTitle, tone: tone, action: { model.send(.nextCase) })
+      }
+      .transition(.move(edge: .bottom).combined(with: .opacity))
+    }
+  }
+
   // MARK: - The entry sequence
 
-  /// ~1.1 s, and every step of it is skippable by tapping anywhere.
+  /// §8, played by the Director.
   ///
-  /// The cues are fired here rather than by the reducer because only the view knows
-  /// when its animation reaches them (§4.4): the verdict lands with the stamp, and
-  /// `breachThud` lands with the sweep that shows the damage.
+  /// Two cues do **not** come from here. The `file` thud is the reducer's — it fired
+  /// on `MAKE_CALL`, which is when the call was actually filed — so the `.cut` beat's
+  /// copy of it is silenced. And the verdict chord and the breach thud are the
+  /// sequence's, at 900 and 1500, which is why this method no longer fires either of
+  /// them itself: a screen that plays its own cues and a sequence that carries them is
+  /// how a debrief buzzes twice.
   private func playEntry() {
-    guard !readOnly, let outcome else {
-      stage = .done
-      return
-    }
-    model.feel(SocCue.verdict(outcome.grade))
-
-    guard !reduceMotion else {
-      stage = .done
-      fireBreachThud(outcome)
-      return
-    }
-
-    Task { @MainActor in
-      try? await Task.sleep(for: .seconds(0.35))
-      advance(to: .outcome)
-      try? await Task.sleep(for: .seconds(0.25))
-      if stage < .meters { fireBreachThud(outcome) }
-      advance(to: .meters)
-      try? await Task.sleep(for: .seconds(0.50))
-      advance(to: .done)
-    }
-  }
-
-  /// §5.8: a `breachDelta` at the missed-TP tier is the one call that gets its own
-  /// bespoke pattern. The threshold is the tuning number, not a literal — a designer
-  /// retune moves the thud with it.
-  private func fireBreachThud(_ outcome: CallOutcome) {
-    guard outcome.grade.breachDelta >= model.content.tuning.grade.tpMissedBreach else {
-      return
-    }
-    model.feel(.breachThud)
-  }
-
-  private func advance(to next: Stage) {
-    guard stage < next else { return }
-    withAnimation(Motion.gated(Motion.meterSweep, reduceMotion: reduceMotion)) {
-      stage = next
-    }
-  }
-
-  private func skip() {
-    guard stage != .done else { return }
-    withAnimation(Motion.gated(Motion.meterSweep, reduceMotion: reduceMotion)) {
-      stage = .done
-    }
+    guard !readOnly, let outcome else { return }
+    director.play(
+      Sequences.callSequence(
+        breachDelta: outcome.grade.breachDelta,
+        verdict: SocCue.verdict(outcome.grade)),
+      id: runID, reduceMotion: reduceMotion,
+      silencing: [.file])
   }
 
   // MARK: - Derived

@@ -315,9 +315,15 @@ import SwiftUI
             SourceRow(
               label: source.label, question: source.question,
               cost: copy.render(copy.chromeText("minutes"), ["n": "\(source.cost)"]),
-              isPulled: index == 1, pulledLabel: copy.chromeText("caseSourcePulled"),
+              pullTitle: Play.cta(copy.chromeText("sourcePull")),
+              isPulled: index == 1,
+              pulledLabel: copy.plural("caseFindingsCount", 2),
+              // The catalogue draws the peek open, because the peek is the state a
+              // reviewer cannot reach from a screenshot of the resting row (FEEL.md §3).
+              isPeeked: index == 0,
               spokenLabel: "\(source.label). \(source.question)",
-              spokenHint: copy.chromeText("caseSourceHint"), action: {})
+              spokenHint: copy.chromeText("caseSourceHint"),
+              onTap: {}, onPull: {})
           }
 
           ForEach(Array(sample.evidence.prefix(2)), id: \.id) { finding in

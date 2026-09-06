@@ -159,7 +159,7 @@
       "why": "The behaviour the rule hunts for really happened — encoded PowerShell ran — and a named change ticket sanctions it. That is a Benign True Positive: the detection is right and the activity is authorized. Closing it as a false positive would tell the next analyst the rule misfired, and it did not."
     }
   ],
-  "contentHash": "sha256:f09e899b13553d3da9307e80f09b368c4445ef82cac530d7dcf31dd7dc8629bc",
+  "contentHash": "sha256:8012e5b3edb1bee7652a45615732defde7518a376945def6d2d51843bac57cf9",
   "rows": [
     {
       "breachDelta": 30,

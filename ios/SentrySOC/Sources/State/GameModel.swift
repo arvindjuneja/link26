@@ -40,6 +40,16 @@ import SentryCore
   /// belongs to *a model* rather than to the process (P1-6).
   let play = PlayFocus()
 
+  /// **The feel pass** (F2b, `FEEL.md`). Plays §1/§2/§4/§8, runs §5's live board and
+  /// holds §6's and §7's once-per-shift state.
+  ///
+  /// It hangs off the model rather than off a screen for the same reason `PlayFocus`
+  /// does: a sequence outlives the view that started it (an arrival survives a sheet
+  /// opening over it) and a once-per-shift rule outlives the case that fired it.
+  /// Nothing it holds is game state — none of it reaches `scoreShift`, and a save
+  /// carries none of it.
+  let director = Director()
+
   /// The Shift-1 coach has been through once. Mirrored out of `UserDefaults` into
   /// observed state so a view redraws when the flag flips mid-session; `Flags` stays
   /// the storage.
@@ -121,6 +131,13 @@ import SentryCore
         markDailyDone: { [weak self] day in self?.career.dailyDoneOn = day },
         applyFlag: { [weak self] key, value in self?.applyFlag(key, value) }))
 
+    // The Director's two channels are this model's one call site, so a sequence beat
+    // and a reducer effect reach the ear and the hand through exactly the same gate
+    // (F2b). Weak, because the model owns the director and not the other way round.
+    director.cue = { [weak self] haptic, sound, variant in
+      self?.feel(haptic: haptic, sound: sound, variant: variant)
+    }
+
     refreshInbox()                            // the hub has an inbox on a cold launch
     send(.hydrate)
   }
@@ -136,14 +153,103 @@ import SentryCore
   func send(_ action: SocAction) {
     let (next, effects) = reduce(session, action, content: content, career: career)
     let wasOpen = session.phase != .hub
+    let wasBoard = session.shift?.shiftId
+    let wasInvestigating = session.phase == .investigating
     withAnimation(Motion.gated(Motion.screenPush)) { session = next }
     applyCareerMutation(for: action)
+    directorFollow(
+      wasBoard: wasBoard, wasInvestigating: wasInvestigating, action: action)
     // The room tone is a **state**, not a cue (`FEEL.md` §9): it runs while a shift
     // is open and stops at the desk. Driven from here rather than from a screen
     // because a sheet, a debrief and a summary are all "the shift is still open" and
     // no one of them owns the answer.
     if wasOpen != (next.phase != .hub) { sound.setShiftOpen(next.phase != .hub) }
     runner.run(effects)
+  }
+
+  /// **What the feel pass does after a transition** (F2b).
+  ///
+  /// Three rules, and all three are about *scope* rather than about the game:
+  ///
+  /// 1. A new board resets everything the Director holds — §6's interjections and
+  ///    §7's nudges are "at most once per **shift**", and a shift is what changed.
+  /// 2. §5's live board runs only while the player is investigating; leaving the
+  ///    phase stops it, because a ping on the debrief is a lie about where the
+  ///    pressure is.
+  /// 3. A pull is what §7 hangs off, and the case in hand is the only thing that
+  ///    knows which of its key sources are still unread.
+  ///
+  /// It is called from `send(_:)` and nowhere else, so a sequence can never be armed
+  /// by a view that happens to redraw.
+  private func directorFollow(wasBoard: String?, wasInvestigating: Bool, action: SocAction) {
+    let board = session.shift?.shiftId
+    if board != wasBoard { director.resetForShift() }
+
+    let investigating = session.phase == .investigating
+    if let shift = session.shift {
+      // §5's fear captions. The reveal is a *delta*, so the first call seeds the
+      // baseline and reveals nothing; every move after that types its caption in.
+      director.noteMeters(breach: shift.breachRisk, noise: shift.noise)
+      if investigating {
+        director.startLiveBoard(
+          from: shift.index, count: shift.caseIds.count,
+          seed: Director.boardSeed(shiftID: shift.shiftId))
+      }
+    }
+    if !investigating, wasInvestigating { director.stopLiveBoard() }
+
+    switch action {
+    case .pullSource(let sourceID):
+      guard let socCase = session.currentCase(content) else { return }
+      // §7 — the pull that just landed, and the key sources it has not answered.
+      director.nudge(
+        Director.leadsTo(socCase, justPulled: sourceID, queried: session.queried))
+      // §6 — Vale's first-pull line, shift 1 only, once.
+      if isFirstShift, session.queried.count == 1 {
+        director.interject(
+          key: FeelCopyKey.valeFirstPull,
+          text: content.copy.chromeText(FeelCopyKey.valeFirstPull))
+      }
+
+    case .openView(.call):
+      // §6's second interjection: the call sheet opened on one card, and that card is
+      // noise. It is an *opinion*, not a block — the sheet is already open and the
+      // hold-to-file works — which is the whole difference between a shift lead and a
+      // validation rule.
+      let board = session.revealedEvidence(content)
+      if board.count == 1, board.allSatisfy({ $0.weight == .noise }) {
+        director.interject(
+          key: FeelCopyKey.valeThinCall,
+          text: content.copy.chromeText(FeelCopyKey.valeThinCall))
+      }
+
+    default: break
+    }
+  }
+
+  /// **The band the desk feels like** (`FEEL.md` §5): the worse of the engine's status
+  /// and the clock's.
+  ///
+  /// `Sequences.timeStatus` maps shift-minutes spent against the budget; `feltStatus`
+  /// is `max` of that and what the meters say. It drives the ECG, the band word and
+  /// the heartbeat — and **nothing else**. `scoreShift` never sees it: the founder's
+  /// ruling is no hard timer, so the pressure is felt and not scored, and this
+  /// property is the whole of "felt".
+  var feltStatus: TraceStatus {
+    guard session.phase == .investigating, let shift = session.shift else {
+      return session.status
+    }
+    let used = shift.timeUsed + session.timeSpentOnCurrentCase(content)
+    return Sequences.feltStatus(
+      engine: session.status,
+      time: Sequences.timeStatus(used: used, budget: shift.timeBudget))
+  }
+
+  /// Whether the board in hand is the first on the ladder — the one shift the coach
+  /// and §6's first-pull line belong to. Derived from the content's own order, never
+  /// from an id spelled in Swift.
+  var isFirstShift: Bool {
+    session.shift?.shiftId == content.shifts.first?.id
   }
 
   /// The wallet moves in exactly one place outside the settlement, and this is it.
@@ -259,14 +365,28 @@ import SentryCore
   /// the alert's slot (`FEEL.md` §1, §4). It reaches the ear only; a haptic has no
   /// pitch.
   func feel(_ cue: SocCue, variant: Int = 0) {
-    // The ear first, and **not** behind `cuesAreLive` — that gate is the *Haptics*
-    // switch, and Sound is a switch of its own (F2a). `SoundService` carries the
-    // replay mute and both sound toggles itself, so the two channels are silenced by
-    // the two things a player actually asked to silence.
-    sound.play(cue, variant: variant)
-    if cue == .file { sound.duckRoomTone(for: .milliseconds(Sequences.fileDuckMs)) }
-    guard cuesAreLive else { return }
-    registry.haptics.play(cue)
+    feel(haptic: cue, sound: cue, variant: variant)
+  }
+
+  /// **The two channels, addressed separately** (F2b).
+  ///
+  /// A `Beat` names both — `cue` is what the hand feels and `sound` is what the ear
+  /// hears — and they are frequently *different*: §1's alert landing is a `select`
+  /// tap under a `ping`, and §4's log line is a `tick` nobody feels. Collapsing them
+  /// into one cue, which is what a single-`SocCue` entry point forces, replaced the
+  /// tap with a second copy of the ping and lost the row §9 writes as `—`.
+  ///
+  /// The ear is fired first and **not** behind `cuesAreLive` — that gate is the
+  /// *Haptics* switch, and Sound is a switch of its own (F2a). `SoundService` carries
+  /// the replay mute and both sound toggles itself, so each channel is silenced by
+  /// the thing a player actually asked to silence.
+  func feel(haptic: SocCue?, sound heard: SocCue?, variant: Int = 0) {
+    if let heard {
+      sound.play(heard, variant: variant)
+      if heard == .file { sound.duckRoomTone(for: .milliseconds(Sequences.fileDuckMs)) }
+    }
+    guard cuesAreLive, let haptic else { return }
+    registry.haptics.play(haptic)
   }
 
   /// **Whether a cue may be felt right now** — the one gate, read by all three

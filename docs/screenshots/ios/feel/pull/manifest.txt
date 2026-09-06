@@ -1,0 +1,11 @@
+sequence   : pull
+device     : C2136147-45C8-42DD-8E3A-EDE974B97154
+mode       : video (100 ms grid), driven by a tap on 'Pull the log'
+seconds    : 5
+frames     : 58 at 560px wide
+qa screen  : source
+recorded   : 2026-09-06 09:56:45
+
+The fuchsia numerals are the running sequence's own elapsed milliseconds
+(SENTRY_QA only, RootView.sequenceClock) — read the beat and the clock off
+the same frame and check them against docs/ios/FEEL.md.

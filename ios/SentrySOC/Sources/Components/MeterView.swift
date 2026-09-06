@@ -20,6 +20,11 @@ struct MeterView: View {
   let fraction: Double
   let status: TraceStatus
   var fear: String?
+  /// **`FEEL.md` §5**: the caption *arrives* the first time this meter moves, typed
+  /// in, and then stays. `true` only on the delta that revealed it — every later
+  /// render draws the finished line, because a caption that re-types itself every
+  /// time the board sheet opens is a tic, not a consequence.
+  var fearArriving: Bool = false
   /// `"30 percent, ALERT"` — resolved by the screen, because it is copy.
   let spokenValue: String
   /// The value the odometer keys off. Defaults to the fraction, which is enough
@@ -44,8 +49,12 @@ struct MeterView: View {
       track(palette: palette)
 
       if let fear {
-        Text(fear)
-          .quietLog()
+        if fearArriving {
+          TypedText(text: fear, font: Typography.quietLog, color: Theme.textQuiet)
+        } else {
+          Text(fear)
+            .quietLog()
+        }
       }
     }
     .gatedAnimation(Motion.meterSweep, value: fraction)

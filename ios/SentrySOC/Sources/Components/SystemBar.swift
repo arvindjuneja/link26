@@ -26,15 +26,22 @@ struct SystemBar: View {
     /// A pinned instant for a deterministic render — the snapshot suite's only
     /// use (P1-9). `nil` everywhere in the app.
     var now: Date?
+    /// **The blip** (`FEEL.md` §2, §5). A monotonic counter: every change spikes the
+    /// trace once and flashes the position. An alert arriving bumps it; so does a
+    /// live-board reveal. It is a *counter* rather than a `Bool` because two blips in
+    /// a row are two events, and a boolean that is already `true` is one.
+    var pulse: Int = 0
 
     init(
-      status: TraceStatus, label: String, bpm: Int, paused: Bool = false, now: Date? = nil
+      status: TraceStatus, label: String, bpm: Int, paused: Bool = false,
+      now: Date? = nil, pulse: Int = 0
     ) {
       self.status = status
       self.label = label
       self.bpm = bpm
       self.paused = paused
       self.now = now
+      self.pulse = pulse
     }
   }
 
@@ -65,9 +72,13 @@ struct SystemBar: View {
   let settingsLabel: String
   let settingsAction: () -> Void
 
+  /// §2's ECG spike, live for one beat. Driven by `Trace.pulse`, never by a timer.
+  @State private var spiking = false
+
   var body: some View {
     HStack(spacing: 10) {
       leadingControl
+        .opacity(spiking ? 0.55 : 1)
 
       if let trace {
         // The trace is the first thing to go and the last thing to matter: it is
@@ -78,6 +89,10 @@ struct SystemBar: View {
         if showsTrace {
           ECGCanvas(status: trace.status, bpm: trace.bpm, paused: trace.paused, now: trace.now)
             .frame(minWidth: 0, maxWidth: .infinity, maxHeight: 22)
+            // "amplitude x3 for one beat" (§2, row 2). A scale on the canvas rather
+            // than a second trace generator: the canvas draws a 22 pt band and the
+            // spike is that band, briefly taller — which is what an ECG spike is.
+            .scaleEffect(y: spiking ? 3 : 1, anchor: .center)
             .layoutPriority(-1)
         } else {
           Spacer(minLength: 0)
@@ -85,6 +100,9 @@ struct SystemBar: View {
 
         Text(trace.label)
           .trackedLabel(Theme.status(trace.status).text, scale: shrinkFloor)
+          // §4: "the SystemBar band word pulses once" behind a decisive finding. The
+          // same blip the trace spikes on, because it is the same event.
+          .opacity(spiking ? 0.55 : 1)
           .layoutPriority(1)
       } else {
         Spacer(minLength: 8)
@@ -118,6 +136,18 @@ struct SystemBar: View {
     // The band tints the strip itself as pressure rises — the edge glow of §2.14,
     // at the one place it can live without a second full-screen layer.
     .background(traceWash)
+    .onChange(of: trace?.pulse ?? 0) { _, _ in blip() }
+  }
+
+  /// One spike, then back. 260 ms out and 220 ms back is a beat of the ECG at ALERT,
+  /// which is why the spike reads as the trace doing something rather than as the bar
+  /// animating.
+  private func blip() {
+    withAnimation(Motion.gated(Motion.beatArrive)) { spiking = true }
+    Task { @MainActor in
+      try? await Task.sleep(for: .milliseconds(120), tolerance: .zero)
+      withAnimation(Motion.gated(Motion.beatArrive)) { spiking = false }
+    }
   }
 
   // MARK: - Dynamic Type

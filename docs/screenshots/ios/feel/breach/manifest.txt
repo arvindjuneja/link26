@@ -1,0 +1,11 @@
+sequence   : breach (FEEL.md §8 row 6 — the thud arm)
+device     : C2136147-45C8-42DD-8E3A-EDE974B97154
+mode       : video (100 ms grid), driven by a hold on 'Hold to file'
+frames     : 64 at 560px wide
+qa screen  : call, then Close · False Positive on a True Positive
+
+A missed detection: breachDelta 30 >= Sequences.breachThudDelta, so the call
+sequence carries a `.breach` beat at 1500 ms — the sub thud, one rose flash on the
+screen edge (~320 ms, then gone), and the BREACH RISK caption typing itself in as
+the meter moves for the first time (FEEL.md §5). The fuchsia numerals are the
+sequence's own elapsed milliseconds (SENTRY_QA only).

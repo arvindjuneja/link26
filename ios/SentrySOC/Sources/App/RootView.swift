@@ -20,11 +20,42 @@ struct RootView: View {
 
       PhaseHost()
     }
+    .overlay(alignment: .topTrailing) { sequenceClock }
     .preferredColorScheme(.dark)
     .dynamicTypeSize(Typography.dynamicTypeRange)
     .tint(Theme.falsePositive)
     .onChange(of: scenePhase) { _, phase in
       model.scenePhaseChanged(to: phase)
     }
+  }
+
+  /// **The stopwatch a frame strip is read against** (`FEEL.md` §11, F2b).
+  ///
+  /// `record.sh` cuts a 100 ms grid, and §11 asks for ±60 ms — which a grid alone
+  /// cannot settle, because frame 12 is "somewhere in the 100 ms after the eleventh".
+  /// So under `SENTRY_QA` (Debug only, and the release guard proves its absence) the
+  /// running sequence prints its own elapsed milliseconds in the corner. A reviewer
+  /// reads the beat and the clock off the same pixel row and the tolerance becomes a
+  /// measurement.
+  ///
+  /// It is `TimelineView(.periodic)` rather than a `Task`: this is the one thing in
+  /// the app that legitimately wants a frame clock, it exists only in QA builds, and
+  /// it must not touch the Director's own scheduling to read it.
+  @ViewBuilder private var sequenceClock: some View {
+    #if SENTRY_QA
+      if model.director.isPlaying {
+        TimelineView(.periodic(from: .now, by: 1.0 / 30.0)) { _ in
+          Text(model.director.elapsedMs.map { "\($0)" } ?? "")
+            .font(Typography.gradeNumeral)
+            .foregroundStyle(Theme.crossover)
+            .padding(.horizontal, 8)
+            .background(Theme.scrim.opacity(0.85))
+            .padding(.top, 52)
+            .padding(.trailing, 6)
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+      }
+    #endif
   }
 }

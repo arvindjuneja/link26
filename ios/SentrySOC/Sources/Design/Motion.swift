@@ -1,4 +1,5 @@
 import SwiftUI
+import SentryCore
 
 /// Every named animation of `DESIGN.md` §2.14, and **one** Reduce-Motion gate.
 ///
@@ -61,6 +62,71 @@ enum Motion {
   /// A drag this far off the button abandons the hold. Slop, not precision: the
   /// thumb rolls while it presses, and a roll is not a change of mind.
   static let holdToFileCancelSlop: CGFloat = 44
+
+  // ── the feel pass (F2b, `docs/ios/FEEL.md`) ────────────────────────────────
+  //
+  // Durations only. *When* each of these plays is `SentryCore`'s
+  // `Sequences` — the timelines of §1/§2/§4/§8, asserted in `SequenceTests` — and
+  // *whether* it plays at all is still `Motion.gated`. Nothing below re-times a beat;
+  // each one is how long the pixels take to settle once the beat has landed.
+
+  /// One beat arriving: the default settle for anything the Director marks arrived.
+  /// 220 ms is `findingLand`'s curve, which is the deck's existing "a thing landed".
+  static let beatArrive = Animation.smooth(duration: 0.22, extraBounce: 0)
+  /// How far a beat's content travels as it lands — §1's slots, §2's rows, §4's
+  /// cards. The same 12 pt `findingLand` already spends.
+  static let beatRise: CGFloat = 12
+
+  /// **§2's severity chip**: `scale 1.3 → 1` over 140 ms. A stamp, smaller — the
+  /// tool making a claim, not the analyst filing one, so it is 40 ms shorter and less
+  /// bouncy than `Motion.stamp`.
+  static let severityStamp = Animation.spring(duration: 0.14, bounce: 0.28)
+  static let severityStampScaleFrom: CGFloat = 1.3
+
+  /// **§1's cut** — `Clock in` to the first alert, and §8's cut to black.
+  static let cut = Animation.easeInOut(duration: 0.12)
+
+  /// **§8's `TRUTH:` flip**, 200 ms.
+  static let truthFlip = Animation.smooth(duration: 0.20, extraBounce: 0)
+  /// The rose edge flash behind the breach thud. One pulse, out slower than in, so it
+  /// reads as a wince rather than a strobe.
+  static let breachFlash = Animation.easeOut(duration: 0.45)
+
+  /// **§6's message card**: Vale slides in from the left rail.
+  static let messageCard = Animation.smooth(duration: 0.26, extraBounce: 0)
+  /// How long an interjection stays before it withdraws. Long enough to read
+  /// fourteen words twice, short enough that it never becomes furniture.
+  static let valeDwellSeconds: Double = 6.0
+  /// The typing dots' own bob. Bounded by the 500 ms the sequence gives them, so it
+  /// is not idle decorative motion — it stops when the text arrives.
+  static let typingDot = Animation.easeInOut(duration: 0.42)
+
+  /// **§3's peek**: a source row opening to show its question.
+  static let peek = Animation.smooth(duration: 0.24, extraBounce: 0)
+  /// **§3's long-press to pull**, 350 ms. Shorter than `holdToFileDuration` on
+  /// purpose: a pull costs shift-minutes, a call costs the case.
+  static let sourceLongPress: TimeInterval = 0.35
+
+  /// **§7's leads-to glow**: the ease either side of the pulse on an unpulled key
+  /// source's left rule.
+  static let worthALookGlow = Animation.easeInOut(duration: 0.30)
+  /// How long the rule stays **at full glow** — §7's "one 600 ms glow", measured
+  /// between the two eases rather than across them.
+  static let worthALookHoldMs = 600
+  /// How long the `worth a look` caption stays before it withdraws on its own.
+  ///
+  /// §7 asks for the *pulse* to be one 600 ms glow, and it is. The caption is a
+  /// different question: the nudge fires when the pull's findings land, and the
+  /// player is then inside the source sheet with the results — they reach the row it
+  /// points at a beat or two later. A caption timed to the glow was measured gone
+  /// before the sheet had even been dismissed, which makes it a nudge nobody
+  /// receives. It also clears the moment the player touches any row, so it is
+  /// answered rather than waited out.
+  static let worthALookLifeMs = 4200
+
+  /// A typed line's glyph cadence, when the caller has no duration to spread over.
+  /// `Sequences.glyphMs` is the number; this is it as seconds, once.
+  static let glyphSeconds: Double = Double(Sequences.glyphMs) / 1000.0
 
   /// The ECG's frame budget — 30 fps is plenty for a 40 pt-tall trace and it halves
   /// the wake-ups of `.animation`'s default.

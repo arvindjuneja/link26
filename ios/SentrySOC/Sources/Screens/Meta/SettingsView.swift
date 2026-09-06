@@ -6,6 +6,10 @@ import SwiftUI
 enum MetaRoute: Hashable {
   case about
   case licences
+  /// `FEEL.md` §6's door back to the taxonomy. The DEF-A definition is the first card
+  /// of shift 1 and is not repeated on every board after it, so it needs somewhere to
+  /// live that a player can reach when they want it again.
+  case rules
 }
 
 /// **Settings** — `DESIGN.md` §2.13; `SPEC.md` §5.11. View `.settings`.
@@ -55,6 +59,7 @@ struct SettingsView: View {
         switch route {
         case .about: AboutScreen(model: model)
         case .licences: LicencesScreen(model: model)
+        case .rules: RulesScreen(model: model)
         }
       }
     }
@@ -121,6 +126,21 @@ struct SettingsView: View {
         toggleRow(copy.chromeText("settingsHoldToFile"), .holdToFile)
         MetaDivider()
         toggleRow(copy.chromeText("settingsCoaching"), .coaching)
+        MetaDivider()
+        // FEEL.md §6: "reachable later from Settings — Read the rules again". It sits
+        // beside Coaching because it is the same thing at a different tempo — one is
+        // the lead in your ear on the first board, the other is the rulebook on the
+        // ninth.
+        NavigationLink(value: MetaRoute.rules) {
+          MetaRow(title: copy.chromeText("settingsRules"), titleColor: Theme.textSecondary) {
+            Text(Glyph.forward)
+              .font(Typography.meta)
+              .foregroundStyle(Theme.textQuiet)
+          }
+          .contentShape(Rectangle())
+        }
+        .buttonStyle(PressableStyle())
+        .accessibilityIdentifier("settings.rules")
         MetaDivider()
         // Motion is the system's to decide (§2.14 / D18): Reduce Motion stops the
         // deck's visual motion and deliberately does NOT touch haptics, so there is
@@ -278,6 +298,38 @@ struct SettingsView: View {
 /// The fiction block is the **same** block as the first-run gate (§5.11) — the two
 /// exported keys are byte-identical and `MetaComposition` asserts it in DEBUG, so
 /// they cannot drift apart into two different disclaimers.
+/// **Read the rules again** — `FEEL.md` §6's second half.
+///
+/// The DEF-A taxonomy and the severity-is-a-guess paragraph, exactly as the shift-1
+/// handover card delivers them, with their colour runs intact (D5). Nothing here is
+/// new copy: it is `copy.intro.taxonomy` and `copy.intro.severity`, which the first
+/// board shows once and every board after it does not.
+///
+/// It is a *re-read*, not a tutorial — no progress, no acknowledgement, no flag. The
+/// player asked a question and this is the answer.
+private struct RulesScreen: View {
+  let model: GameModel
+
+  private var copy: CopyPack { model.content.copy }
+
+  var body: some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: 20) {
+        RichTextView(segments: copy.intro.taxonomy)
+        PlayHairline()
+        RichTextView(segments: copy.intro.severity, baseColor: Theme.textTertiary)
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(.horizontal, 20)
+      .padding(.vertical, 20)
+    }
+    .scrollBounceBehavior(.basedOnSize)
+    .background(Theme.ground.ignoresSafeArea())
+    .metaNavigationChrome(copy.chromeText("settingsRules"))
+    .accessibilityIdentifier("settings.rulesScreen")
+  }
+}
+
 private struct AboutScreen: View {
   let model: GameModel
 

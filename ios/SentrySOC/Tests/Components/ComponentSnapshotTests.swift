@@ -303,12 +303,16 @@ struct ComponentSnapshotTests {
     try shot("SourceRow", "list") {
       VStack(spacing: 8) {
         ForEach(Array(sources.enumerated()), id: \.element.id) { index, source in
+          // FEEL.md §3's three states in one strip: at rest (name + cost only), spent
+          // (a tick and what it surfaced), and peeked (the question and the commit).
           SourceRow(
             label: source.label, question: source.question, cost: "\(source.cost)m",
-            isPulled: index == 1, pulledLabel: "pulled",
+            pullTitle: "Pull the log  \(source.cost)m",
+            isPulled: index == 1, pulledLabel: "2 findings",
+            isPeeked: index == 2,
             spokenLabel:
               "\(source.label). Answers: \(source.question). Costs \(source.cost) shift-minutes.",
-            spokenHint: "Pulls this log", action: {})
+            spokenHint: "Pulls this log", onTap: {}, onPull: {})
         }
       }
       .padding(20)
@@ -617,7 +621,8 @@ struct ComponentSnapshotTests {
     try shot("Stress", "SourceRow", width: width, typeSize: size) {
       SourceRow(
         label: "EDR process tree", question: "What spawned this, and what did it do after?",
-        cost: "6m", spokenLabel: "EDR process tree", action: {}
+        cost: "6m", pullTitle: "Pull the log  6m", isPeeked: true,
+        spokenLabel: "EDR process tree", onTap: {}, onPull: {}
       ).padding(16)
     }
     try shot("Stress", "SegmentedTabs", width: width, typeSize: size) {

@@ -297,3 +297,216 @@ still runs its 600 ms progress bar; `callSequence` has no view, so `DebriefView`
 mounts whole. §3 (collapsed source rows), §5's live board and fear text, §6's message
 cards and §7's pulse are likewise unbuilt. Every one of them now has its numbers, its
 cues, its sounds and its strings waiting.
+
+---
+
+## 14. F2b implementation notes (2026-09-06)
+
+**What F2b was:** the *drawing*. F2a landed the spine — the pure timelines, the cue
+vocabulary, the sound bank, the settings and the recorder — and left every screen
+rendering the pre-feel-pass page. F2b plays them: §1 and §2 are sequences now, §3's
+sources are collapsed, §4 is a query rather than a progress bar, §5's pressure is
+felt, §6 is a voice, §7 points, §8 is a cut, and §10's removals are done.
+
+**Contract, unchanged and re-verified.** `SentryCore` grading, content, fixtures and
+the TS↔Swift parity contract did not move: `swift test --package-path ios/SentryCore`
+is green on the same 215 tests and the same goldens, `content.json`'s
+`cases`/`shifts`/`tuning` are byte-identical to `HEAD` (checked field by field, not
+just by eye), and a full Shift 1 played through the UI produces the
+`shift-runs.json` / `shift1-demo-complete` scoreline exactly.
+
+### 14.1 Landed
+
+| Deliverable | Where |
+|---|---|
+| The sequence runner: one running sequence, absolute deadlines, end-state memory, skip, Reduce-Motion collapse, two channels per beat | `Sources/State/Director.swift` |
+| §5's live board, §6's interjections, §7's nudge, §5's fear-caption ledger, §4's clock count-up | the same file, driven from `GameModel.directorFollow(...)` |
+| §5's felt band — `max(engine, time)` on the ECG, the band word **and** the heartbeat | `GameModel.feltStatus`, `PlayBar`, `Haptics/HeartbeatPlayer.swift` (one line, see 14.2 #9) |
+| §1 the handover: typed eyebrow, a rail of seven slots, alerts landing one per 260 ms, Vale's line, the dock last | `Screens/Play/ShiftIntroView.swift` |
+| §2 the arrival: cut, spike, trigger typed, title + asset, severity stamped, sources risen, coach last | `Screens/Play/CaseView.swift` (+ `CaseHeader`) |
+| §3 collapsed sources, peek-on-tap (one at a time), `Pull · 10m`, 350 ms long-press, a spent row as a `✓` line | `Components/SourceRow.swift`, `CaseView.sources(_:proxy:)` |
+| §4 the pull as a query: seeded log pane, the SystemBar clock counting the cost, `RESULTS`, cards one at a time | `Screens/Play/SourceSheet.swift` |
+| §6 Vale as one-line message cards with 500 ms of typing dots; the taxonomy as shift 1's first card | `Components/MessageCard.swift`, `ShiftIntroView`, `CaseView.voice` |
+| §6 Settings → *Read the rules again* | `Screens/Meta/SettingsView.swift` (`MetaRoute.rules`, `RulesScreen`) |
+| §7 leads-to by rule | `Director.leadsTo(_:justPulled:queried:)` + `SourceRow.nudge` |
+| §8 the call as a cut: black, stamp, ground, truth flip, meters, breach flash, why, dock | `Screens/Play/DebriefView.swift` |
+| §5's `TIME n / 90`, the live-board severity reveals, the deferred fear captions | `Screens/Play/BoardSheet.swift`, `Components/MeterView.swift` |
+| A line that types itself, frame-stable and Reduce-Motion-correct | `Components/TypedText.swift` |
+| New durations only — no new timings | `Design/Motion.swift` |
+| 25 tests for the parts a strip cannot prove | `Tests/DirectorTests.swift` |
+| The QA stopwatch a frame strip is read against | `App/RootView.swift` (`#if SENTRY_QA`) |
+| One new chrome key, `settingsRules` | `app/lib/soc/exporter/chrome.ts` |
+
+### 14.2 Decisions and deviations — each one a place the document and the tree differ
+
+1. **`intro.severity` is no longer printed on the handover.** It was the second of the
+   two paragraphs that made §1 read as a lecture, and §6 already moves its neighbour —
+   the taxonomy — into a card. Both now live in the shift-1 card and in Settings →
+   *Read the rules again*. Nothing was deleted: the copy is exported, drawn and
+   reachable, and later boards get Vale's one line alone.
+2. **The rail carries no title.** §1's `intro.title` — *"7 alerts on the board."* — is
+   the ONE line Vale says at the bottom of the sequence, and printing it over the rail
+   as well made the screen say the same sentence twice, 1.4 s apart.
+3. **The handover's dock is `intro.cta` ("Start the shift ▸"), not §1's "Clock in ▸".**
+   §1's label is descriptive; `intro.cta` is the *authored* string for that button, and
+   "Clock in" is already the hub's dock (`dockClockIn`). Changing the exported CTA to
+   match a prose row would have been a copy edit the document did not ask for.
+4. **One new chrome key.** §6's Settings row needed a word, so `settingsRules: "Read
+   the rules again"` was authored in `chrome.ts` and the bundle re-exported. The
+   exporter's own report is the evidence: `copy.json: changed (23070 → 23115 bytes)` ·
+   `contentHash restamped only (no content change)` for the other nine. `content.json`,
+   `handler.json`, `shift-runs.json` and `grades.json` were then compared to `HEAD`
+   with their `contentHash` removed: identical.
+5. **§2's header reads evidence → title → guess.** The shipped header led with the
+   severity chip, which is the deck teaching the exact habit it exists to break — the
+   tool's severity is a *guess* (`intro.severity`), and printing it first frames the
+   read. §2's own timeline puts the trigger at 260 ms and the chip at 1500, so the
+   layout was inverted to match the order the player receives it in.
+6. **Reduce Motion deduplicates the cues it collapses.** D18 says the sound and the
+   haptics stay, and they do — but seven `ping`s inside one millisecond is a blurt
+   rather than §1's rising line, and a six-voice pool would drop most of them anyway.
+   Each distinct cue fires once, in order.
+7. **A skip drops the cues it passed.** Reduce Motion is "do not perform this at me";
+   a tap is "stop performing this at me", and finishing the performance into the
+   player's ear on the way out is not what they asked for.
+8. **`Director.play(…, silencing:)` exists for exactly one cue.** §8's `.cut` beat
+   carries `file`, and the reducer already emitted `Effect.haptic(.file)` on
+   `MAKE_CALL` — the thud belongs to the *action*. Without the silencer the call
+   slammed twice, half a frame apart.
+9. **One line outside the owned paths.** `HeartbeatDriver.Signal.status` now reads
+   `GameModel.feltStatus` instead of `session.status`
+   (`Sources/Haptics/HeartbeatPlayer.swift`, two call sites, one expression). §5 asks
+   for the heartbeat to follow `max(engine, time)` and the driver is the only thing
+   that decides which band beats. It is presentation exactly like the ECG the same
+   value drives; `scoreShift` never sees it.
+10. **The scrim dims the read, not the strip.** It used to cover the whole screen,
+    SystemBar included, at 85 % — and §4 asks the player to watch the shift clock
+    count the cost out under an open sheet. It now covers the content area only.
+11. **§7's nudge is delivered when the findings land, and the caption outlives the
+    glow.** `PULL_SOURCE` is dispatched before the first log line, so a nudge applied
+    there glowed and faded while the player was still watching a query pane two
+    seconds from its results. It is now *decided* at the pull and *delivered* at the
+    sequence's `.end`. The pulse is §7's 600 ms; the caption stays 4.2 s or until the
+    player touches any row, because two words that vanish before the sheet is
+    dismissed are a nudge nobody receives.
+12. **The board's TIME row reads `20 / 90 shift-min`, not §5's `62 / 90m`.** That is
+    the authored `boardTimeValue`, and re-voicing it would have been a copy edit for a
+    shorthand in a prose row.
+13. **The QA stopwatch.** §11 asks a reviewer to check the beats to ±60 ms off a
+    100 ms frame grid, which a grid alone cannot settle. Under `SENTRY_QA` — Debug
+    only, and check 3 of the release guard proves its absence from Release — the
+    running sequence prints its own elapsed milliseconds in the corner. Every timing
+    claim in 14.4 is read off those numerals.
+14. **`docs/screenshots/ios/feel/debrief/` was removed**, superseded by `call/`: the
+    same QA screen, recorded against the screen §8 describes. `smoke/` stays — it is
+    the recorder's fallback-path evidence, not a screen's. All frames are re-encoded
+    to an 8-bit palette (35 KB a frame rather than 380 KB) and stay fully legible.
+15. **§6's thin-call rule is exactly one finding, of noise weight.** §6's line is
+    *"You're calling on one card"*, so the condition is `revealed.count == 1 &&
+    revealed.allSatisfy { $0.weight == .noise }`. Three noise findings would make the
+    sentence false.
+16. **The dots are the typing.** §1 row 4 and §6 say "typing dots 500 ms → text";
+    running a typewriter on the line *as well* pushed the sentence 400 ms past the
+    dock that is supposed to rise after it. The card fades its line in.
+17. **The full Shift-1 replay has one forced deviation.** `shift1-demo-complete`'s
+    sixth step files a call with **nothing** pulled, and the shipped app disables the
+    Dock until a finding is on the board (C8: *"You can't make the call blind"*). The
+    replay pulls `change-tickets` — a **non-key** source — instead: `keySourcesPulled`
+    stays 0, the call is still blind by the grader's definition, and every scored
+    number is unchanged. This is a pre-existing property of the UI, not an F2b change.
+
+### 14.3 Eight bugs the runtime passes caught
+
+1. **The case screen went blank the moment a pull started.** Only one sequence runs at
+   a time, so `runID` moved to `pull:…` and `shows(.sources, of: "arrival:…")` — which
+   draws the SOURCES list — went false under the open sheet. Found by the Shift-1
+   replay, which could not find its second source to pull. Fixed with an end-state
+   memory.
+2. **…and remembering only the *id* was worse.** `shows(_:of:)` then answered `true`
+   for every kind, including beats a sequence never had, so the debrief of a **good**
+   call drew §8's rose breach edge. Visible in the first `call/` recording, frames
+   37–40. The memory is now the *set* of beats a run contained.
+3. **The breach edge never went out.** A beat that has landed stays landed, so an edge
+   drawn from `shows(.breach)` stayed lit for the whole debrief — frame 65 of
+   `breach/`, four and a half seconds after the cut, still had a rose border. It is a
+   one-shot the screen owns now, and Reduce Motion draws no flash at all.
+4. **A relative `Task.sleep` is 140 ms late on a 500 ms wait.** The default tolerance
+   lets the runtime coalesce a wake-up: §1's line landed at 3760 ms against a
+   specified 3620. Every sleep in the feel pass now passes `tolerance: .zero`, and the
+   beat walks sleep to absolute deadlines besides.
+5. **A pulled source row read as nothing at all.** `.accessibilityElement(children:
+   .ignore)` on the row's outer `Group` threw away the labels its branches carry;
+   the replay's accessibility dump showed two `case.source` elements with an empty
+   label. Each branch owns its own element now, and a spent row announces what it
+   surfaced.
+6. **The peek button could open underneath the coach card.** The coach and the Dock
+   are two stacked bottom insets; the fourth source's `Pull · 6m` chip landed at
+   y 702 under a card occupying 689–830, and the tap went to the card. Peeking now
+   scrolls the row to centre.
+7. **The shift clock jumped instead of counting.** `Director.clockHeld` was subtracted
+   inside the source sheet but not in the case screen's own read-out, so the strip
+   above the sheet went `0m → 10m` in one frame. One `clockReading(_:)` on the
+   Director, read by both.
+8. **A beat's two channels were collapsed into one cue.** `Beat` names the haptic and
+   the sound separately and they are frequently different — §1's alert is a `select`
+   under a `ping`, §4's log line is a `tick` nobody feels — and firing
+   `beat.sound ?? beat.cue` on both channels replaced the tap with a second ping and
+   lost every `—` row of §9's table. `GameModel.feel(haptic:sound:variant:)` is the
+   two-channel call site.
+
+### 14.4 Verification — what was measured, and where the evidence is
+
+Frames are cut at 10 Hz; the fuchsia numerals in each frame are the running
+sequence's own elapsed milliseconds (14.2 #13), so a beat and its clock are read off
+the same pixel row. Strips and frames are under `docs/screenshots/ios/feel/<name>/`
+with a `manifest.txt` beside each.
+
+| § | Beat | FEEL.md | Measured | Evidence |
+|---|---|---|---|---|
+| §1 | eyebrow complete (22 glyphs × 18 ms) | 396 | 445 | `handover/` |
+| §1 | board rises | 600 | (595, 662] | `handover/` |
+| §1 | alerts 1–7 | 900 … 2460, step 260 | every one inside its 100 ms frame | `handover/` |
+| §1 | Vale's card | 3120 | (3119, 3219] | `handover/` |
+| §1 | its line, after 500 ms of dots | 3620 | (3723, 3811] mid-fade ⇒ ~3630 | `handover/` |
+| §1 | dock + meters | 3920 | (3886, 4019] | `handover/` |
+| §2 | trigger types in | 260, over ~700 | (212, 312], complete 996 | `arrival/` |
+| §2 | title + `ASSET:` | 1100 | (1112, 1212] | `arrival/` |
+| §2 | severity chip stamps | 1500 | (1496, 1596] | `arrival/` |
+| §2 | sources rise | 1800 | (1796, 1896] | `arrival/` |
+| §4 | log lines (seeded 310 · 602 · 989 · 1300 · 1705) | that list | each inside a frame of it | `pull/` |
+| §4 | the clock counts the cost | 0m → 10m over 2000 | 1m at 271, 5m at 1071, 9m at 1871 | `pull/` |
+| §4 | `RESULTS · 1 finding`, sheet grows | 2000 | (2014, 2147] | `pull/` |
+| §8 | stamp slams | 450 | (442, 534] | `call/`, `breach/` |
+| §8 | ground + `WRONG CALL` | 900 | (934, 1034] | `breach/` |
+| §8 | `TRUTH:` flips | 1200 | (1234, 1334] | `breach/` |
+| §8 | meters + breach flash | 1500 | (1409, 1511] | `breach/` |
+| §8 | `WHY` + findings, dock last | 2100 | (2132, 2233] | `call/` |
+
+Everything else, checked on the glass and kept as an end state under
+`docs/screenshots/ios/feel/states/`:
+
+- `03-arrival-end` — §2's end state and §3's collapsed rows: name and cost, no questions.
+- `04-source-peek` — §3's peek, one row open, `Pull the log 10m`, and §6's coach as a card.
+- `06-pull-querying` / `07-pull-results` — §4 mid-stream (clock at 6m, `USED 6 / 90`) and at rest.
+- `08-leads-to-and-vale` — §7's `worth a look` on two unpulled key sources, §6's first-pull line, §3's spent row as `✓ … 1 finding`.
+- `10-board-sheet` — §5's `TIME 20 / 90 shift-min`, no fear captions yet.
+- `12-live-board` — §5's live board: alert 6 revealed `MEDIUM` after ~60 s of investigating.
+- `13-breach-edge` / `14-fear-caption` — §5's caption arriving with the first delta, on the meter that moved and not on the one that did not.
+- `shift1-summary` — the full replay's scoreline.
+
+**Reduce Motion** (`ReduceMotionEnabled` on the simulator): §1's whole 4.2 s sequence
+is at its end state 1.2 s after launch — eyebrow complete, seven slots filled, the
+taxonomy card with no dots, meters and dock present — and the trace still reads
+`sound ping-1` · `cue ping via feedbackGenerator` · `sound tick` · `cue tick via
+soundOnly`. Motion collapsed; both other channels unchanged (D18).
+
+**Full Shift 1, fresh install, driven with idb.** Seven alerts, fifteen pulls, seven
+holds-to-file. The 16:00 summary: `ROUGH SHIFT` · Accuracy **86 %** · Calls **7/7** ·
+Missed threats **0** · False escalations **1** · Investigation **88 %** · **1 call
+made blind** · **+300 ¢** · **+15 ⬢** · standing `0 → 15`. Every one of those is
+`shift1-demo-complete`, to the number.
+
+**Check set:** `xcodegen generate` · `xcodebuild build` · `xcodebuild test
+-only-testing:SentrySOCTests` (109 tests, 9 suites) · `swift test --package-path
+ios/SentryCore` (215 tests, 18 suites) · `bash ios/scripts/verify.sh` (9 checks, 0
+failures, no new allowlist entries).

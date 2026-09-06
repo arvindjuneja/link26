@@ -220,6 +220,11 @@ export const CHROME: Record<string, string> = {
   // is opt-in and says so.
   settingsSound: "Sound · cues and room tone",
   settingsHeartbeatSound: "Heartbeat sound · a low thump",
+  // FEEL.md §6. The DEF-A taxonomy is the first card of shift 1 and is not repeated
+  // on every board after it — so it needs a door, and this is the door. Phrased as a
+  // re-read rather than as help: the player already met these rules at 08:00 on their
+  // first shift, and this row is for the shift where they want them again.
+  settingsRules: "Read the rules again",
   settingsHoldToFile: "Hold to file · off = tap twice",
   settingsCoaching: "Coaching on the first alert",
   settingsMotion: "Motion",

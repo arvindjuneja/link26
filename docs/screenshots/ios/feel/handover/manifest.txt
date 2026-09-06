@@ -1,0 +1,11 @@
+sequence   : handover
+device     : C2136147-45C8-42DD-8E3A-EDE974B97154
+mode       : video (100 ms grid)
+seconds    : 5
+frames     : 54 at 560px wide
+contact    : strip.png (6 per row)
+qa screen  : intro
+recorded   : 2026-09-06 09:56:23
+
+f-001 is t=0; each frame after it is +100 ms. Read against docs/ios/FEEL.md
+§1 handover · §2 arrival · §4 pull · §8 call — the numbers SequenceTests asserts.

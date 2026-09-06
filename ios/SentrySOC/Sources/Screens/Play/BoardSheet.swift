@@ -23,6 +23,7 @@ struct BoardSheet: View {
 
   private var copy: CopyPack { model.content.copy }
   private var session: SessionState { model.session }
+  private var director: Director { model.director }
 
   var body: some View {
     SheetChrome(
@@ -58,11 +59,26 @@ struct BoardSheet: View {
           number: index + 1,
           title: socCase?.alertTitle ?? caseID,
           detectionRule: index == shift.index ? socCase?.detectionRule : nil,
+          // **The live board** (`FEEL.md` §5). An upcoming row normally shows a title
+          // and nothing else, because the tool's severity is a guess and printing it
+          // primes the read (§4.1). What §5 adds is *time*: every 25–40 s one alert
+          // ahead of the player reveals what the tool made of it, with a ping and an
+          // ECG blip. Nothing about the queue's order or content moves — the desk
+          // simply stops being a still life while you work.
+          severity: revealedSeverity(index, socCase),
           state: state(index, in: shift, caseID: caseID),
           action: shift.result(for: caseID) == nil
             ? nil : { model.send(.viewResult(caseID)) })
       }
     }
+  }
+
+  /// What the tool said about an alert the player has not reached — but only once the
+  /// live board has revealed it (§5).
+  private func revealedSeverity(_ index: Int, _ socCase: SocCase?) -> (String, Color)? {
+    guard let socCase, director.revealedAlerts.contains(index) else { return nil }
+    let severity = copy.severity(socCase.toolSeverity)
+    return (severity.label, Theme.tone(severity.tone))
   }
 
   /// Done rows carry the verdict they earned; the current row is the only one with a
@@ -82,12 +98,16 @@ struct BoardSheet: View {
 
       ForEach(copy.intro.meters, id: \.key) { meter in
         let reading = reading(meter.key, shift)
+        // §5 / §10: the `fear` caption is a **consequence**, so it arrives the first
+        // time its meter moves and then stays. TIME never moves a meter — it is the
+        // soft budget — so its caption rides on the two that do.
+        let revealed = director.fearRevealed.contains(meter.key.rawValue)
         MeterView(
           label: meter.label,
           valueText: reading.text,
           fraction: reading.fraction,
           status: reading.status,
-          fear: meter.fear,
+          fear: revealed ? meter.fear : nil,
           spokenValue: "\(reading.text), \(Play.statusLabel(reading.status, copy))",
           numericKey: reading.fraction)
       }
@@ -180,6 +200,10 @@ struct BoardQueueRow: View {
   let title: String
   /// Only the current alert shows the rule that fired it.
   var detectionRule: String?
+  /// The tool's guess and its hue, once the live board has revealed it (`FEEL.md`
+  /// §5). `nil` on every row that has not been revealed — which is every row, until
+  /// the desk has been worked for half a minute.
+  var severity: (String, Color)?
   let state: State
   /// `nil` on a row that cannot be opened.
   var action: (() -> Void)?
@@ -217,6 +241,12 @@ struct BoardQueueRow: View {
           .lineLimit(state == .current ? nil : 1)
           .truncationMode(.tail)
           .fixedSize(horizontal: false, vertical: state == .current)
+
+        if let severity, state == .ahead {
+          Text(severity.0)
+            .trackedLabel(severity.1, scale: 0.8)
+            .transition(.opacity)
+        }
 
         if let detectionRule {
           Text(detectionRule)
